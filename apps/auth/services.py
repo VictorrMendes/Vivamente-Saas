@@ -124,3 +124,8 @@ def confirm_password_reset(oob_code, new_password):
 def delete_user(firebase_uid):
     get_firebase_app()
     firebase_auth.delete_user(firebase_uid)
+
+
+def set_user_role(firebase_uid, role):
+    get_firebase_app()
+    firebase_auth.set_custom_user_claims(firebase_uid, {"role": role})

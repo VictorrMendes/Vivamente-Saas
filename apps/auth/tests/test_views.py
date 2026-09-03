@@ -472,3 +472,67 @@ class UserDetailViewTests(TestCase):
         response = self.client.get("/oauth/v1/users/does-not-exist")
 
         self.assertEqual(response.status_code, 404)
+
+
+class RoleListViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.user.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    def test_lists_available_roles(self):
+        response = self.client.get("/oauth/v1/roles")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"], ["ADMIN", "THERAPIST"])
+
+
+class UserRoleUpdateViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = OauthUser.objects.create(
+            firebase_uid="admin_uid", email="admin@x.com", role="ADMIN"
+        )
+        self.therapist = OauthUser.objects.create(
+            firebase_uid="therapist_uid", email="ana@x.com", role="THERAPIST"
+        )
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.admin.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    @patch("apps.auth.views.services.set_user_role")
+    def test_updates_role_and_logs_audit(self, mock_set_role):
+        response = self.client.patch(
+            f"/oauth/v1/users/{self.therapist.firebase_uid}/role",
+            {"role": "ADMIN"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_set_role.assert_called_once_with("therapist_uid", "ADMIN")
+        self.therapist.refresh_from_db()
+        self.assertEqual(self.therapist.role, "ADMIN")
+        self.assertEqual(
+            OauthAuditLog.objects.filter(event="role_changed").count(), 1
+        )
+
+    def test_rejects_invalid_role(self):
+        response = self.client.patch(
+            f"/oauth/v1/users/{self.therapist.firebase_uid}/role",
+            {"role": "SUPERADMIN"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)

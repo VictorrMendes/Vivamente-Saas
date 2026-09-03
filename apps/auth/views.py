@@ -17,6 +17,7 @@ from apps.auth.serializers import (
     PasswordResetSerializer,
     RefreshSerializer,
     RegisterSerializer,
+    RoleUpdateSerializer,
     UserActiveUpdateSerializer,
     UserSerializer,
 )
@@ -264,3 +265,28 @@ class UserDetailView(APIView):
         user.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RoleListView(APIView):
+    def get(self, request):
+        return Response(success_envelope(["ADMIN", "THERAPIST"]))
+
+
+class UserRoleUpdateView(APIView):
+    permission_classes = [IsAdmin]
+
+    def patch(self, request, user_id):
+        serializer = RoleUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        role = serializer.validated_data["role"]
+
+        user = get_object_or_404(OauthUser, firebase_uid=user_id)
+        services.set_user_role(user.firebase_uid, role)
+        user.role = role
+        user.save(update_fields=["role"])
+
+        OauthAuditLog.objects.create(
+            user=user, event="role_changed", metadata={"role": role}
+        )
+
+        return Response(success_envelope(UserSerializer(user).data))

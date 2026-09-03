@@ -177,3 +177,14 @@ class DeleteUserTests(TestCase):
         services.delete_user("uid_123")
 
         mock_firebase_auth.delete_user.assert_called_once_with("uid_123")
+
+
+class SetUserRoleTests(TestCase):
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_sets_custom_claim(self, mock_firebase_auth, mock_get_app):
+        services.set_user_role("uid_123", "ADMIN")
+
+        mock_firebase_auth.set_custom_user_claims.assert_called_once_with(
+            "uid_123", {"role": "ADMIN"}
+        )

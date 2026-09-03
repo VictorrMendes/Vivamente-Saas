@@ -42,3 +42,7 @@ class UserSerializer(serializers.Serializer):
 
 class UserActiveUpdateSerializer(serializers.Serializer):
     active = serializers.BooleanField()
+
+
+class RoleUpdateSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=["ADMIN", "THERAPIST"])
