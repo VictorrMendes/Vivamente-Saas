@@ -9,4 +9,5 @@ def health(request):
 urlpatterns = [
     path("health", health, name="health"),
     path("oauth/v1/", include("apps.auth.urls")),
+    path("oauth/v1/", include("apps.sessions.urls")),
 ]
