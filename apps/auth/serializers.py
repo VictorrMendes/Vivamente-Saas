@@ -18,3 +18,16 @@ class RefreshSerializer(serializers.Serializer):
 
 class LogoutSerializer(serializers.Serializer):
     allDevices = serializers.BooleanField(required=False, default=False)
+
+
+class EmailVerifySerializer(serializers.Serializer):
+    oobCode = serializers.CharField()
+
+
+class PasswordForgotSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    newPassword = serializers.CharField(min_length=6, write_only=True)

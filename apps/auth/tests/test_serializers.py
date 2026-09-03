@@ -1,8 +1,11 @@
 from django.test import SimpleTestCase
 
 from apps.auth.serializers import (
+    EmailVerifySerializer,
     LoginSerializer,
     LogoutSerializer,
+    PasswordForgotSerializer,
+    PasswordResetSerializer,
     RefreshSerializer,
     RegisterSerializer,
 )
@@ -56,3 +59,33 @@ class LogoutSerializerTests(SimpleTestCase):
         serializer.is_valid()
 
         self.assertFalse(serializer.validated_data["allDevices"])
+
+
+class EmailVerifySerializerTests(SimpleTestCase):
+    def test_requires_oob_code(self):
+        serializer = EmailVerifySerializer(data={})
+
+        self.assertFalse(serializer.is_valid())
+
+
+class PasswordForgotSerializerTests(SimpleTestCase):
+    def test_requires_valid_email(self):
+        serializer = PasswordForgotSerializer(data={"email": "not-an-email"})
+
+        self.assertFalse(serializer.is_valid())
+
+
+class PasswordResetSerializerTests(SimpleTestCase):
+    def test_rejects_short_new_password(self):
+        serializer = PasswordResetSerializer(
+            data={"token": "oob-code", "newPassword": "123"}
+        )
+
+        self.assertFalse(serializer.is_valid())
+
+    def test_valid_payload(self):
+        serializer = PasswordResetSerializer(
+            data={"token": "oob-code", "newPassword": "novaSenha123"}
+        )
+
+        self.assertTrue(serializer.is_valid())
