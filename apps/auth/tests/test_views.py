@@ -108,3 +108,91 @@ class LoginViewTests(TestCase):
         self.assertEqual(
             OauthAuditLog.objects.filter(event="login_failed").count(), 1
         )
+
+
+class MeViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
+
+    def _authenticate(self):
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.user.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    def test_returns_current_user(self):
+        self._authenticate()
+
+        response = self.client.get("/oauth/v1/me")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["email"], "ana@x.com")
+
+    def test_denied_without_token(self):
+        response = self.client.get("/oauth/v1/me")
+
+        self.assertEqual(response.status_code, 401)
+
+
+class LogoutViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.user.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    def test_logout_logs_audit_event(self):
+        response = self.client.post("/oauth/v1/logout", {}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(OauthAuditLog.objects.filter(event="logout").count(), 1)
+
+    @patch("apps.auth.views.services.revoke_refresh_tokens")
+    def test_logout_all_devices_revokes_tokens(self, mock_revoke):
+        response = self.client.post(
+            "/oauth/v1/logout", {"allDevices": True}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_revoke.assert_called_once_with("uid_123")
+
+
+class RefreshViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    @patch("apps.auth.views.services.refresh_id_token")
+    def test_returns_new_id_token(self, mock_refresh):
+        mock_refresh.return_value = {"idToken": "new-id-token", "expiresIn": 3600}
+
+        response = self.client.post(
+            "/oauth/v1/refresh", {"refreshToken": "old-refresh"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["idToken"], "new-id-token")
+
+    @patch("apps.auth.views.services.refresh_id_token")
+    def test_invalid_refresh_token_returns_401(self, mock_refresh):
+        mock_refresh.side_effect = services.FirebaseAuthError(
+            "Refresh token invalido."
+        )
+
+        response = self.client.post(
+            "/oauth/v1/refresh", {"refreshToken": "bad"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 401)

@@ -1,5 +1,5 @@
 from rest_framework import exceptions, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
@@ -8,7 +8,12 @@ from apps.audit.models import OauthAuditLog
 from apps.auth import services
 from apps.auth.models import OauthUser
 from apps.auth.permissions import IsAdmin
-from apps.auth.serializers import LoginSerializer, RegisterSerializer
+from apps.auth.serializers import (
+    LoginSerializer,
+    LogoutSerializer,
+    RefreshSerializer,
+    RegisterSerializer,
+)
 from apps.sessions.models import OauthSession
 from core.responses import success_envelope
 
@@ -77,6 +82,56 @@ class LoginView(APIView):
                         "email": user.email,
                         "role": user.role,
                     },
+                }
+            )
+        )
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if serializer.validated_data["allDevices"]:
+            services.revoke_refresh_tokens(request.user.firebase_uid)
+
+        OauthAuditLog.objects.create(
+            user=request.user, event="logout", ip_address=_client_ip(request)
+        )
+
+        return Response(success_envelope({"loggedOut": True}))
+
+
+class RefreshView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RefreshSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            tokens = services.refresh_id_token(
+                serializer.validated_data["refreshToken"]
+            )
+        except services.FirebaseAuthError as exc:
+            raise exceptions.AuthenticationFailed(str(exc)) from exc
+
+        return Response(success_envelope(tokens))
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(
+            success_envelope(
+                {
+                    "id": request.user.firebase_uid,
+                    "email": request.user.email,
+                    "role": request.user.role,
+                    "active": request.user.active,
                 }
             )
         )
