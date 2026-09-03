@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { Calendar } from 'v-calendar';
 import 'v-calendar/style.css';
 import { useAppointments } from '@/composables/useAppointments';
+import { useAvailability } from '@/composables/useAvailability';
 import { formatTime, toDateOnly } from '@/lib/datetime';
 import type { Appointment, AppointmentStatus } from '@/types/appointment';
+import { WEEKDAYS } from '@/types/availability';
 import Button from '@/components/ui/Button.vue';
 import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
+import AvailabilityCalendar from '@/components/calendar/AvailabilityCalendar.vue';
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   pending: 'Pendente',
@@ -24,11 +27,37 @@ const STATUS_VARIANT: Record<AppointmentStatus, 'warning' | 'primary' | 'success
 };
 
 const { appointments, showLoading, error, actionError, pendingActionId, load, updateStatus } = useAppointments();
+const {
+  slots,
+  showLoading: availabilityShowLoading,
+  error: availabilityError,
+  saving: savingSlot,
+  saveError: slotError,
+  removingId,
+  load: loadAvailability,
+  create: createSlot,
+  remove: removeSlot,
+} = useAvailability();
 
 const today = new Date();
 const selectedDate = ref(toDateOnly(today));
 
-onMounted(() => load(today));
+onMounted(() => {
+  load(today);
+  loadAvailability();
+});
+
+const newSlot = reactive({ weekday: 1, startTime: '09:00', endTime: '12:00' });
+const newSlotError = ref<string | null>(null);
+
+async function handleAddSlot() {
+  newSlotError.value = null;
+  if (newSlot.endTime <= newSlot.startTime) {
+    newSlotError.value = 'O horário final precisa ser depois do inicial.';
+    return;
+  }
+  await createSlot({ ...newSlot });
+}
 
 const appointmentsByDate = computed(() => {
   const map = new Map<string, Appointment[]>();
@@ -144,5 +173,64 @@ function handleCancel(id: string) {
         </ul>
       </div>
     </div>
+
+    <section class="mt-8">
+      <h2 class="font-display text-h5 text-text">Disponibilidade</h2>
+      <p class="mt-1 text-body-sm text-text-muted">Horários recorrentes em que você atende, por dia da semana.</p>
+
+      <p v-if="availabilityError" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
+        {{ availabilityError }}
+      </p>
+
+      <div v-else-if="availabilityShowLoading" class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7" aria-busy="true">
+        <Skeleton v-for="n in 7" :key="n" variant="card" />
+      </div>
+
+      <template v-else>
+        <AvailabilityCalendar :slots="slots" :removing-id="removingId" class="mt-4" @remove="removeSlot" />
+
+        <form
+          class="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4"
+          novalidate
+          @submit.prevent="handleAddSlot"
+        >
+          <div>
+            <label for="slot-weekday" class="mb-1 block text-label uppercase tracking-label text-text-muted">Dia</label>
+            <select
+              id="slot-weekday"
+              v-model.number="newSlot.weekday"
+              class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+            >
+              <option v-for="(day, index) in WEEKDAYS" :key="day" :value="index">{{ day }}</option>
+            </select>
+          </div>
+          <div>
+            <label for="slot-start" class="mb-1 block text-label uppercase tracking-label text-text-muted">Início</label>
+            <input
+              id="slot-start"
+              v-model="newSlot.startTime"
+              type="time"
+              required
+              class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+            />
+          </div>
+          <div>
+            <label for="slot-end" class="mb-1 block text-label uppercase tracking-label text-text-muted">Fim</label>
+            <input
+              id="slot-end"
+              v-model="newSlot.endTime"
+              type="time"
+              required
+              class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+            />
+          </div>
+          <Button type="submit" size="md" :loading="savingSlot">Adicionar horário</Button>
+        </form>
+
+        <p v-if="newSlotError || slotError" role="alert" class="mt-2 text-body-sm text-error">
+          {{ newSlotError || slotError }}
+        </p>
+      </template>
+    </section>
   </div>
 </template>
