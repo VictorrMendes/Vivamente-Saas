@@ -5,10 +5,11 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
 from apps.audit.models import OauthAuditLog
-from apps.auth import services
+from apps.auth import emails, services
 from apps.auth.models import OauthUser
 from apps.auth.permissions import IsAdmin
 from apps.auth.serializers import (
+    EmailVerifySerializer,
     LoginSerializer,
     LogoutSerializer,
     RefreshSerializer,
@@ -135,3 +136,37 @@ class MeView(APIView):
                 }
             )
         )
+
+
+class EmailVerifyView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = EmailVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            email = services.confirm_email_verification(
+                serializer.validated_data["oobCode"]
+            )
+        except services.FirebaseAuthError as exc:
+            raise exceptions.ValidationError(str(exc)) from exc
+
+        user = OauthUser.objects.filter(email=email).first()
+        OauthAuditLog.objects.create(user=user, event="email_verified")
+
+        return Response(success_envelope({"verified": True}))
+
+
+class EmailResendView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        link = services.generate_email_verification_link(request.user.email)
+        emails.send_verification_email(request.user.email, link)
+
+        OauthAuditLog.objects.create(
+            user=request.user, event="email_verification_sent"
+        )
+
+        return Response(success_envelope({"sent": True}))

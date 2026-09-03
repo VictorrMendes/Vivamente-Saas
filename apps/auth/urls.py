@@ -1,6 +1,14 @@
 from django.urls import path
 
-from apps.auth.views import LoginView, LogoutView, MeView, RefreshView, RegisterView
+from apps.auth.views import (
+    EmailResendView,
+    EmailVerifyView,
+    LoginView,
+    LogoutView,
+    MeView,
+    RefreshView,
+    RegisterView,
+)
 
 urlpatterns = [
     path("register", RegisterView.as_view(), name="register"),
@@ -8,4 +16,6 @@ urlpatterns = [
     path("logout", LogoutView.as_view(), name="logout"),
     path("refresh", RefreshView.as_view(), name="refresh"),
     path("me", MeView.as_view(), name="me"),
+    path("email/verify", EmailVerifyView.as_view(), name="email-verify"),
+    path("email/resend", EmailResendView.as_view(), name="email-resend"),
 ]

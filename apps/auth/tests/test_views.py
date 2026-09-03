@@ -224,3 +224,66 @@ class LoginThrottleTests(TestCase):
 
         self.assertEqual(response.status_code, 429)
         self.assertIn("Retry-After", response)
+
+
+class EmailVerifyViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
+
+    @patch("apps.auth.views.services.confirm_email_verification")
+    def test_confirms_verification_and_logs_audit(self, mock_confirm):
+        mock_confirm.return_value = "ana@x.com"
+
+        response = self.client.post(
+            "/oauth/v1/email/verify", {"oobCode": "oob-code"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            OauthAuditLog.objects.filter(event="email_verified").count(), 1
+        )
+
+    @patch("apps.auth.views.services.confirm_email_verification")
+    def test_invalid_code_returns_400(self, mock_confirm):
+        mock_confirm.side_effect = services.FirebaseAuthError("codigo invalido")
+
+        response = self.client.post(
+            "/oauth/v1/email/verify", {"oobCode": "bad-code"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+
+class EmailResendViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.user.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    @patch("apps.auth.views.emails.send_verification_email")
+    @patch("apps.auth.views.services.generate_email_verification_link")
+    def test_generates_link_and_sends_email(self, mock_generate, mock_send):
+        mock_generate.return_value = "https://link/verify"
+
+        response = self.client.post("/oauth/v1/email/resend", {}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        mock_send.assert_called_once_with("ana@x.com", "https://link/verify")
+
+    def test_denied_without_token(self):
+        self.client.credentials()
+
+        response = self.client.post("/oauth/v1/email/resend", {}, format="json")
+
+        self.assertEqual(response.status_code, 401)
