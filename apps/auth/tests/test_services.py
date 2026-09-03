@@ -98,3 +98,73 @@ class RevokeRefreshTokensTests(TestCase):
         services.revoke_refresh_tokens("uid_123")
 
         mock_firebase_auth.revoke_refresh_tokens.assert_called_once_with("uid_123")
+
+
+class GenerateEmailVerificationLinkTests(TestCase):
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_returns_link_from_admin_sdk(self, mock_firebase_auth, mock_get_app):
+        mock_firebase_auth.generate_email_verification_link.return_value = (
+            "https://link/verify"
+        )
+
+        link = services.generate_email_verification_link("ana@x.com")
+
+        self.assertEqual(link, "https://link/verify")
+        mock_firebase_auth.generate_email_verification_link.assert_called_once_with(
+            "ana@x.com"
+        )
+
+
+class GeneratePasswordResetLinkTests(TestCase):
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_returns_link_from_admin_sdk(self, mock_firebase_auth, mock_get_app):
+        mock_firebase_auth.generate_password_reset_link.return_value = (
+            "https://link/reset"
+        )
+
+        link = services.generate_password_reset_link("ana@x.com")
+
+        self.assertEqual(link, "https://link/reset")
+        mock_firebase_auth.generate_password_reset_link.assert_called_once_with(
+            "ana@x.com"
+        )
+
+
+class ConfirmEmailVerificationTests(TestCase):
+    @patch("apps.auth.services.requests.post")
+    def test_returns_confirmed_email(self, mock_post):
+        mock_post.return_value = MagicMock(
+            status_code=200, json=lambda: {"email": "ana@x.com"}
+        )
+
+        email = services.confirm_email_verification("oob-code")
+
+        self.assertEqual(email, "ana@x.com")
+
+    @patch("apps.auth.services.requests.post")
+    def test_raises_on_invalid_code(self, mock_post):
+        mock_post.return_value = MagicMock(status_code=400, json=lambda: {})
+
+        with self.assertRaises(services.FirebaseAuthError):
+            services.confirm_email_verification("bad-code")
+
+
+class ConfirmPasswordResetTests(TestCase):
+    @patch("apps.auth.services.requests.post")
+    def test_returns_email_of_reset_account(self, mock_post):
+        mock_post.return_value = MagicMock(
+            status_code=200, json=lambda: {"email": "ana@x.com"}
+        )
+
+        email = services.confirm_password_reset("oob-code", "novaSenha123")
+
+        self.assertEqual(email, "ana@x.com")
+
+    @patch("apps.auth.services.requests.post")
+    def test_raises_on_invalid_code(self, mock_post):
+        mock_post.return_value = MagicMock(status_code=400, json=lambda: {})
+
+        with self.assertRaises(services.FirebaseAuthError):
+            services.confirm_password_reset("bad-code", "novaSenha123")

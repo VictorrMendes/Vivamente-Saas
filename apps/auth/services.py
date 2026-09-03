@@ -9,6 +9,10 @@ IDENTITY_TOOLKIT_SIGN_IN_URL = (
     "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
 )
 SECURE_TOKEN_URL = "https://securetoken.googleapis.com/v1/token"
+ACCOUNTS_UPDATE_URL = "https://identitytoolkit.googleapis.com/v1/accounts:update"
+ACCOUNTS_RESET_PASSWORD_URL = (
+    "https://identitytoolkit.googleapis.com/v1/accounts:resetPassword"
+)
 
 
 class FirebaseAuthError(Exception):
@@ -77,3 +81,41 @@ def verify_id_token(id_token):
 def revoke_refresh_tokens(firebase_uid):
     get_firebase_app()
     firebase_auth.revoke_refresh_tokens(firebase_uid)
+
+
+def generate_email_verification_link(email):
+    get_firebase_app()
+    return firebase_auth.generate_email_verification_link(email)
+
+
+def generate_password_reset_link(email):
+    get_firebase_app()
+    return firebase_auth.generate_password_reset_link(email)
+
+
+def confirm_email_verification(oob_code):
+    response = requests.post(
+        ACCOUNTS_UPDATE_URL,
+        params={"key": settings.FIREBASE_WEB_API_KEY},
+        json={"oobCode": oob_code},
+        timeout=10,
+    )
+
+    if response.status_code != 200:
+        raise FirebaseAuthError("Codigo de verificacao invalido ou expirado.")
+
+    return response.json()["email"]
+
+
+def confirm_password_reset(oob_code, new_password):
+    response = requests.post(
+        ACCOUNTS_RESET_PASSWORD_URL,
+        params={"key": settings.FIREBASE_WEB_API_KEY},
+        json={"oobCode": oob_code, "newPassword": new_password},
+        timeout=10,
+    )
+
+    if response.status_code != 200:
+        raise FirebaseAuthError("Codigo de redefinicao invalido ou expirado.")
+
+    return response.json()["email"]
