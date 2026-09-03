@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+from django.db import IntegrityError
 from django.test import TestCase
 
 from apps.auth import services
@@ -22,6 +23,23 @@ class CreateUserTests(TestCase):
         )
         self.assertEqual(user.firebase_uid, "uid_123")
         self.assertEqual(OauthUser.objects.count(), 1)
+
+
+class CreateUserCompensationTests(TestCase):
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_deletes_firebase_user_when_local_mirror_fails(
+        self, mock_firebase_auth, mock_get_app
+    ):
+        OauthUser.objects.create(
+            firebase_uid="uid_dup", email="existing@x.com", role="THERAPIST"
+        )
+        mock_firebase_auth.create_user.return_value = MagicMock(uid="uid_dup")
+
+        with self.assertRaises(IntegrityError):
+            services.create_user("nova@x.com", "senha123", "ADMIN")
+
+        mock_firebase_auth.delete_user.assert_called_once_with("uid_dup")
 
 
 class LoginWithPasswordTests(TestCase):

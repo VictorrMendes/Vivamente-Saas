@@ -24,9 +24,13 @@ def create_user(email, password, role):
     firebase_user = firebase_auth.create_user(email=email, password=password)
     firebase_auth.set_custom_user_claims(firebase_user.uid, {"role": role})
 
-    return OauthUser.objects.create(
-        firebase_uid=firebase_user.uid, email=email, role=role
-    )
+    try:
+        return OauthUser.objects.create(
+            firebase_uid=firebase_user.uid, email=email, role=role
+        )
+    except Exception:
+        firebase_auth.delete_user(firebase_user.uid)
+        raise
 
 
 def login_with_password(email, password):
