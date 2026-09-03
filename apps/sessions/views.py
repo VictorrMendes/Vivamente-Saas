@@ -1,11 +1,14 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.auth import services
+from apps.auth.permissions import IsAdmin
 from apps.sessions.models import OauthSession
 from apps.sessions.serializers import SessionSerializer
+from core.pagination import OauthPageNumberPagination
 from core.responses import success_envelope
 
 
@@ -37,3 +40,10 @@ class SessionDetailView(APIView):
         session.save(update_fields=["revoked_at"])
 
         return Response(success_envelope({"revoked": True}))
+
+
+class SecuritySessionListView(generics.ListAPIView):
+    queryset = OauthSession.objects.all().order_by("-created_at")
+    serializer_class = SessionSerializer
+    pagination_class = OauthPageNumberPagination
+    permission_classes = [IsAdmin]

@@ -89,3 +89,42 @@ class SessionDetailViewTests(TestCase):
         response = self.client.delete(f"/oauth/v1/sessions/{session.id}")
 
         self.assertEqual(response.status_code, 404)
+
+
+class SecuritySessionListViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = OauthUser.objects.create(
+            firebase_uid="admin_uid", email="admin@x.com", role="ADMIN"
+        )
+        self.therapist = OauthUser.objects.create(
+            firebase_uid="therapist_uid", email="ana@x.com", role="THERAPIST"
+        )
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.admin.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    def test_admin_sees_sessions_of_any_user(self):
+        OauthSession.objects.create(user=self.admin)
+        OauthSession.objects.create(user=self.therapist)
+
+        response = self.client.get("/oauth/v1/security/sessions")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["pagination"]["total"], 2)
+
+    def test_therapist_forbidden(self):
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.therapist.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        response = self.client.get("/oauth/v1/security/sessions")
+
+        self.assertEqual(response.status_code, 403)

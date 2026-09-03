@@ -11,6 +11,7 @@ from apps.auth.views import (
     RefreshView,
     RegisterView,
     RoleListView,
+    TokenRevokeView,
     UserDetailView,
     UserListView,
     UserRoleUpdateView,
@@ -34,4 +35,5 @@ urlpatterns = [
         UserRoleUpdateView.as_view(),
         name="user-role",
     ),
+    path("tokens/revoke", TokenRevokeView.as_view(), name="tokens-revoke"),
 ]

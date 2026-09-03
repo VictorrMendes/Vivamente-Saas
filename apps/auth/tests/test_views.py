@@ -536,3 +536,25 @@ class UserRoleUpdateViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
+
+
+class TokenRevokeViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.user.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    @patch("apps.auth.views.services.revoke_refresh_tokens")
+    def test_revokes_current_user_tokens(self, mock_revoke):
+        response = self.client.post("/oauth/v1/tokens/revoke", {}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        mock_revoke.assert_called_once_with("uid_123")

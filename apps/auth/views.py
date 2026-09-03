@@ -290,3 +290,12 @@ class UserRoleUpdateView(APIView):
         )
 
         return Response(success_envelope(UserSerializer(user).data))
+
+
+class TokenRevokeView(APIView):
+    def post(self, request):
+        services.revoke_refresh_tokens(request.user.firebase_uid)
+
+        OauthAuditLog.objects.create(user=request.user, event="token_revoked")
+
+        return Response(success_envelope({"revoked": True}))
