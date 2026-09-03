@@ -39,7 +39,21 @@ class SessionDetailView(APIView):
         session.revoked_at = timezone.now()
         session.save(update_fields=["revoked_at"])
 
-        return Response(success_envelope({"revoked": True}))
+        return Response(
+            success_envelope(
+                {
+                    "revoked": True,
+                    "note": (
+                        "Esta sessao foi marcada como revogada apenas no "
+                        "registro local. O Firebase nao suporta revogar um "
+                        "unico refresh token - o idToken ja emitido pra esse "
+                        "dispositivo continua valido ate expirar (~1h). Pra "
+                        "revogar de verdade, use DELETE /sessions (revoga "
+                        "todos os dispositivos)."
+                    ),
+                }
+            )
+        )
 
 
 class SecuritySessionListView(generics.ListAPIView):

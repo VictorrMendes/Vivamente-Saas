@@ -82,6 +82,7 @@ class SessionDetailViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         session.refresh_from_db()
         self.assertIsNotNone(session.revoked_at)
+        self.assertIn("note", response.data["data"])
 
     def test_cannot_revoke_session_of_another_user(self):
         session = OauthSession.objects.create(user=self.other_user)
