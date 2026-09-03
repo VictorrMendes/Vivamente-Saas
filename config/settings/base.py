@@ -59,4 +59,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # Nao usamos django.contrib.auth (identidade e 100% Firebase), entao
+    # nao deixamos o DRF tentar importar django.contrib.auth.models.AnonymousUser.
+    "UNAUTHENTICATED_USER": None,
 }

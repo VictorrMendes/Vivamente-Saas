@@ -25,3 +25,6 @@ class FirebaseTokenAuthentication(BaseAuthentication):
             raise AuthenticationFailed("Usuario nao encontrado.") from exc
 
         return (user, claims)
+
+    def authenticate_header(self, request):
+        return "Bearer"
