@@ -12,12 +12,15 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "changeme")
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
+    "rest_framework",
+    "corsheaders",
     "apps.auth",
     "apps.sessions",
     "apps.audit",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
@@ -45,3 +48,10 @@ FIREBASE_CREDENTIALS_PATH = os.environ.get(
     "FIREBASE_CREDENTIALS_PATH", ".secrets/firebase-service-account.json"
 )
 FIREBASE_WEB_API_KEY = os.environ.get("FIREBASE_WEB_API_KEY", "")
+
+CORS_ALLOWED_ORIGINS = ALLOWED_ORIGINS
+
+REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "core.exception_handler.oauth_exception_handler",
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+}
