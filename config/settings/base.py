@@ -62,4 +62,8 @@ REST_FRAMEWORK = {
     # Nao usamos django.contrib.auth (identidade e 100% Firebase), entao
     # nao deixamos o DRF tentar importar django.contrib.auth.models.AnonymousUser.
     "UNAUTHENTICATED_USER": None,
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "5/min",
+        "user": "20/min",
+    },
 }

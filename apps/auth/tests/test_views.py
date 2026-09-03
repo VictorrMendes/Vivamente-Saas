@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -196,3 +197,30 @@ class RefreshViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+
+class LoginThrottleTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    @patch("apps.auth.views.services.login_with_password")
+    def test_sixth_login_attempt_in_a_minute_is_throttled(self, mock_login):
+        mock_login.side_effect = services.FirebaseAuthError("bad creds")
+
+        for _ in range(5):
+            self.client.post(
+                "/oauth/v1/login",
+                {"email": "a@x.com", "password": "x"},
+                format="json",
+            )
+
+        response = self.client.post(
+            "/oauth/v1/login", {"email": "a@x.com", "password": "x"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertIn("Retry-After", response)
