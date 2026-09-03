@@ -1,6 +1,16 @@
 from django.db import models
 
 from apps.auth.models import OauthUser
+from core.request_id import get_request_id
+
+
+class OauthAuditLogManager(models.Manager):
+    def create(self, **kwargs):
+        metadata = dict(kwargs.get("metadata") or {})
+        metadata.setdefault("request_id", get_request_id())
+        kwargs["metadata"] = metadata
+
+        return super().create(**kwargs)
 
 
 class OauthAuditLog(models.Model):
@@ -15,6 +25,8 @@ class OauthAuditLog(models.Model):
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     metadata = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = OauthAuditLogManager()
 
     class Meta:
         db_table = "oauth_audit_log"
