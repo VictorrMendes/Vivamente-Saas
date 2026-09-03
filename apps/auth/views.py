@@ -31,22 +31,24 @@ def _client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 
+def _register_user(request_data):
+    serializer = RegisterSerializer(data=request_data)
+    serializer.is_valid(raise_exception=True)
+
+    user = services.create_user(**serializer.validated_data)
+
+    return Response(
+        success_envelope(UserSerializer(user).data),
+        status=status.HTTP_201_CREATED,
+    )
+
+
 class RegisterView(APIView):
     permission_classes = [IsAdmin]
     throttle_classes = [UserRateThrottle]
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = services.create_user(**serializer.validated_data)
-
-        return Response(
-            success_envelope(
-                {"id": user.firebase_uid, "email": user.email, "role": user.role}
-            ),
-            status=status.HTTP_201_CREATED,
-        )
+        return _register_user(request.data)
 
 
 class LoginView(APIView):
@@ -262,15 +264,7 @@ class UserListView(generics.ListAPIView):
     permission_classes = [IsAdmin]
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = services.create_user(**serializer.validated_data)
-
-        return Response(
-            success_envelope(UserSerializer(user).data),
-            status=status.HTTP_201_CREATED,
-        )
+        return _register_user(request.data)
 
 
 class UserDetailView(APIView):
