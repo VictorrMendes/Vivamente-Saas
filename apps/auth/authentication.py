@@ -24,6 +24,9 @@ class FirebaseTokenAuthentication(BaseAuthentication):
         except OauthUser.DoesNotExist as exc:
             raise AuthenticationFailed("Usuario nao encontrado.") from exc
 
+        if not user.active:
+            raise AuthenticationFailed("Conta desativada.")
+
         return (user, claims)
 
     def authenticate_header(self, request):

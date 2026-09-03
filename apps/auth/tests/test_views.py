@@ -193,10 +193,17 @@ class LogoutViewTests(TestCase):
 class RefreshViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
 
     @patch("apps.auth.views.services.refresh_id_token")
     def test_returns_new_id_token(self, mock_refresh):
-        mock_refresh.return_value = {"idToken": "new-id-token", "expiresIn": 3600}
+        mock_refresh.return_value = {
+            "idToken": "new-id-token",
+            "expiresIn": 3600,
+            "firebase_uid": "uid_123",
+        }
 
         response = self.client.post(
             "/oauth/v1/refresh", {"refreshToken": "old-refresh"}, format="json"
@@ -204,6 +211,7 @@ class RefreshViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"]["idToken"], "new-id-token")
+        self.assertNotIn("firebase_uid", response.data["data"])
 
     @patch("apps.auth.views.services.refresh_id_token")
     def test_invalid_refresh_token_returns_401(self, mock_refresh):
@@ -213,6 +221,36 @@ class RefreshViewTests(TestCase):
 
         response = self.client.post(
             "/oauth/v1/refresh", {"refreshToken": "bad"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch("apps.auth.views.services.refresh_id_token")
+    def test_deactivated_user_cannot_refresh(self, mock_refresh):
+        self.user.active = False
+        self.user.save(update_fields=["active"])
+        mock_refresh.return_value = {
+            "idToken": "new-id-token",
+            "expiresIn": 3600,
+            "firebase_uid": "uid_123",
+        }
+
+        response = self.client.post(
+            "/oauth/v1/refresh", {"refreshToken": "old-refresh"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @patch("apps.auth.views.services.refresh_id_token")
+    def test_removed_user_cannot_refresh(self, mock_refresh):
+        mock_refresh.return_value = {
+            "idToken": "new-id-token",
+            "expiresIn": 3600,
+            "firebase_uid": "uid_does_not_exist_locally",
+        }
+
+        response = self.client.post(
+            "/oauth/v1/refresh", {"refreshToken": "old-refresh"}, format="json"
         )
 
         self.assertEqual(response.status_code, 401)

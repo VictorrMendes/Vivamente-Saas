@@ -129,7 +129,19 @@ class RefreshView(APIView):
         except services.FirebaseAuthError as exc:
             raise exceptions.AuthenticationFailed(str(exc)) from exc
 
-        return Response(success_envelope(tokens))
+        user = OauthUser.objects.filter(
+            firebase_uid=tokens["firebase_uid"], active=True
+        ).first()
+        if user is None:
+            raise exceptions.AuthenticationFailed(
+                "Conta desativada ou removida."
+            )
+
+        return Response(
+            success_envelope(
+                {"idToken": tokens["idToken"], "expiresIn": tokens["expiresIn"]}
+            )
+        )
 
 
 class MeView(APIView):

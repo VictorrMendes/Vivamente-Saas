@@ -53,3 +53,15 @@ class FirebaseTokenAuthenticationTests(TestCase):
 
         with self.assertRaises(AuthenticationFailed):
             self.authenticator.authenticate(request)
+
+    @patch("apps.auth.services.verify_id_token")
+    def test_rejects_deactivated_user(self, mock_verify):
+        self.user.active = False
+        self.user.save(update_fields=["active"])
+        mock_verify.return_value = {"uid": "uid_123"}
+        request = self.factory.get(
+            "/oauth/v1/me", HTTP_AUTHORIZATION="Bearer good-token"
+        )
+
+        with self.assertRaises(AuthenticationFailed):
+            self.authenticator.authenticate(request)

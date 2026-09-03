@@ -66,6 +66,7 @@ def refresh_id_token(refresh_token):
     return {
         "idToken": payload["id_token"],
         "expiresIn": int(payload["expires_in"]),
+        "firebase_uid": payload["user_id"],
     }
 
 
@@ -73,7 +74,7 @@ def verify_id_token(id_token):
     get_firebase_app()
 
     try:
-        return firebase_auth.verify_id_token(id_token)
+        return firebase_auth.verify_id_token(id_token, check_revoked=True)
     except Exception as exc:
         raise FirebaseAuthError("Token invalido ou expirado.") from exc
 

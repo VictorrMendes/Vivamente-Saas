@@ -56,13 +56,18 @@ class RefreshIdTokenTests(TestCase):
     def test_returns_new_id_token(self, mock_post):
         mock_post.return_value = MagicMock(
             status_code=200,
-            json=lambda: {"id_token": "new-id-token", "expires_in": "3600"},
+            json=lambda: {
+                "id_token": "new-id-token",
+                "expires_in": "3600",
+                "user_id": "uid_123",
+            },
         )
 
         result = services.refresh_id_token("refresh-token")
 
         self.assertEqual(result["idToken"], "new-id-token")
         self.assertEqual(result["expiresIn"], 3600)
+        self.assertEqual(result["firebase_uid"], "uid_123")
 
     @patch("apps.auth.services.requests.post")
     def test_raises_on_invalid_refresh_token(self, mock_post):
@@ -81,6 +86,9 @@ class VerifyIdTokenTests(TestCase):
         claims = services.verify_id_token("id-token")
 
         self.assertEqual(claims["uid"], "uid_123")
+        mock_firebase_auth.verify_id_token.assert_called_once_with(
+            "id-token", check_revoked=True
+        )
 
     @patch("apps.auth.services.get_firebase_app")
     @patch("apps.auth.services.firebase_auth")
