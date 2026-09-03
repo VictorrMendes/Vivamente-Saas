@@ -12,6 +12,8 @@ from apps.auth.serializers import (
     EmailVerifySerializer,
     LoginSerializer,
     LogoutSerializer,
+    PasswordForgotSerializer,
+    PasswordResetSerializer,
     RefreshSerializer,
     RegisterSerializer,
 )
@@ -170,3 +172,44 @@ class EmailResendView(APIView):
         )
 
         return Response(success_envelope({"sent": True}))
+
+
+class PasswordForgotView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        serializer = PasswordForgotSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+
+        user = OauthUser.objects.filter(email=email).first()
+        if user is not None:
+            link = services.generate_password_reset_link(email)
+            emails.send_password_reset_email(email, link)
+            OauthAuditLog.objects.create(
+                user=user, event="password_reset_requested"
+            )
+
+        return Response(success_envelope({"sent": True}))
+
+
+class PasswordResetView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            email = services.confirm_password_reset(
+                serializer.validated_data["token"],
+                serializer.validated_data["newPassword"],
+            )
+        except services.FirebaseAuthError as exc:
+            raise exceptions.ValidationError(str(exc)) from exc
+
+        user = OauthUser.objects.filter(email=email).first()
+        OauthAuditLog.objects.create(user=user, event="password_reset")
+
+        return Response(success_envelope({"reset": True}))

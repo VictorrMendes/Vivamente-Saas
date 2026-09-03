@@ -287,3 +287,77 @@ class EmailResendViewTests(TestCase):
         response = self.client.post("/oauth/v1/email/resend", {}, format="json")
 
         self.assertEqual(response.status_code, 401)
+
+
+class PasswordForgotViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        cache.clear()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    @patch("apps.auth.views.emails.send_password_reset_email")
+    @patch("apps.auth.views.services.generate_password_reset_link")
+    def test_existing_email_sends_reset_link(self, mock_generate, mock_send):
+        mock_generate.return_value = "https://link/reset"
+
+        response = self.client.post(
+            "/oauth/v1/password/forgot", {"email": "ana@x.com"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_send.assert_called_once_with("ana@x.com", "https://link/reset")
+
+    @patch("apps.auth.views.emails.send_password_reset_email")
+    @patch("apps.auth.views.services.generate_password_reset_link")
+    def test_unknown_email_still_returns_success_without_sending(
+        self, mock_generate, mock_send
+    ):
+        response = self.client.post(
+            "/oauth/v1/password/forgot",
+            {"email": "desconhecido@x.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_send.assert_not_called()
+        mock_generate.assert_not_called()
+
+
+class PasswordResetViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = OauthUser.objects.create(
+            firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
+        )
+
+    @patch("apps.auth.views.services.confirm_password_reset")
+    def test_resets_password_and_logs_audit(self, mock_confirm):
+        mock_confirm.return_value = "ana@x.com"
+
+        response = self.client.post(
+            "/oauth/v1/password/reset",
+            {"token": "oob-code", "newPassword": "novaSenha123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            OauthAuditLog.objects.filter(event="password_reset").count(), 1
+        )
+
+    @patch("apps.auth.views.services.confirm_password_reset")
+    def test_invalid_token_returns_400(self, mock_confirm):
+        mock_confirm.side_effect = services.FirebaseAuthError("codigo invalido")
+
+        response = self.client.post(
+            "/oauth/v1/password/reset",
+            {"token": "bad-code", "newPassword": "novaSenha123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
