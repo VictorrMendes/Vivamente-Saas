@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { ApiError } from '@/services/api/errors';
+import Button from '@/components/ui/Button.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -61,14 +62,9 @@ async function handleSubmit() {
           {{ error }}
         </p>
 
-        <button
-          type="submit"
-          :disabled="loading"
-          :aria-busy="loading"
-          class="h-10 w-full rounded-md bg-primary-600 text-button font-medium text-text-inverse transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
+        <Button type="submit" :loading="loading" class="w-full">
           {{ loading ? 'Entrando…' : 'Entrar' }}
-        </button>
+        </Button>
       </form>
     </div>
   </div>
