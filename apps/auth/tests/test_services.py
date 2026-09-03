@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import requests
 from django.db import IntegrityError
 from django.test import TestCase
 
@@ -214,3 +215,22 @@ class SetUserRoleTests(TestCase):
         mock_firebase_auth.set_custom_user_claims.assert_called_once_with(
             "uid_123", {"role": "ADMIN"}
         )
+
+
+class RevokeRefreshTokensFailureTests(TestCase):
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_wraps_admin_sdk_error(self, mock_firebase_auth, mock_get_app):
+        mock_firebase_auth.revoke_refresh_tokens.side_effect = ValueError("boom")
+
+        with self.assertRaises(services.FirebaseAuthError):
+            services.revoke_refresh_tokens("uid_123")
+
+
+class LoginWithPasswordNetworkFailureTests(TestCase):
+    @patch("apps.auth.services.requests.post")
+    def test_wraps_connection_error(self, mock_post):
+        mock_post.side_effect = requests.exceptions.ConnectionError("no route")
+
+        with self.assertRaises(services.FirebaseAuthError):
+            services.login_with_password("ana@x.com", "senha123")

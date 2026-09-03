@@ -1,8 +1,11 @@
+import functools
+
 import requests
 from django.conf import settings
 from firebase_admin import auth as firebase_auth
 
 from apps.auth.models import OauthUser
+from core.exceptions import ExternalServiceError
 from core.firebase import get_firebase_app
 
 IDENTITY_TOOLKIT_SIGN_IN_URL = (
@@ -15,14 +18,39 @@ ACCOUNTS_RESET_PASSWORD_URL = (
 )
 
 
-class FirebaseAuthError(Exception):
+class FirebaseAuthError(ExternalServiceError):
     pass
+
+
+def _post_identity_toolkit(url, **kwargs):
+    try:
+        return requests.post(url, timeout=10, **kwargs)
+    except requests.exceptions.RequestException as exc:
+        raise FirebaseAuthError("Falha de comunicacao com o Firebase.") from exc
+
+
+def _firebase_admin_call(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        get_firebase_app()
+        try:
+            return func(*args, **kwargs)
+        except Exception as exc:
+            raise FirebaseAuthError(
+                "Falha de comunicacao com o Firebase."
+            ) from exc
+
+    return wrapper
 
 
 def create_user(email, password, role):
     get_firebase_app()
-    firebase_user = firebase_auth.create_user(email=email, password=password)
-    firebase_auth.set_custom_user_claims(firebase_user.uid, {"role": role})
+
+    try:
+        firebase_user = firebase_auth.create_user(email=email, password=password)
+        firebase_auth.set_custom_user_claims(firebase_user.uid, {"role": role})
+    except Exception as exc:
+        raise FirebaseAuthError("Falha de comunicacao com o Firebase.") from exc
 
     try:
         return OauthUser.objects.create(
@@ -34,11 +62,10 @@ def create_user(email, password, role):
 
 
 def login_with_password(email, password):
-    response = requests.post(
+    response = _post_identity_toolkit(
         IDENTITY_TOOLKIT_SIGN_IN_URL,
         params={"key": settings.FIREBASE_WEB_API_KEY},
         json={"email": email, "password": password, "returnSecureToken": True},
-        timeout=10,
     )
 
     if response.status_code != 200:
@@ -55,11 +82,10 @@ def login_with_password(email, password):
 
 
 def refresh_id_token(refresh_token):
-    response = requests.post(
+    response = _post_identity_toolkit(
         SECURE_TOKEN_URL,
         params={"key": settings.FIREBASE_WEB_API_KEY},
         data={"grant_type": "refresh_token", "refresh_token": refresh_token},
-        timeout=10,
     )
 
     if response.status_code != 200:
@@ -83,27 +109,26 @@ def verify_id_token(id_token):
         raise FirebaseAuthError("Token invalido ou expirado.") from exc
 
 
+@_firebase_admin_call
 def revoke_refresh_tokens(firebase_uid):
-    get_firebase_app()
     firebase_auth.revoke_refresh_tokens(firebase_uid)
 
 
+@_firebase_admin_call
 def generate_email_verification_link(email):
-    get_firebase_app()
     return firebase_auth.generate_email_verification_link(email)
 
 
+@_firebase_admin_call
 def generate_password_reset_link(email):
-    get_firebase_app()
     return firebase_auth.generate_password_reset_link(email)
 
 
 def confirm_email_verification(oob_code):
-    response = requests.post(
+    response = _post_identity_toolkit(
         ACCOUNTS_UPDATE_URL,
         params={"key": settings.FIREBASE_WEB_API_KEY},
         json={"oobCode": oob_code},
-        timeout=10,
     )
 
     if response.status_code != 200:
@@ -113,11 +138,10 @@ def confirm_email_verification(oob_code):
 
 
 def confirm_password_reset(oob_code, new_password):
-    response = requests.post(
+    response = _post_identity_toolkit(
         ACCOUNTS_RESET_PASSWORD_URL,
         params={"key": settings.FIREBASE_WEB_API_KEY},
         json={"oobCode": oob_code, "newPassword": new_password},
-        timeout=10,
     )
 
     if response.status_code != 200:
@@ -126,11 +150,11 @@ def confirm_password_reset(oob_code, new_password):
     return response.json()["email"]
 
 
+@_firebase_admin_call
 def delete_user(firebase_uid):
-    get_firebase_app()
     firebase_auth.delete_user(firebase_uid)
 
 
+@_firebase_admin_call
 def set_user_role(firebase_uid, role):
-    get_firebase_app()
     firebase_auth.set_custom_user_claims(firebase_uid, {"role": role})

@@ -23,3 +23,12 @@ class SendPasswordResetEmailTests(SimpleTestCase):
         args = mock_send.call_args[0][0]
         self.assertEqual(args["to"], ["ana@x.com"])
         self.assertIn("https://link/reset", args["html"])
+
+
+class SendVerificationEmailFailureTests(SimpleTestCase):
+    @patch("apps.auth.emails.resend.Emails.send")
+    def test_wraps_resend_error(self, mock_send):
+        mock_send.side_effect = Exception("resend down")
+
+        with self.assertRaises(emails.EmailDeliveryError):
+            emails.send_verification_email("ana@x.com", "https://link/verify")
