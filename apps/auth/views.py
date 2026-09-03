@@ -22,6 +22,7 @@ from apps.auth.serializers import (
     UserSerializer,
 )
 from apps.sessions.models import OauthSession
+from core.exceptions import ExternalServiceError
 from core.pagination import OauthPageNumberPagination
 from core.responses import success_envelope
 
@@ -106,7 +107,13 @@ class LogoutView(APIView):
         serializer.is_valid(raise_exception=True)
 
         if serializer.validated_data["allDevices"]:
-            services.revoke_refresh_tokens(request.user.firebase_uid)
+            try:
+                services.revoke_refresh_tokens(request.user.firebase_uid)
+            except ExternalServiceError:
+                OauthAuditLog.objects.create(
+                    user=request.user, event="logout_all_devices_failed"
+                )
+                raise
 
         OauthAuditLog.objects.create(
             user=request.user, event="logout", ip_address=_client_ip(request)
@@ -184,8 +191,14 @@ class EmailResendView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        link = services.generate_email_verification_link(request.user.email)
-        emails.send_verification_email(request.user.email, link)
+        try:
+            link = services.generate_email_verification_link(request.user.email)
+            emails.send_verification_email(request.user.email, link)
+        except ExternalServiceError:
+            OauthAuditLog.objects.create(
+                user=request.user, event="email_verification_failed"
+            )
+            raise
 
         OauthAuditLog.objects.create(
             user=request.user, event="email_verification_sent"
@@ -205,8 +218,15 @@ class PasswordForgotView(APIView):
 
         user = OauthUser.objects.filter(email=email).first()
         if user is not None:
-            link = services.generate_password_reset_link(email)
-            emails.send_password_reset_email(email, link)
+            try:
+                link = services.generate_password_reset_link(email)
+                emails.send_password_reset_email(email, link)
+            except ExternalServiceError:
+                OauthAuditLog.objects.create(
+                    user=user, event="password_reset_request_failed"
+                )
+                raise
+
             OauthAuditLog.objects.create(
                 user=user, event="password_reset_requested"
             )
@@ -269,11 +289,27 @@ class UserDetailView(APIView):
         user.active = serializer.validated_data["active"]
         user.save(update_fields=["active"])
 
+        OauthAuditLog.objects.create(
+            user=user,
+            event="user_reactivated" if user.active else "user_deactivated",
+        )
+
         return Response(success_envelope(UserSerializer(user).data))
 
     def delete(self, request, user_id):
         user = get_object_or_404(OauthUser, firebase_uid=user_id)
-        services.delete_user(user.firebase_uid)
+
+        try:
+            services.delete_user(user.firebase_uid)
+        except ExternalServiceError:
+            OauthAuditLog.objects.create(user=user, event="user_delete_failed")
+            raise
+
+        OauthAuditLog.objects.create(
+            user=user,
+            event="user_deleted",
+            metadata={"email": user.email, "firebase_uid": user.firebase_uid},
+        )
         user.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -293,7 +329,13 @@ class UserRoleUpdateView(APIView):
         role = serializer.validated_data["role"]
 
         user = get_object_or_404(OauthUser, firebase_uid=user_id)
-        services.set_user_role(user.firebase_uid, role)
+
+        try:
+            services.set_user_role(user.firebase_uid, role)
+        except ExternalServiceError:
+            OauthAuditLog.objects.create(user=user, event="role_change_failed")
+            raise
+
         user.role = role
         user.save(update_fields=["role"])
 
@@ -306,7 +348,13 @@ class UserRoleUpdateView(APIView):
 
 class TokenRevokeView(APIView):
     def post(self, request):
-        services.revoke_refresh_tokens(request.user.firebase_uid)
+        try:
+            services.revoke_refresh_tokens(request.user.firebase_uid)
+        except ExternalServiceError:
+            OauthAuditLog.objects.create(
+                user=request.user, event="token_revoke_failed"
+            )
+            raise
 
         OauthAuditLog.objects.create(user=request.user, event="token_revoked")
 

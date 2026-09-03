@@ -4,10 +4,12 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.audit.models import OauthAuditLog
 from apps.auth import services
 from apps.auth.permissions import IsAdmin
 from apps.sessions.models import OauthSession
 from apps.sessions.serializers import SessionSerializer
+from core.exceptions import ExternalServiceError
 from core.pagination import OauthPageNumberPagination
 from core.responses import success_envelope
 
@@ -23,10 +25,21 @@ class SessionListView(APIView):
         )
 
     def delete(self, request):
-        services.revoke_refresh_tokens(request.user.firebase_uid)
+        try:
+            services.revoke_refresh_tokens(request.user.firebase_uid)
+        except ExternalServiceError:
+            OauthAuditLog.objects.create(
+                user=request.user, event="sessions_revoke_all_failed"
+            )
+            raise
+
         OauthSession.objects.filter(
             user=request.user, revoked_at__isnull=True
         ).update(revoked_at=timezone.now())
+
+        OauthAuditLog.objects.create(
+            user=request.user, event="sessions_revoked_all"
+        )
 
         return Response(success_envelope({"revoked": True}))
 
@@ -38,6 +51,12 @@ class SessionDetailView(APIView):
         )
         session.revoked_at = timezone.now()
         session.save(update_fields=["revoked_at"])
+
+        OauthAuditLog.objects.create(
+            user=request.user,
+            event="session_revoked",
+            metadata={"session_id": session.id},
+        )
 
         return Response(
             success_envelope(

@@ -494,6 +494,17 @@ class UserDetailViewTests(TestCase):
         self.therapist.refresh_from_db()
         self.assertFalse(self.therapist.active)
 
+    def test_deactivates_user_logs_audit_event(self):
+        self.client.patch(
+            f"/oauth/v1/users/{self.therapist.firebase_uid}",
+            {"active": False},
+            format="json",
+        )
+
+        self.assertEqual(
+            OauthAuditLog.objects.filter(event="user_deactivated").count(), 1
+        )
+
     @patch("apps.auth.views.services.delete_user")
     def test_deletes_user(self, mock_delete):
         response = self.client.delete(
@@ -504,6 +515,16 @@ class UserDetailViewTests(TestCase):
         mock_delete.assert_called_once_with("therapist_uid")
         self.assertEqual(
             OauthUser.objects.filter(firebase_uid="therapist_uid").count(), 0
+        )
+
+    def test_deletes_user_logs_audit_event(self):
+        with patch("apps.auth.views.services.delete_user"):
+            self.client.delete(
+                f"/oauth/v1/users/{self.therapist.firebase_uid}"
+            )
+
+        self.assertEqual(
+            OauthAuditLog.objects.filter(event="user_deleted").count(), 1
         )
 
     def test_unknown_user_returns_404(self):

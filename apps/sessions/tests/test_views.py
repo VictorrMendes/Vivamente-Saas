@@ -3,6 +3,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+from apps.audit.models import OauthAuditLog
 from apps.auth.models import OauthUser
 from apps.sessions.models import OauthSession
 
@@ -49,6 +50,17 @@ class SessionListViewTests(TestCase):
             0,
         )
 
+    def test_delete_all_logs_audit_event(self):
+        OauthSession.objects.create(user=self.user)
+
+        with patch("apps.sessions.views.services.revoke_refresh_tokens"):
+            self.client.delete("/oauth/v1/sessions")
+
+        self.assertEqual(
+            OauthAuditLog.objects.filter(event="sessions_revoked_all").count(),
+            1,
+        )
+
     def test_denied_without_token(self):
         self.client.credentials()
 
@@ -83,6 +95,15 @@ class SessionDetailViewTests(TestCase):
         session.refresh_from_db()
         self.assertIsNotNone(session.revoked_at)
         self.assertIn("note", response.data["data"])
+
+    def test_revokes_own_session_logs_audit_event(self):
+        session = OauthSession.objects.create(user=self.user)
+
+        self.client.delete(f"/oauth/v1/sessions/{session.id}")
+
+        self.assertEqual(
+            OauthAuditLog.objects.filter(event="session_revoked").count(), 1
+        )
 
     def test_cannot_revoke_session_of_another_user(self):
         session = OauthSession.objects.create(user=self.other_user)
