@@ -14,6 +14,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "rest_framework",
     "corsheaders",
+    "drf_spectacular",
     "apps.auth",
     "apps.sessions",
     "apps.audit",
@@ -28,7 +29,14 @@ MIDDLEWARE = [
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 
-TEMPLATES = []
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {},
+    },
+]
 
 DATABASES = {
     "default": dj_database_url.config(default="sqlite:///db.sqlite3")
@@ -71,4 +79,12 @@ REST_FRAMEWORK = {
         "anon": "5/min",
         "user": "20/min",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "VivaMente Oauth API",
+    "DESCRIPTION": "Servico de autenticacao e identidade da VivaMente.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
