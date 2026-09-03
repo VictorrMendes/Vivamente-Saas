@@ -24,6 +24,7 @@ services:
     environment:
       DATABASE_URL: postgresql://vivamente:vivamente@db:5432/vivamente
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DJANGO_SECURE_SSL_REDIRECT: "False"
     volumes:
       - ./.secrets:/app/.secrets:ro
     ports:
