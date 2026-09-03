@@ -1,4 +1,4 @@
-from rest_framework import exceptions, status
+from rest_framework import exceptions, generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
@@ -16,8 +16,10 @@ from apps.auth.serializers import (
     PasswordResetSerializer,
     RefreshSerializer,
     RegisterSerializer,
+    UserSerializer,
 )
 from apps.sessions.models import OauthSession
+from core.pagination import OauthPageNumberPagination
 from core.responses import success_envelope
 
 
@@ -213,3 +215,21 @@ class PasswordResetView(APIView):
         OauthAuditLog.objects.create(user=user, event="password_reset")
 
         return Response(success_envelope({"reset": True}))
+
+
+class UserListView(generics.ListAPIView):
+    queryset = OauthUser.objects.all().order_by("id")
+    serializer_class = UserSerializer
+    pagination_class = OauthPageNumberPagination
+    permission_classes = [IsAdmin]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = services.create_user(**serializer.validated_data)
+
+        return Response(
+            success_envelope(UserSerializer(user).data),
+            status=status.HTTP_201_CREATED,
+        )

@@ -361,3 +361,43 @@ class PasswordResetViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
+
+
+class UserListViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = OauthUser.objects.create(
+            firebase_uid="admin_uid", email="admin@x.com", role="ADMIN"
+        )
+        self.therapist = OauthUser.objects.create(
+            firebase_uid="therapist_uid", email="ana@x.com", role="THERAPIST"
+        )
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.admin.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    def test_lists_users_paginated(self):
+        response = self.client.get("/oauth/v1/users")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["pagination"]["total"], 2)
+        self.assertEqual(response.data["pagination"]["per_page"], 20)
+
+    @patch("apps.auth.views.services.create_user")
+    def test_creates_user(self, mock_create_user):
+        mock_create_user.return_value = OauthUser(
+            firebase_uid="new_uid", email="nova@x.com", role="THERAPIST"
+        )
+
+        response = self.client.post(
+            "/oauth/v1/users",
+            {"email": "nova@x.com", "password": "senha123", "role": "THERAPIST"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["data"]["id"], "new_uid")

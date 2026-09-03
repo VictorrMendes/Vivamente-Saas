@@ -31,3 +31,10 @@ class PasswordForgotSerializer(serializers.Serializer):
 class PasswordResetSerializer(serializers.Serializer):
     token = serializers.CharField()
     newPassword = serializers.CharField(min_length=6, write_only=True)
+
+
+class UserSerializer(serializers.Serializer):
+    id = serializers.CharField(source="firebase_uid")
+    email = serializers.EmailField()
+    role = serializers.CharField()
+    active = serializers.BooleanField()
