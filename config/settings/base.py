@@ -14,6 +14,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "apps.auth",
     "apps.sessions",
+    "apps.audit",
 ]
 
 MIDDLEWARE = [
