@@ -49,6 +49,11 @@ FIREBASE_CREDENTIALS_PATH = os.environ.get(
 )
 FIREBASE_WEB_API_KEY = os.environ.get("FIREBASE_WEB_API_KEY", "")
 
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.environ.get(
+    "RESEND_FROM_EMAIL", "nao-responda@vivamenteterapias.com.br"
+)
+
 CORS_ALLOWED_ORIGINS = ALLOWED_ORIGINS
 
 REST_FRAMEWORK = {
