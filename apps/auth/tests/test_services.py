@@ -168,3 +168,12 @@ class ConfirmPasswordResetTests(TestCase):
 
         with self.assertRaises(services.FirebaseAuthError):
             services.confirm_password_reset("bad-code", "novaSenha123")
+
+
+class DeleteUserTests(TestCase):
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_calls_admin_sdk_delete(self, mock_firebase_auth, mock_get_app):
+        services.delete_user("uid_123")
+
+        mock_firebase_auth.delete_user.assert_called_once_with("uid_123")

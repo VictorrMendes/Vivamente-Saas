@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import exceptions, generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -16,6 +17,7 @@ from apps.auth.serializers import (
     PasswordResetSerializer,
     RefreshSerializer,
     RegisterSerializer,
+    UserActiveUpdateSerializer,
     UserSerializer,
 )
 from apps.sessions.models import OauthSession
@@ -66,6 +68,9 @@ class LoginView(APIView):
             raise exceptions.AuthenticationFailed(str(exc)) from exc
 
         user = OauthUser.objects.get(firebase_uid=tokens["firebase_uid"])
+
+        if not user.active:
+            raise exceptions.AuthenticationFailed("Conta desativada.")
 
         OauthSession.objects.create(
             user=user,
@@ -233,3 +238,29 @@ class UserListView(generics.ListAPIView):
             success_envelope(UserSerializer(user).data),
             status=status.HTTP_201_CREATED,
         )
+
+
+class UserDetailView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request, user_id):
+        user = get_object_or_404(OauthUser, firebase_uid=user_id)
+
+        return Response(success_envelope(UserSerializer(user).data))
+
+    def patch(self, request, user_id):
+        user = get_object_or_404(OauthUser, firebase_uid=user_id)
+        serializer = UserActiveUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user.active = serializer.validated_data["active"]
+        user.save(update_fields=["active"])
+
+        return Response(success_envelope(UserSerializer(user).data))
+
+    def delete(self, request, user_id):
+        user = get_object_or_404(OauthUser, firebase_uid=user_id)
+        services.delete_user(user.firebase_uid)
+        user.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

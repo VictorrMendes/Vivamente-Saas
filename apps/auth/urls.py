@@ -10,6 +10,7 @@ from apps.auth.views import (
     PasswordResetView,
     RefreshView,
     RegisterView,
+    UserDetailView,
     UserListView,
 )
 
@@ -24,4 +25,5 @@ urlpatterns = [
     path("password/forgot", PasswordForgotView.as_view(), name="password-forgot"),
     path("password/reset", PasswordResetView.as_view(), name="password-reset"),
     path("users", UserListView.as_view(), name="users"),
+    path("users/<str:user_id>", UserDetailView.as_view(), name="user-detail"),
 ]

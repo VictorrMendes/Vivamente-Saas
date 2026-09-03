@@ -110,6 +110,25 @@ class LoginViewTests(TestCase):
             OauthAuditLog.objects.filter(event="login_failed").count(), 1
         )
 
+    @patch("apps.auth.views.services.login_with_password")
+    def test_deactivated_user_cannot_login(self, mock_login):
+        self.user.active = False
+        self.user.save(update_fields=["active"])
+        mock_login.return_value = {
+            "idToken": "id-token",
+            "refreshToken": "refresh-token",
+            "expiresIn": 3600,
+            "firebase_uid": "uid_123",
+        }
+
+        response = self.client.post(
+            "/oauth/v1/login",
+            {"email": "ana@x.com", "password": "senha123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+
 
 class MeViewTests(TestCase):
     def setUp(self):
@@ -401,3 +420,55 @@ class UserListViewTests(TestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["data"]["id"], "new_uid")
+
+
+class UserDetailViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = OauthUser.objects.create(
+            firebase_uid="admin_uid", email="admin@x.com", role="ADMIN"
+        )
+        self.therapist = OauthUser.objects.create(
+            firebase_uid="therapist_uid", email="ana@x.com", role="THERAPIST"
+        )
+        patcher = patch(
+            "apps.auth.services.verify_id_token",
+            return_value={"uid": self.admin.firebase_uid},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+    def test_retrieves_user_detail(self):
+        response = self.client.get(f"/oauth/v1/users/{self.therapist.firebase_uid}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["email"], "ana@x.com")
+
+    def test_deactivates_user(self):
+        response = self.client.patch(
+            f"/oauth/v1/users/{self.therapist.firebase_uid}",
+            {"active": False},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.therapist.refresh_from_db()
+        self.assertFalse(self.therapist.active)
+
+    @patch("apps.auth.views.services.delete_user")
+    def test_deletes_user(self, mock_delete):
+        response = self.client.delete(
+            f"/oauth/v1/users/{self.therapist.firebase_uid}"
+        )
+
+        self.assertEqual(response.status_code, 204)
+        mock_delete.assert_called_once_with("therapist_uid")
+        self.assertEqual(
+            OauthUser.objects.filter(firebase_uid="therapist_uid").count(), 0
+        )
+
+    def test_unknown_user_returns_404(self):
+        response = self.client.get("/oauth/v1/users/does-not-exist")
+
+        self.assertEqual(response.status_code, 404)

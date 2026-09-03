@@ -119,3 +119,8 @@ def confirm_password_reset(oob_code, new_password):
         raise FirebaseAuthError("Codigo de redefinicao invalido ou expirado.")
 
     return response.json()["email"]
+
+
+def delete_user(firebase_uid):
+    get_firebase_app()
+    firebase_auth.delete_user(firebase_uid)

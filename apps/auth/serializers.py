@@ -38,3 +38,7 @@ class UserSerializer(serializers.Serializer):
     email = serializers.EmailField()
     role = serializers.CharField()
     active = serializers.BooleanField()
+
+
+class UserActiveUpdateSerializer(serializers.Serializer):
+    active = serializers.BooleanField()
