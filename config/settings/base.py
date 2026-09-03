@@ -12,6 +12,8 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "changeme")
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
+    "apps.auth",
+    "apps.sessions",
 ]
 
 MIDDLEWARE = [
