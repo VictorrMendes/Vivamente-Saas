@@ -19,3 +19,11 @@ class OauthUser(models.Model):
 
     def __str__(self):
         return f"{self.email} ({self.role})"
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False

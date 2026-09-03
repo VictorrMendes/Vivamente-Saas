@@ -23,3 +23,11 @@ class OauthUserModelTests(TestCase):
             OauthUser.objects.create(
                 firebase_uid="uid_dup", email="b@x.com", role="THERAPIST"
             )
+
+
+class OauthUserAuthProtocolTests(TestCase):
+    def test_is_authenticated_is_always_true(self):
+        user = OauthUser(firebase_uid="uid_x", email="a@x.com", role="ADMIN")
+
+        self.assertTrue(user.is_authenticated)
+        self.assertFalse(user.is_anonymous)

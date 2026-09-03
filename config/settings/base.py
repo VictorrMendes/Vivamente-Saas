@@ -53,5 +53,10 @@ CORS_ALLOWED_ORIGINS = ALLOWED_ORIGINS
 
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exception_handler.oauth_exception_handler",
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.auth.authentication.FirebaseTokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
 }
