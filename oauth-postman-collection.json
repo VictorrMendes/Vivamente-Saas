@@ -1,0 +1,284 @@
+{
+  "info": {
+    "name": "VivaMente Oauth",
+    "description": "Colecao dos 24 endpoints do servico Oauth (docs/oauth.md e a fonte da verdade). Rode 'Login' primeiro - ele preenche idToken/refreshToken automaticamente pras outras requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8003" },
+    { "key": "idToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "userId", "value": "", "description": "firebase_uid de um usuario, pra testar /users/{id} etc" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        },
+        {
+          "name": "GET /schema",
+          "request": { "method": "GET", "url": "{{baseUrl}}/schema" }
+        },
+        {
+          "name": "GET /docs (Swagger UI)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/docs" }
+        }
+      ]
+    },
+    {
+      "name": "Autenticacao",
+      "item": [
+        {
+          "name": "POST /oauth/v1/register (somente ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{idToken}}" }
+            ],
+            "url": "{{baseUrl}}/oauth/v1/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nova@vivamenteterapias.com.br\",\n  \"password\": \"senha123\",\n  \"role\": \"THERAPIST\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /oauth/v1/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.data && body.data.idToken) {",
+                  "    pm.collectionVariables.set('idToken', body.data.idToken);",
+                  "    pm.collectionVariables.set('refreshToken', body.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/oauth/v1/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@vivamenteterapias.com.br\",\n  \"password\": \"changeme\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /oauth/v1/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{idToken}}" }
+            ],
+            "url": "{{baseUrl}}/oauth/v1/logout",
+            "body": { "mode": "raw", "raw": "{\n  \"allDevices\": false\n}" }
+          }
+        },
+        {
+          "name": "POST /oauth/v1/refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/oauth/v1/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /oauth/v1/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verificacao e recuperacao",
+      "item": [
+        {
+          "name": "POST /oauth/v1/email/verify",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/oauth/v1/email/verify",
+            "body": { "mode": "raw", "raw": "{\n  \"oobCode\": \"cole-o-codigo-do-link-aqui\"\n}" }
+          }
+        },
+        {
+          "name": "POST /oauth/v1/email/resend",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/email/resend"
+          }
+        },
+        {
+          "name": "POST /oauth/v1/password/forgot",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/oauth/v1/password/forgot",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"ana@vivamenteterapias.com.br\"\n}" }
+          }
+        },
+        {
+          "name": "POST /oauth/v1/password/reset",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/oauth/v1/password/reset",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"cole-o-codigo-do-link-aqui\",\n  \"newPassword\": \"novaSenha123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sessoes",
+      "item": [
+        {
+          "name": "GET /oauth/v1/sessions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/sessions"
+          }
+        },
+        {
+          "name": "DELETE /oauth/v1/sessions/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/sessions/1"
+          }
+        },
+        {
+          "name": "DELETE /oauth/v1/sessions (todos os dispositivos)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/sessions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios (somente ADMIN)",
+      "item": [
+        {
+          "name": "GET /oauth/v1/users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/users?page=1&per_page=20"
+          }
+        },
+        {
+          "name": "POST /oauth/v1/users (alias de /register)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{idToken}}" }
+            ],
+            "url": "{{baseUrl}}/oauth/v1/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"outra@vivamenteterapias.com.br\",\n  \"password\": \"senha123\",\n  \"role\": \"THERAPIST\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /oauth/v1/users/{id}",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/users/{{userId}}"
+          }
+        },
+        {
+          "name": "PATCH /oauth/v1/users/{id} (ativar/desativar)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{idToken}}" }
+            ],
+            "url": "{{baseUrl}}/oauth/v1/users/{{userId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"active\": false\n}" }
+          }
+        },
+        {
+          "name": "DELETE /oauth/v1/users/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/users/{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "GET /oauth/v1/roles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/roles"
+          }
+        },
+        {
+          "name": "PATCH /oauth/v1/users/{id}/role (somente ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{idToken}}" }
+            ],
+            "url": "{{baseUrl}}/oauth/v1/users/{{userId}}/role",
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"ADMIN\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seguranca",
+      "item": [
+        {
+          "name": "POST /oauth/v1/tokens/revoke",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/tokens/revoke"
+          }
+        },
+        {
+          "name": "GET /oauth/v1/security/sessions (somente ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{idToken}}" }],
+            "url": "{{baseUrl}}/oauth/v1/security/sessions?page=1&per_page=20"
+          }
+        }
+      ]
+    }
+  ]
+}

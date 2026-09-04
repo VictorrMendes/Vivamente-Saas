@@ -1,0 +1,16 @@
+.env
+.secrets/
+__pycache__/
+*.pyc
+db.sqlite3
+.venv/
+venv/
+.agents
+.codex
+.remember
+docs
+CLAUDE.MD
+.context
+.gitignore
+.mcp.json
+create_admin.py
