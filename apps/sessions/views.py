@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,9 +13,11 @@ from apps.sessions.serializers import SessionSerializer
 from core.exceptions import ExternalServiceError
 from core.pagination import OauthPageNumberPagination
 from core.responses import success_envelope
+from core.schema import RevokedSerializer, SessionRevokedSerializer, envelope_of
 
 
 class SessionListView(APIView):
+    @extend_schema(responses={200: envelope_of(SessionSerializer, many=True)})
     def get(self, request):
         sessions = OauthSession.objects.filter(user=request.user).order_by(
             "-created_at"
@@ -24,6 +27,10 @@ class SessionListView(APIView):
             success_envelope(SessionSerializer(sessions, many=True).data)
         )
 
+    @extend_schema(
+        operation_id="sessions_revoke_all",
+        responses={200: envelope_of(RevokedSerializer)},
+    )
     def delete(self, request):
         try:
             services.revoke_refresh_tokens(request.user.firebase_uid)
@@ -45,6 +52,10 @@ class SessionListView(APIView):
 
 
 class SessionDetailView(APIView):
+    @extend_schema(
+        operation_id="sessions_revoke_one",
+        responses={200: envelope_of(SessionRevokedSerializer)},
+    )
     def delete(self, request, session_id):
         session = get_object_or_404(
             OauthSession, id=session_id, user=request.user

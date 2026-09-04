@@ -40,6 +40,24 @@ class UserSerializer(serializers.Serializer):
     active = serializers.BooleanField()
 
 
+class LoginUserSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    email = serializers.EmailField()
+    role = serializers.CharField()
+
+
+class LoginResponseSerializer(serializers.Serializer):
+    idToken = serializers.CharField()
+    refreshToken = serializers.CharField()
+    expiresIn = serializers.IntegerField()
+    user = LoginUserSerializer()
+
+
+class RefreshResponseSerializer(serializers.Serializer):
+    idToken = serializers.CharField()
+    expiresIn = serializers.IntegerField()
+
+
 class UserActiveUpdateSerializer(serializers.Serializer):
     active = serializers.BooleanField()
 

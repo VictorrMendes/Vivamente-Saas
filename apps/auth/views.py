@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import exceptions, generics, status
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import exceptions, generics, serializers, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
@@ -11,10 +12,12 @@ from apps.auth.models import OauthUser
 from apps.auth.permissions import IsAdmin
 from apps.auth.serializers import (
     EmailVerifySerializer,
+    LoginResponseSerializer,
     LoginSerializer,
     LogoutSerializer,
     PasswordForgotSerializer,
     PasswordResetSerializer,
+    RefreshResponseSerializer,
     RefreshSerializer,
     RegisterSerializer,
     RoleUpdateSerializer,
@@ -25,6 +28,14 @@ from apps.sessions.models import OauthSession
 from core.exceptions import ExternalServiceError
 from core.pagination import OauthPageNumberPagination
 from core.responses import success_envelope
+from core.schema import (
+    LoggedOutSerializer,
+    ResetSerializer,
+    RevokedSerializer,
+    SentSerializer,
+    VerifiedSerializer,
+    envelope_of,
+)
 
 
 def _client_ip(request):
@@ -47,6 +58,9 @@ class RegisterView(APIView):
     permission_classes = [IsAdmin]
     throttle_classes = [UserRateThrottle]
 
+    @extend_schema(
+        request=RegisterSerializer, responses={201: envelope_of(UserSerializer)}
+    )
     def post(self, request):
         return _register_user(request.data)
 
@@ -55,6 +69,10 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
 
+    @extend_schema(
+        request=LoginSerializer,
+        responses={200: envelope_of(LoginResponseSerializer)},
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -112,6 +130,10 @@ class LoginView(APIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=LogoutSerializer,
+        responses={200: envelope_of(LoggedOutSerializer)},
+    )
     def post(self, request):
         serializer = LogoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -135,6 +157,10 @@ class LogoutView(APIView):
 class RefreshView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=RefreshSerializer,
+        responses={200: envelope_of(RefreshResponseSerializer)},
+    )
     def post(self, request):
         serializer = RefreshSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -164,6 +190,7 @@ class RefreshView(APIView):
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(responses={200: envelope_of(UserSerializer)})
     def get(self, request):
         return Response(
             success_envelope(
@@ -180,6 +207,10 @@ class MeView(APIView):
 class EmailVerifyView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=EmailVerifySerializer,
+        responses={200: envelope_of(VerifiedSerializer)},
+    )
     def post(self, request):
         serializer = EmailVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -200,6 +231,7 @@ class EmailVerifyView(APIView):
 class EmailResendView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(request=None, responses={200: envelope_of(SentSerializer)})
     def post(self, request):
         try:
             link = services.generate_email_verification_link(request.user.email)
@@ -221,6 +253,10 @@ class PasswordForgotView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
 
+    @extend_schema(
+        request=PasswordForgotSerializer,
+        responses={200: envelope_of(SentSerializer)},
+    )
     def post(self, request):
         serializer = PasswordForgotSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -247,6 +283,10 @@ class PasswordForgotView(APIView):
 class PasswordResetView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=PasswordResetSerializer,
+        responses={200: envelope_of(ResetSerializer)},
+    )
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -271,6 +311,9 @@ class UserListView(generics.ListAPIView):
     pagination_class = OauthPageNumberPagination
     permission_classes = [IsAdmin]
 
+    @extend_schema(
+        request=RegisterSerializer, responses={201: envelope_of(UserSerializer)}
+    )
     def post(self, request):
         return _register_user(request.data)
 
@@ -278,11 +321,16 @@ class UserListView(generics.ListAPIView):
 class UserDetailView(APIView):
     permission_classes = [IsAdmin]
 
+    @extend_schema(responses={200: envelope_of(UserSerializer)})
     def get(self, request, user_id):
         user = get_object_or_404(OauthUser, firebase_uid=user_id)
 
         return Response(success_envelope(UserSerializer(user).data))
 
+    @extend_schema(
+        request=UserActiveUpdateSerializer,
+        responses={200: envelope_of(UserSerializer)},
+    )
     def patch(self, request, user_id):
         user = get_object_or_404(OauthUser, firebase_uid=user_id)
         serializer = UserActiveUpdateSerializer(data=request.data)
@@ -311,6 +359,7 @@ class UserDetailView(APIView):
 
         return Response(success_envelope(UserSerializer(user).data))
 
+    @extend_schema(responses={204: None})
     def delete(self, request, user_id):
         user = get_object_or_404(OauthUser, firebase_uid=user_id)
 
@@ -330,7 +379,19 @@ class UserDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+_role_list_envelope = inline_serializer(
+    name="RoleListEnvelope",
+    fields={
+        "data": serializers.ListField(
+            child=serializers.ChoiceField(choices=["ADMIN", "THERAPIST"])
+        ),
+        "meta": serializers.DictField(),
+    },
+)
+
+
 class RoleListView(APIView):
+    @extend_schema(responses={200: _role_list_envelope})
     def get(self, request):
         return Response(success_envelope(["ADMIN", "THERAPIST"]))
 
@@ -338,6 +399,10 @@ class RoleListView(APIView):
 class UserRoleUpdateView(APIView):
     permission_classes = [IsAdmin]
 
+    @extend_schema(
+        request=RoleUpdateSerializer,
+        responses={200: envelope_of(UserSerializer)},
+    )
     def patch(self, request, user_id):
         serializer = RoleUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -362,6 +427,7 @@ class UserRoleUpdateView(APIView):
 
 
 class TokenRevokeView(APIView):
+    @extend_schema(request=None, responses={200: envelope_of(RevokedSerializer)})
     def post(self, request):
         try:
             services.revoke_refresh_tokens(request.user.firebase_uid)

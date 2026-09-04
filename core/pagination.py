@@ -19,3 +19,20 @@ class OauthPageNumberPagination(PageNumberPagination):
                 },
             }
         )
+
+    def get_paginated_response_schema(self, schema):
+        return {
+            "type": "object",
+            "properties": {
+                "data": schema,
+                "pagination": {
+                    "type": "object",
+                    "properties": {
+                        "page": {"type": "integer"},
+                        "per_page": {"type": "integer"},
+                        "total": {"type": "integer"},
+                        "total_pages": {"type": "integer"},
+                    },
+                },
+            },
+        }
