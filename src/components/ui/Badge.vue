@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'error' | 'info';
+type Variant = 'neutral' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
 type Size = 'sm' | 'md';
 
 const props = withDefaults(defineProps<{ variant?: Variant; size?: Size }>(), {
@@ -10,6 +10,7 @@ const props = withDefaults(defineProps<{ variant?: Variant; size?: Size }>(), {
 const variantClasses: Record<Variant, string> = {
   neutral: 'bg-surface-sunken text-text-muted',
   primary: 'bg-primary-50 text-primary-700',
+  secondary: 'bg-secondary-50 text-secondary-700',
   success: 'bg-success-bg text-success',
   warning: 'bg-warning-bg text-warning',
   error: 'bg-error-bg text-error',
