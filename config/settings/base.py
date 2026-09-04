@@ -89,3 +89,25 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {"()": "core.logging.RequestIdFilter"},
+    },
+    "formatters": {
+        "json": {"()": "core.logging.JsonFormatter"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "filters": ["request_id"],
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
+    },
+}

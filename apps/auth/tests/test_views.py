@@ -8,6 +8,7 @@ from apps.audit.models import OauthAuditLog
 from apps.auth import services
 from apps.auth.models import OauthUser
 from apps.sessions.models import OauthSession
+from core.exceptions import ExternalServiceError
 
 
 class RegisterViewTests(TestCase):
@@ -128,6 +129,28 @@ class LoginViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+    @patch("apps.auth.views.services.login_with_password")
+    def test_firebase_user_without_local_mirror_returns_401_and_logs_audit(
+        self, mock_login
+    ):
+        mock_login.return_value = {
+            "idToken": "id-token",
+            "refreshToken": "refresh-token",
+            "expiresIn": 3600,
+            "firebase_uid": "uid_orfao_no_firebase",
+        }
+
+        response = self.client.post(
+            "/oauth/v1/login",
+            {"email": "orfao@x.com", "password": "senha123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            OauthAuditLog.objects.filter(event="login_failed").count(), 1
+        )
 
 
 class MeViewTests(TestCase):
@@ -483,7 +506,9 @@ class UserDetailViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"]["email"], "ana@x.com")
 
-    def test_deactivates_user(self):
+    @patch("apps.auth.views.services.revoke_refresh_tokens")
+    @patch("apps.auth.views.services.set_user_disabled")
+    def test_deactivates_user(self, mock_set_disabled, mock_revoke):
         response = self.client.patch(
             f"/oauth/v1/users/{self.therapist.firebase_uid}",
             {"active": False},
@@ -494,7 +519,68 @@ class UserDetailViewTests(TestCase):
         self.therapist.refresh_from_db()
         self.assertFalse(self.therapist.active)
 
-    def test_deactivates_user_logs_audit_event(self):
+    @patch("apps.auth.views.services.revoke_refresh_tokens")
+    @patch("apps.auth.views.services.set_user_disabled")
+    def test_deactivating_disables_and_revokes_on_firebase(
+        self, mock_set_disabled, mock_revoke
+    ):
+        self.client.patch(
+            f"/oauth/v1/users/{self.therapist.firebase_uid}",
+            {"active": False},
+            format="json",
+        )
+
+        mock_set_disabled.assert_called_once_with(
+            "therapist_uid", disabled=True
+        )
+        mock_revoke.assert_called_once_with("therapist_uid")
+
+    @patch("apps.auth.views.services.revoke_refresh_tokens")
+    @patch("apps.auth.views.services.set_user_disabled")
+    def test_reactivating_enables_on_firebase_without_revoking(
+        self, mock_set_disabled, mock_revoke
+    ):
+        self.therapist.active = False
+        self.therapist.save(update_fields=["active"])
+
+        self.client.patch(
+            f"/oauth/v1/users/{self.therapist.firebase_uid}",
+            {"active": True},
+            format="json",
+        )
+
+        mock_set_disabled.assert_called_once_with(
+            "therapist_uid", disabled=False
+        )
+        mock_revoke.assert_not_called()
+
+    @patch("apps.auth.views.services.set_user_disabled")
+    def test_active_change_failure_logs_audit_and_reraises(
+        self, mock_set_disabled
+    ):
+        mock_set_disabled.side_effect = ExternalServiceError("Firebase fora do ar")
+
+        response = self.client.patch(
+            f"/oauth/v1/users/{self.therapist.firebase_uid}",
+            {"active": False},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(
+            OauthAuditLog.objects.filter(
+                event="user_active_change_failed"
+            ).count(),
+            1,
+        )
+        self.therapist.refresh_from_db()
+        self.assertTrue(self.therapist.active)
+
+    @patch("apps.auth.views.services.revoke_refresh_tokens")
+    @patch("apps.auth.views.services.set_user_disabled")
+    def test_deactivates_user_logs_audit_event(
+        self, mock_set_disabled, mock_revoke
+    ):
         self.client.patch(
             f"/oauth/v1/users/{self.therapist.firebase_uid}",
             {"active": False},

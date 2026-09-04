@@ -3,9 +3,11 @@ from unittest.mock import MagicMock, patch
 import requests
 from django.db import IntegrityError
 from django.test import TestCase
+from firebase_admin.auth import CertificateFetchError
 
 from apps.auth import services
 from apps.auth.models import OauthUser
+from core.exceptions import ExternalServiceError
 
 
 class CreateUserTests(TestCase):
@@ -117,6 +119,20 @@ class VerifyIdTokenTests(TestCase):
         with self.assertRaises(services.FirebaseAuthError):
             services.verify_id_token("bad-token")
 
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_certificate_fetch_failure_is_external_service_error_not_auth_error(
+        self, mock_firebase_auth, mock_get_app
+    ):
+        mock_firebase_auth.verify_id_token.side_effect = CertificateFetchError(
+            "network down", cause=Exception("network down")
+        )
+
+        with self.assertRaises(ExternalServiceError) as ctx:
+            services.verify_id_token("id-token")
+
+        self.assertNotIsInstance(ctx.exception, services.FirebaseAuthError)
+
 
 class RevokeRefreshTokensTests(TestCase):
     @patch("apps.auth.services.get_firebase_app")
@@ -206,6 +222,26 @@ class DeleteUserTests(TestCase):
         mock_firebase_auth.delete_user.assert_called_once_with("uid_123")
 
 
+class SetUserDisabledTests(TestCase):
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_disables_user(self, mock_firebase_auth, mock_get_app):
+        services.set_user_disabled("uid_123", disabled=True)
+
+        mock_firebase_auth.update_user.assert_called_once_with(
+            "uid_123", disabled=True
+        )
+
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_reenables_user(self, mock_firebase_auth, mock_get_app):
+        services.set_user_disabled("uid_123", disabled=False)
+
+        mock_firebase_auth.update_user.assert_called_once_with(
+            "uid_123", disabled=False
+        )
+
+
 class SetUserRoleTests(TestCase):
     @patch("apps.auth.services.get_firebase_app")
     @patch("apps.auth.services.firebase_auth")
@@ -220,17 +256,23 @@ class SetUserRoleTests(TestCase):
 class RevokeRefreshTokensFailureTests(TestCase):
     @patch("apps.auth.services.get_firebase_app")
     @patch("apps.auth.services.firebase_auth")
-    def test_wraps_admin_sdk_error(self, mock_firebase_auth, mock_get_app):
+    def test_wraps_admin_sdk_error_as_external_service_error(
+        self, mock_firebase_auth, mock_get_app
+    ):
         mock_firebase_auth.revoke_refresh_tokens.side_effect = ValueError("boom")
 
-        with self.assertRaises(services.FirebaseAuthError):
+        with self.assertRaises(ExternalServiceError) as ctx:
             services.revoke_refresh_tokens("uid_123")
+
+        self.assertNotIsInstance(ctx.exception, services.FirebaseAuthError)
 
 
 class LoginWithPasswordNetworkFailureTests(TestCase):
     @patch("apps.auth.services.requests.post")
-    def test_wraps_connection_error(self, mock_post):
+    def test_wraps_connection_error_as_external_service_error(self, mock_post):
         mock_post.side_effect = requests.exceptions.ConnectionError("no route")
 
-        with self.assertRaises(services.FirebaseAuthError):
+        with self.assertRaises(ExternalServiceError) as ctx:
             services.login_with_password("ana@x.com", "senha123")
+
+        self.assertNotIsInstance(ctx.exception, services.FirebaseAuthError)

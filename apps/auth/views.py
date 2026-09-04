@@ -71,7 +71,15 @@ class LoginView(APIView):
             )
             raise exceptions.AuthenticationFailed(str(exc)) from exc
 
-        user = OauthUser.objects.get(firebase_uid=tokens["firebase_uid"])
+        try:
+            user = OauthUser.objects.get(firebase_uid=tokens["firebase_uid"])
+        except OauthUser.DoesNotExist:
+            OauthAuditLog.objects.create(
+                event="login_failed",
+                ip_address=_client_ip(request),
+                metadata={"email": email, "reason": "user_not_mirrored"},
+            )
+            raise exceptions.AuthenticationFailed("E-mail ou senha incorretos.")
 
         if not user.active:
             raise exceptions.AuthenticationFailed("Conta desativada.")
@@ -279,8 +287,21 @@ class UserDetailView(APIView):
         user = get_object_or_404(OauthUser, firebase_uid=user_id)
         serializer = UserActiveUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        active = serializer.validated_data["active"]
 
-        user.active = serializer.validated_data["active"]
+        try:
+            services.set_user_disabled(user.firebase_uid, disabled=not active)
+            if not active:
+                services.revoke_refresh_tokens(user.firebase_uid)
+        except ExternalServiceError:
+            OauthAuditLog.objects.create(
+                user=user,
+                event="user_active_change_failed",
+                metadata={"active": active},
+            )
+            raise
+
+        user.active = active
         user.save(update_fields=["active"])
 
         OauthAuditLog.objects.create(

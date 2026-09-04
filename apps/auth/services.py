@@ -3,6 +3,7 @@ import functools
 import requests
 from django.conf import settings
 from firebase_admin import auth as firebase_auth
+from firebase_admin.auth import CertificateFetchError
 
 from apps.auth.models import OauthUser
 from core.exceptions import ExternalServiceError
@@ -26,7 +27,9 @@ def _post_identity_toolkit(url, **kwargs):
     try:
         return requests.post(url, timeout=10, **kwargs)
     except requests.exceptions.RequestException as exc:
-        raise FirebaseAuthError("Falha de comunicacao com o Firebase.") from exc
+        raise ExternalServiceError(
+            "Falha de comunicacao com o Firebase."
+        ) from exc
 
 
 def _firebase_admin_call(func):
@@ -36,7 +39,7 @@ def _firebase_admin_call(func):
         try:
             return func(*args, **kwargs)
         except Exception as exc:
-            raise FirebaseAuthError(
+            raise ExternalServiceError(
                 "Falha de comunicacao com o Firebase."
             ) from exc
 
@@ -50,7 +53,9 @@ def create_user(email, password, role):
         firebase_user = firebase_auth.create_user(email=email, password=password)
         firebase_auth.set_custom_user_claims(firebase_user.uid, {"role": role})
     except Exception as exc:
-        raise FirebaseAuthError("Falha de comunicacao com o Firebase.") from exc
+        raise ExternalServiceError(
+            "Falha de comunicacao com o Firebase."
+        ) from exc
 
     try:
         return OauthUser.objects.create(
@@ -105,6 +110,10 @@ def verify_id_token(id_token):
 
     try:
         return firebase_auth.verify_id_token(id_token, check_revoked=True)
+    except CertificateFetchError as exc:
+        raise ExternalServiceError(
+            "Falha de comunicacao com o Firebase."
+        ) from exc
     except Exception as exc:
         raise FirebaseAuthError("Token invalido ou expirado.") from exc
 
@@ -153,6 +162,11 @@ def confirm_password_reset(oob_code, new_password):
 @_firebase_admin_call
 def delete_user(firebase_uid):
     firebase_auth.delete_user(firebase_uid)
+
+
+@_firebase_admin_call
+def set_user_disabled(firebase_uid, disabled):
+    firebase_auth.update_user(firebase_uid, disabled=disabled)
 
 
 @_firebase_admin_call
