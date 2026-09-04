@@ -5,26 +5,13 @@ import 'v-calendar/style.css';
 import { useAppointments } from '@/composables/useAppointments';
 import { useAvailability } from '@/composables/useAvailability';
 import { formatTime, toDateOnly } from '@/lib/datetime';
-import type { Appointment, AppointmentStatus } from '@/types/appointment';
+import type { Appointment } from '@/types/appointment';
 import { WEEKDAYS } from '@/types/availability';
+import { APPOINTMENT_STATUS_LABEL as STATUS_LABEL, APPOINTMENT_STATUS_VARIANT as STATUS_VARIANT } from '@/constants/appointmentStatus';
 import Button from '@/components/ui/Button.vue';
 import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import AvailabilityCalendar from '@/components/calendar/AvailabilityCalendar.vue';
-
-const STATUS_LABEL: Record<AppointmentStatus, string> = {
-  pending: 'Pendente',
-  confirmed: 'Confirmado',
-  completed: 'Concluído',
-  cancelled: 'Cancelado',
-};
-
-const STATUS_VARIANT: Record<AppointmentStatus, 'warning' | 'primary' | 'success' | 'neutral'> = {
-  pending: 'warning',
-  confirmed: 'primary',
-  completed: 'success',
-  cancelled: 'neutral',
-};
 
 const { appointments, showLoading, error, actionError, pendingActionId, load, updateStatus } = useAppointments();
 const {
