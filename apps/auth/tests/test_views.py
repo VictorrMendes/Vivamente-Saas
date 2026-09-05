@@ -20,6 +20,9 @@ class RegisterViewTests(TestCase):
         self.therapist = OauthUser.objects.create(
             firebase_uid="therapist_uid", email="ana@x.com", role="THERAPIST"
         )
+        sync_patcher = patch("apps.auth.views.back_sync.enqueue_identity_event")
+        self.mock_enqueue_identity_event = sync_patcher.start()
+        self.addCleanup(sync_patcher.stop)
 
     def _authenticate_as(self, user):
         patcher = patch(
@@ -460,6 +463,10 @@ class UserListViewTests(TestCase):
         self.addCleanup(patcher.stop)
         self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
 
+        sync_patcher = patch("apps.auth.views.back_sync.enqueue_identity_event")
+        sync_patcher.start()
+        self.addCleanup(sync_patcher.stop)
+
     def test_lists_users_paginated(self):
         response = self.client.get("/oauth/v1/users")
 
@@ -499,6 +506,10 @@ class UserDetailViewTests(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+        sync_patcher = patch("apps.auth.views.back_sync.enqueue_identity_event")
+        sync_patcher.start()
+        self.addCleanup(sync_patcher.stop)
 
     def test_retrieves_user_detail(self):
         response = self.client.get(f"/oauth/v1/users/{self.therapist.firebase_uid}")
@@ -656,6 +667,10 @@ class UserRoleUpdateViewTests(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
+
+        sync_patcher = patch("apps.auth.views.back_sync.enqueue_identity_event")
+        sync_patcher.start()
+        self.addCleanup(sync_patcher.stop)
 
     @patch("apps.auth.views.services.set_user_role")
     def test_updates_role_and_logs_audit(self, mock_set_role):

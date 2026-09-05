@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import exceptions, generics, serializers, status
@@ -7,8 +8,8 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
 from apps.audit.models import OauthAuditLog
-from apps.auth import emails, services
-from apps.auth.models import OauthUser
+from apps.auth import back_sync, emails, services
+from apps.auth.models import IdentitySyncOutbox, OauthUser
 from apps.auth.permissions import IsAdmin
 from apps.auth.serializers import (
     EmailVerifySerializer,
@@ -46,6 +47,8 @@ def _register_user(request_data):
     serializer = RegisterSerializer(data=request_data)
     serializer.is_valid(raise_exception=True)
 
+    # services.create_user ja enfileira o evento de sync com o Back, na
+    # mesma transacao que cria o OauthUser (ver apps/auth/services.py).
     user = services.create_user(**serializer.validated_data)
 
     return Response(
@@ -349,8 +352,10 @@ class UserDetailView(APIView):
             )
             raise
 
-        user.active = active
-        user.save(update_fields=["active"])
+        with transaction.atomic():
+            user.active = active
+            user.save(update_fields=["active"])
+            back_sync.enqueue_identity_event(user, IdentitySyncOutbox.PUT)
 
         OauthAuditLog.objects.create(
             user=user,
@@ -374,7 +379,11 @@ class UserDetailView(APIView):
             event="user_deleted",
             metadata={"email": user.email, "firebase_uid": user.firebase_uid},
         )
-        user.delete()
+        with transaction.atomic():
+            back_sync.enqueue_identity_event(
+                user, IdentitySyncOutbox.DELETE, persist_version=False
+            )
+            user.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -416,8 +425,10 @@ class UserRoleUpdateView(APIView):
             OauthAuditLog.objects.create(user=user, event="role_change_failed")
             raise
 
-        user.role = role
-        user.save(update_fields=["role"])
+        with transaction.atomic():
+            user.role = role
+            user.save(update_fields=["role"])
+            back_sync.enqueue_identity_event(user, IdentitySyncOutbox.PUT)
 
         OauthAuditLog.objects.create(
             user=user, event="role_changed", metadata={"role": role}

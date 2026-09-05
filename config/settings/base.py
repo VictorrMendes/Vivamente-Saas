@@ -63,6 +63,21 @@ RESEND_FROM_EMAIL = os.environ.get(
     "RESEND_FROM_EMAIL", "nao-responda@vivamenteterapias.com.br"
 )
 
+# API interna do Back (apps.accounts.internal_views) usada para sincronizar
+# identidade - ver apps/auth/back_sync.py. Assinamos o JWT de servico com
+# esta chave PRIVADA (RS256); o Back so tem a chave publica correspondente
+# (INTERNAL_SERVICE_JWT_PUBLIC_KEY), entao nunca pode forjar um token nosso.
+BACK_INTERNAL_URL = os.environ.get("BACK_INTERNAL_URL", "http://localhost:8000")
+BACK_INTERNAL_SERVICE_PRIVATE_KEY = os.environ.get(
+    "BACK_INTERNAL_SERVICE_PRIVATE_KEY", ""
+).replace("\\n", "\n")
+BACK_INTERNAL_JWT_TTL_SECONDS = int(
+    os.environ.get("BACK_INTERNAL_JWT_TTL_SECONDS", "60")
+)
+BACK_SYNC_TIMEOUT_SECONDS = float(
+    os.environ.get("BACK_SYNC_TIMEOUT_SECONDS", "3")
+)
+
 CORS_ALLOWED_ORIGINS = ALLOWED_ORIGINS
 
 REST_FRAMEWORK = {

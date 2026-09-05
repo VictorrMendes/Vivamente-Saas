@@ -2,10 +2,12 @@ import functools
 
 import requests
 from django.conf import settings
+from django.db import transaction
 from firebase_admin import auth as firebase_auth
 from firebase_admin.auth import CertificateFetchError
 
-from apps.auth.models import OauthUser
+from apps.auth import back_sync
+from apps.auth.models import IdentitySyncOutbox, OauthUser
 from core.exceptions import ExternalServiceError
 from core.firebase import get_firebase_app
 
@@ -58,9 +60,12 @@ def create_user(email, password, role):
         ) from exc
 
     try:
-        return OauthUser.objects.create(
-            firebase_uid=firebase_user.uid, email=email, role=role
-        )
+        with transaction.atomic():
+            user = OauthUser.objects.create(
+                firebase_uid=firebase_user.uid, email=email, role=role
+            )
+            back_sync.enqueue_identity_event(user, IdentitySyncOutbox.PUT)
+        return user
     except Exception:
         firebase_auth.delete_user(firebase_user.uid)
         raise
