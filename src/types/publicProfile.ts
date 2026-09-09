@@ -1,15 +1,12 @@
-export type Modality = 'presencial' | 'online' | 'hibrido';
+import type { Professional } from './professional';
 
-export interface PublicProfile {
-  id: string;
-  slug: string;
-  photoUrl: string;
-  name: string;
-  bio: string;
-  specialties: string[];
-  services: string[];
-  modality: Modality;
-  location: string;
-}
+export type { Modality } from './professional';
 
-export type PublicProfilePatch = Omit<PublicProfile, 'id' | 'slug'>;
+/**
+ * A página pública é só um subconjunto de campos do Professional (docs,
+ * seção 7 do front-plataforma.md) — não é mais uma entidade separada.
+ * Ver `useMyPublicProfile` pra como isso é buscado (GET /me -> GET /professionals/{id}).
+ */
+export type PublicProfilePatch = Required<
+  Pick<Professional, 'photoUrl' | 'name' | 'bio' | 'specialties' | 'services' | 'modality' | 'location'>
+>;

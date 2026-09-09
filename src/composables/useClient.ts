@@ -42,7 +42,7 @@ export function useClient() {
     appointmentsLoading.value = true;
     appointmentsError.value = null;
     try {
-      const res = await backApi<PaginatedEnvelope<Appointment>>(`/api/v1/appointments?clientId=${id}&per_page=50`);
+      const res = await backApi<PaginatedEnvelope<Appointment>>(`/api/v1/appointments?client=${id}&per_page=50`);
       appointments.value = res.data;
     } catch {
       appointmentsError.value = 'Não foi possível carregar os agendamentos deste cliente.';

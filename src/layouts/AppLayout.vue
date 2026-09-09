@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { RouterView, RouterLink, useRouter } from 'vue-router';
 import {
   LayoutDashboard,
@@ -9,19 +9,26 @@ import {
   Briefcase,
   UserCog,
   FileEdit,
+  ClipboardList,
+  Package,
+  Wallet,
   Bell,
   Settings,
-  LogOut,
+  Menu,
   type LucideIcon,
 } from '@lucide/vue';
+import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, VisuallyHidden } from 'reka-ui';
 import { useAuthStore } from '@/stores/auth';
 import type { UserRole } from '@/types/auth';
+import SidebarNav from '@/components/layout/SidebarNav.vue';
+import SidebarProfile from '@/components/layout/SidebarProfile.vue';
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
   roles?: UserRole[];
+  comingSoon?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -31,70 +38,94 @@ const navItems: NavItem[] = [
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/servicos', label: 'Serviços', icon: Briefcase },
   { to: '/profissionais', label: 'Profissionais', icon: UserCog, roles: ['ADMIN'] },
+  { to: '/prontuarios', label: 'Prontuários', icon: ClipboardList, comingSoon: true },
+  { to: '/pacotes', label: 'Pacotes', icon: Package, comingSoon: true },
+  { to: '/financeiro', label: 'Financeiro', icon: Wallet, comingSoon: true },
   { to: '/minha-pagina', label: 'Minha Página', icon: FileEdit, roles: ['THERAPIST'] },
+  { to: '/notificacoes', label: 'Notificações', icon: Bell },
   { to: '/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
 const auth = useAuthStore();
 const router = useRouter();
+const mobileNavOpen = ref(false);
 
 const visibleNavItems = computed(() =>
-  navItems.filter((item) => !item.roles || (auth.role && item.roles.includes(auth.role))),
+  navItems
+    .filter((item) => !item.roles || (auth.role && item.roles.includes(auth.role)))
+    .map((item, index) => ({ ...item, number: String(index + 1).padStart(2, '0') })),
 );
 
 async function handleLogout() {
   await auth.logout();
+  mobileNavOpen.value = false;
   router.push({ name: 'login' });
 }
 </script>
 
 <template>
   <div class="flex min-h-screen bg-background">
-    <aside class="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
-      <div class="flex h-16 items-center border-b border-border px-6">
-        <span class="font-display text-h6 text-primary-700">VivaMente</span>
+    <aside class="hidden w-64 shrink-0 flex-col rounded-r-3xl bg-primary-900 lg:flex">
+      <div class="flex h-16 items-center gap-2 px-6">
+        <span class="font-display text-h6 tracking-tight text-text-inverse">VivaMente</span>
       </div>
-
-      <nav class="flex-1 space-y-1 px-3 py-4" aria-label="Navegação principal">
-        <RouterLink
-          v-for="item in visibleNavItems"
-          :key="item.to"
-          :to="item.to"
-          class="flex items-center gap-3 rounded-md px-3 py-2 text-body-sm text-text-muted transition-colors hover:bg-surface-sunken hover:text-text"
-          active-class="bg-primary-50 font-medium text-primary-700 hover:bg-primary-50 hover:text-primary-700"
-        >
-          <component :is="item.icon" :size="18" aria-hidden="true" />
-          {{ item.label }}
-        </RouterLink>
-      </nav>
-
-      <div class="border-t border-border px-3 py-4">
-        <button
-          type="button"
-          class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-body-sm text-text-muted transition-colors hover:bg-surface-sunken hover:text-text"
-          @click="handleLogout"
-        >
-          <LogOut :size="18" aria-hidden="true" />
-          Sair
-        </button>
-      </div>
+      <SidebarNav :items="visibleNavItems" />
+      <SidebarProfile @logout="handleLogout" />
     </aside>
 
-    <div class="flex flex-1 flex-col">
-      <header class="flex h-16 items-center justify-between border-b border-border bg-surface px-6">
-        <p class="text-body-sm text-text-muted">
-          Olá, <span class="font-medium text-text">{{ auth.user?.email }}</span>
-        </p>
-        <RouterLink
-          to="/notificacoes"
-          class="rounded-md p-2 text-text-muted hover:bg-surface-sunken hover:text-text"
-          aria-label="Notificações"
+    <DialogRoot v-model:open="mobileNavOpen">
+      <DialogPortal>
+        <DialogOverlay class="fixed inset-0 z-40 bg-black/50 lg:hidden" />
+        <DialogContent
+          class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-primary-900 focus:outline-none lg:hidden"
         >
-          <Bell :size="20" aria-hidden="true" />
-        </RouterLink>
+          <VisuallyHidden as-child>
+            <DialogTitle>Menu de navegação</DialogTitle>
+          </VisuallyHidden>
+          <div class="flex h-16 items-center justify-between px-6">
+            <span class="font-display text-h6 tracking-tight text-text-inverse">VivaMente</span>
+            <button
+              type="button"
+              class="rounded-md p-1.5 text-primary-200 hover:bg-primary-800 hover:text-text-inverse"
+              aria-label="Fechar menu"
+              @click="mobileNavOpen = false"
+            >
+              <Menu :size="20" aria-hidden="true" />
+            </button>
+          </div>
+          <SidebarNav :items="visibleNavItems" @navigate="mobileNavOpen = false" />
+          <SidebarProfile @logout="handleLogout" />
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <header class="flex h-16 items-center gap-3 border-b border-border bg-surface px-4 lg:px-6">
+        <button
+          type="button"
+          class="rounded-md p-1.5 text-text-muted hover:bg-surface-sunken hover:text-text lg:hidden"
+          aria-label="Abrir menu"
+          @click="mobileNavOpen = true"
+        >
+          <Menu :size="22" aria-hidden="true" />
+        </button>
+        <span class="font-display text-h6 text-primary-700 lg:hidden">VivaMente</span>
+
+        <div class="ml-auto flex items-center gap-3">
+          <p class="hidden text-body-sm text-text-muted sm:block">
+            Olá, <span class="font-medium text-text">{{ auth.user?.email }}</span>
+          </p>
+          <RouterLink
+            to="/notificacoes"
+            class="rounded-md p-2 text-text-muted hover:bg-surface-sunken hover:text-text"
+            aria-label="Notificações"
+          >
+            <Bell :size="20" aria-hidden="true" />
+          </RouterLink>
+        </div>
       </header>
 
-      <main class="flex-1 p-6">
+      <main class="flex-1 p-4 lg:p-8">
         <RouterView />
       </main>
     </div>

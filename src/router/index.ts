@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { ClipboardList, Package, Wallet } from '@lucide/vue';
 import { useAuthStore } from '@/stores/auth';
+import { safeLoginRedirect } from './redirect';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -43,6 +45,36 @@ const router = createRouter({
         },
         { path: 'notificacoes', name: 'notificacoes', component: () => import('@/pages/Notificacoes/NotificacoesPage.vue') },
         { path: 'configuracoes', name: 'configuracoes', component: () => import('@/pages/Configuracoes/ConfiguracoesPage.vue') },
+        {
+          path: 'prontuarios',
+          name: 'prontuarios',
+          component: () => import('@/pages/ComingSoon/ComingSoonPage.vue'),
+          props: {
+            title: 'Prontuários',
+            description: 'Registro clínico por cliente, com controle de acesso reforçado. Ainda não exposto pelo Back.',
+            icon: ClipboardList,
+          },
+        },
+        {
+          path: 'pacotes',
+          name: 'pacotes',
+          component: () => import('@/pages/ComingSoon/ComingSoonPage.vue'),
+          props: {
+            title: 'Pacotes',
+            description: 'Pacotes e planos vinculados a serviços. Ainda não exposto pelo Back.',
+            icon: Package,
+          },
+        },
+        {
+          path: 'financeiro',
+          name: 'financeiro',
+          component: () => import('@/pages/ComingSoon/ComingSoonPage.vue'),
+          props: {
+            title: 'Financeiro',
+            description: 'Lançamentos, status de pagamento e relatórios. Ainda não exposto pelo Back.',
+            icon: Wallet,
+          },
+        },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
@@ -57,10 +89,10 @@ router.beforeEach((to) => {
   }
 
   if (to.name === 'login' && auth.isAuthenticated) {
-    return { name: 'dashboard' };
+    return safeLoginRedirect(to.query.redirect);
   }
 
-  if (to.meta.roles && auth.role && !to.meta.roles.includes(auth.role)) {
+  if (to.meta.roles && (!auth.role || !to.meta.roles.includes(auth.role))) {
     return { name: 'dashboard' };
   }
 });

@@ -30,13 +30,13 @@ watch(
   profile,
   (value) => {
     if (!value) return;
-    form.photoUrl = value.photoUrl;
+    form.photoUrl = value.photoUrl ?? '';
     form.name = value.name;
-    form.bio = value.bio;
-    form.specialties = value.specialties.join(', ');
-    form.services = [...value.services];
-    form.modality = value.modality;
-    form.location = value.location;
+    form.bio = value.bio ?? '';
+    form.specialties = (value.specialties ?? []).join(', ');
+    form.services = [...(value.services ?? [])];
+    form.modality = value.modality ?? 'presencial';
+    form.location = value.location ?? '';
   },
   { immediate: true },
 );

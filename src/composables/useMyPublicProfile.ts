@@ -1,10 +1,12 @@
 import { ref } from 'vue';
 import { backApi } from '@/services/api/client';
 import type { ApiEnvelope } from '@/types/api';
-import type { PublicProfile, PublicProfilePatch } from '@/types/publicProfile';
+import type { AuthUser } from '@/types/auth';
+import type { Professional } from '@/types/professional';
+import type { PublicProfilePatch } from '@/types/publicProfile';
 
 export function useMyPublicProfile() {
-  const profile = ref<PublicProfile | null>(null);
+  const profile = ref<Professional | null>(null);
   const loading = ref(false);
   const showLoading = ref(false);
   const error = ref<string | null>(null);
@@ -20,7 +22,11 @@ export function useMyPublicProfile() {
     }, 300);
 
     try {
-      const res = await backApi<ApiEnvelope<PublicProfile>>('/api/v1/me');
+      // /api/v1/me retorna o usuário autenticado (User), não o Professional —
+      // o perfil completo (com os campos da página pública) vem de
+      // /api/v1/professionals/{id}, usando o id do próprio /me.
+      const me = await backApi<ApiEnvelope<AuthUser>>('/api/v1/me');
+      const res = await backApi<ApiEnvelope<Professional>>(`/api/v1/professionals/${me.data.id}`);
       profile.value = res.data;
     } catch {
       error.value = 'Não foi possível carregar sua página. Tente novamente em instantes.';
@@ -37,7 +43,7 @@ export function useMyPublicProfile() {
     saved.value = false;
     saving.value = true;
     try {
-      const res = await backApi<ApiEnvelope<PublicProfile>>(`/api/v1/professionals/${profile.value.id}/public-profile`, {
+      const res = await backApi<ApiEnvelope<Professional>>(`/api/v1/professionals/${profile.value.id}/public-profile`, {
         method: 'PATCH',
         body: JSON.stringify(patch),
       });
