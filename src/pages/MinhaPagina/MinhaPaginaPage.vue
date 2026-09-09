@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { FileEdit } from '@lucide/vue';
 import { useMyPublicProfile } from '@/composables/useMyPublicProfile';
 import { useServices } from '@/composables/useServices';
@@ -42,6 +42,38 @@ watch(
   },
   { immediate: true },
 );
+
+const photoInput = ref<HTMLInputElement | null>(null);
+const photoError = ref<string | null>(null);
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+
+function handlePhotoChange(event: Event) {
+  photoError.value = null;
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    photoError.value = 'Escolha um arquivo de imagem.';
+  } else if (file.size > MAX_PHOTO_BYTES) {
+    photoError.value = 'A imagem precisa ter até 2MB.';
+  } else {
+    const reader = new FileReader();
+    reader.onload = () => {
+      form.photoUrl = String(reader.result);
+    };
+    reader.onerror = () => {
+      photoError.value = 'Não foi possível ler o arquivo. Tente novamente.';
+    };
+    reader.readAsDataURL(file);
+  }
+  input.value = '';
+}
+
+function removePhoto() {
+  form.photoUrl = '';
+  photoError.value = null;
+}
 
 function toggleService(name: string) {
   const index = form.services.indexOf(name);
@@ -100,14 +132,32 @@ onMounted(() => {
     <div v-else class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
       <form class="space-y-4 rounded-lg border border-border bg-surface p-4" novalidate @submit.prevent="handleSave">
         <div>
-          <label for="photo-url" class="mb-1 block text-label uppercase tracking-label text-text-muted">URL da foto</label>
-          <input
-            id="photo-url"
-            v-model="form.photoUrl"
-            type="url"
-            placeholder="https://…"
-            class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
-          />
+          <label class="mb-1 block text-label uppercase tracking-label text-text-muted">Foto</label>
+          <div class="flex items-center gap-3">
+            <div
+              v-if="form.photoUrl"
+              class="h-12 w-12 shrink-0 overflow-hidden rounded-pill bg-surface-sunken"
+              aria-hidden="true"
+            >
+              <img :src="form.photoUrl" alt="" class="h-full w-full object-cover" />
+            </div>
+            <input
+              id="photo-file"
+              ref="photoInput"
+              type="file"
+              accept="image/*"
+              class="sr-only"
+              @change="handlePhotoChange"
+            />
+            <Button type="button" variant="secondary" size="sm" @click="photoInput?.click()">
+              {{ form.photoUrl ? 'Trocar foto' : 'Escolher foto' }}
+            </Button>
+            <Button v-if="form.photoUrl" type="button" variant="ghost" size="sm" @click="removePhoto">
+              Remover
+            </Button>
+          </div>
+          <p v-if="photoError" role="alert" class="mt-1 text-caption text-error">{{ photoError }}</p>
+          <p v-else class="mt-1 text-caption text-text-muted">JPG ou PNG, até 2MB.</p>
         </div>
         <div>
           <label for="my-name" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nome</label>

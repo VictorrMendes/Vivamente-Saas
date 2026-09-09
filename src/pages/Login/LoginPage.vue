@@ -59,9 +59,30 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-background px-4">
-    <div class="w-full max-w-sm rounded-lg border border-border bg-surface p-8 shadow-sm">
-      <h1 class="mb-1 font-display text-h4 text-text">Plataforma</h1>
+  <div class="login-light flex min-h-screen bg-surface">
+    <div class="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-primary-900 px-12 py-12 lg:flex">
+      <div class="absolute -left-20 -top-20 h-72 w-72 rounded-pill bg-primary-700 blur-3xl" aria-hidden="true" />
+      <div class="absolute bottom-16 right-0 h-56 w-56 translate-x-1/3 rounded-pill bg-secondary-600 blur-3xl" aria-hidden="true" />
+
+      <div class="relative z-10">
+        <p class="text-label uppercase tracking-label text-primary-300">Gestão de terapia</p>
+        <p class="mt-1 font-display text-h6 tracking-tight text-text-inverse">VivaMente</p>
+      </div>
+
+      <blockquote class="relative z-10 font-display text-h3 italic leading-snug text-text-inverse">
+        “Presença, cuidado e organização para a sua prática clínica.”
+      </blockquote>
+    </div>
+
+    <div class="flex flex-1 flex-col items-center justify-center bg-background px-4 py-12 sm:px-8">
+      <div class="mb-8 text-center lg:hidden">
+        <p class="text-label uppercase tracking-label text-text-muted">Gestão de terapia</p>
+        <p class="mt-1 font-display text-h6 text-primary-700">VivaMente</p>
+      </div>
+
+      <div class="w-full max-w-sm rounded-lg border border-border bg-surface p-8 shadow-sm">
+      <p class="text-label uppercase tracking-label text-primary-600">Bem-vindo de volta</p>
+      <h1 class="mt-1 mb-1 font-display text-h4 text-text">Entrar na Plataforma</h1>
       <p class="mb-6 text-body-sm text-text-muted">Entre com sua conta VivaMente.</p>
 
       <form class="space-y-4" :aria-busy="loading" @submit.prevent="handleSubmit">
@@ -103,6 +124,35 @@ async function handleSubmit() {
         <p class="mb-1 font-medium text-text">Contas de teste (dev, sem backend):</p>
         <p v-for="line in devHint" :key="line">{{ line }}</p>
       </div>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+/*
+ * A página de login tem identidade fixa (painel escuro de marca + painel
+ * claro de formulário) que não deve trocar com o tema do sistema — em dark
+ * mode, --color-primary-700/--color-secondary-600 viram tons claros e
+ * --color-background/--color-surface escurecem, colapsando o contraste entre
+ * os dois painéis e deixando os inputs ilegíveis. Fixamos aqui os mesmos
+ * tokens no valor de tema claro (copiados de tokens.css) pra esta página
+ * sempre renderizar como desenhada, sem inventar cor fora dos tokens.
+ */
+.login-light {
+  --color-primary-300: #74a599;
+  --color-primary-600: #1f5548;
+  --color-primary-700: #17423a;
+  --color-secondary-600: #a16f2a;
+  --color-background: #f1f3f1;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #e9ece9;
+  --color-border: #dce1dd;
+  --color-text: #16211d;
+  --color-text-muted: #5b6b63;
+  --color-text-inverse: #f3f6f4;
+  --color-error: #b23a3a;
+  --color-error-bg: #fbeaea;
+  --focus-ring: 0 0 0 3px rgba(31, 85, 72, 0.35);
+}
+</style>
