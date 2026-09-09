@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, watch } from 'vue';
+import { FileEdit } from '@lucide/vue';
 import { useMyPublicProfile } from '@/composables/useMyPublicProfile';
 import { useServices } from '@/composables/useServices';
 import type { Modality } from '@/types/publicProfile';
 import Button from '@/components/ui/Button.vue';
 import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const MODALITY_LABEL: Record<Modality, string> = {
   presencial: 'Presencial',
@@ -80,10 +82,11 @@ onMounted(() => {
 
 <template>
   <div>
-    <h1 class="font-display text-h3 text-text">Minha Página</h1>
-    <p class="mt-1 text-body-sm text-text-muted">
-      Como você aparece pra quem visita <span class="font-medium">vivamenteterapias.com.br</span>.
-    </p>
+    <ModuleBanner
+      :icon="FileEdit"
+      title="Minha Página"
+      subtitle="Como você aparece pra quem visita vivamenteterapias.com.br."
+    />
 
     <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
       {{ error }}

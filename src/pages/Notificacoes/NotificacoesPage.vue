@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { Bell } from '@lucide/vue';
 import { useNotifications } from '@/composables/useNotifications';
 import { formatDateTime } from '@/lib/datetime';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import Pagination from '@/components/ui/Pagination.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const {
   notifications,
@@ -32,8 +34,9 @@ onMounted(() => load(page.value));
 
 <template>
   <div>
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <h1 class="font-display text-h3 text-text">Notificações</h1>
+    <ModuleBanner :icon="Bell" title="Notificações" subtitle="Avisos de leads, agendamentos e atividades da plataforma." />
+
+    <div class="mt-6 flex justify-end">
       <Button variant="ghost" :disabled="!hasUnread" :loading="markingAllRead" @click="markAllAsRead">
         Marcar todas como lidas
       </Button>

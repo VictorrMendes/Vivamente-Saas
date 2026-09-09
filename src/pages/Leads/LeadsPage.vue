@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
+import { UserPlus } from '@lucide/vue';
 import { useLeads } from '@/composables/useLeads';
 import { LEAD_STATUS_LABEL, LEAD_STATUS_VARIANT, LEAD_STATUS_ORDER } from '@/constants/leadStatus';
 import type { LeadStatus } from '@/types/lead';
 import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import Pagination from '@/components/ui/Pagination.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const { leads, pagination, showLoading, error, load } = useLeads();
 
@@ -42,7 +44,11 @@ onMounted(fetchLeads);
 
 <template>
   <div>
-    <h1 class="font-display text-h3 text-text">Leads</h1>
+    <ModuleBanner
+      :icon="UserPlus"
+      title="Leads"
+      subtitle="Acompanhe e avance o funil de leads até a conversão em cliente."
+    />
 
     <div class="mt-4 flex flex-wrap items-center gap-4">
       <div class="flex flex-wrap gap-2" role="group" aria-label="Filtrar por status">

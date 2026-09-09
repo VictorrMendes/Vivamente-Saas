@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { UserCog } from '@lucide/vue';
 import { useProfessionals } from '@/composables/useProfessionals';
 import Button from '@/components/ui/Button.vue';
 import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import Pagination from '@/components/ui/Pagination.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const router = useRouter();
 const { professionals, pagination, showLoading, error, saving, saveError, load, create } = useProfessionals();
@@ -52,8 +54,9 @@ onMounted(fetchProfessionals);
 
 <template>
   <div>
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <h1 class="font-display text-h3 text-text">Profissionais</h1>
+    <ModuleBanner :icon="UserCog" title="Profissionais" subtitle="Gestão de terapeutas cadastrados na plataforma." />
+
+    <div class="mt-6 flex justify-end">
       <Button variant="primary" @click="showNewForm = !showNewForm">
         {{ showNewForm ? 'Cancelar' : '+ Novo profissional' }}
       </Button>

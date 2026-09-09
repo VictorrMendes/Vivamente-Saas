@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { Briefcase } from '@lucide/vue';
 import { useServices } from '@/composables/useServices';
 import { formatCurrency } from '@/lib/currency';
 import type { NewService } from '@/types/service';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import ServiceForm from '@/components/forms/ServiceForm.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const { services, showLoading, error, saving, saveError, removingId, load, create, update, remove } = useServices();
 
@@ -34,8 +36,9 @@ onMounted(load);
 
 <template>
   <div>
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <h1 class="font-display text-h3 text-text">Serviços</h1>
+    <ModuleBanner :icon="Briefcase" title="Serviços" subtitle="Catálogo de serviços oferecidos pela clínica." />
+
+    <div class="mt-6 flex justify-end">
       <Button variant="primary" @click="showNewForm = !showNewForm">
         {{ showNewForm ? 'Cancelar' : '+ Novo serviço' }}
       </Button>

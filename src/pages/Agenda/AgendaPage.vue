@@ -8,10 +8,12 @@ import { formatTime, toDateOnly } from '@/lib/datetime';
 import type { Appointment } from '@/types/appointment';
 import { WEEKDAYS } from '@/types/availability';
 import { APPOINTMENT_STATUS_LABEL as STATUS_LABEL, APPOINTMENT_STATUS_VARIANT as STATUS_VARIANT } from '@/constants/appointmentStatus';
+import { CalendarDays } from '@lucide/vue';
 import Button from '@/components/ui/Button.vue';
 import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import AvailabilityCalendar from '@/components/calendar/AvailabilityCalendar.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const { appointments, showLoading, error, actionError, pendingActionId, load, updateStatus } = useAppointments();
 const {
@@ -84,7 +86,11 @@ function handleCancel(id: string) {
 
 <template>
   <div>
-    <h1 class="font-display text-h3 text-text">Agenda</h1>
+    <ModuleBanner
+      :icon="CalendarDays"
+      title="Agenda"
+      subtitle="Calendário de atendimentos e disponibilidade semanal."
+    />
 
     <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
       {{ error }}

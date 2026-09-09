@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { CalendarDays, UserPlus, Users, TrendingUp } from '@lucide/vue';
+import { CalendarDays, LayoutDashboard, UserPlus, Users, TrendingUp } from '@lucide/vue';
 import { useDashboard } from '@/composables/useDashboard';
 import { formatDateTime } from '@/lib/datetime';
 import MetricCard from '@/components/dashboard/MetricCard.vue';
 import RecentActivity from '@/components/dashboard/RecentActivity.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const { metrics, showLoading, error, load } = useDashboard();
 onMounted(load);
@@ -13,7 +14,11 @@ onMounted(load);
 
 <template>
   <div>
-    <h1 class="font-display text-h3 text-text">Dashboard</h1>
+    <ModuleBanner
+      :icon="LayoutDashboard"
+      title="Dashboard"
+      subtitle="Visão geral do dia: leads novos, agendamentos e atividades recentes."
+    />
 
     <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
       {{ error }}

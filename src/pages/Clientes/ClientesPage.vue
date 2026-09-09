@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { Users } from '@lucide/vue';
 import { useClients } from '@/composables/useClients';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import Pagination from '@/components/ui/Pagination.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const router = useRouter();
 const { clients, pagination, showLoading, error, saving, saveError, load, create } = useClients();
@@ -42,8 +44,9 @@ onMounted(fetchClients);
 
 <template>
   <div>
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <h1 class="font-display text-h3 text-text">Clientes</h1>
+    <ModuleBanner :icon="Users" title="Clientes" subtitle="Busque, cadastre e acompanhe o histórico de cada cliente." />
+
+    <div class="mt-6 flex justify-end">
       <Button variant="primary" @click="showNewForm = !showNewForm">
         {{ showNewForm ? 'Cancelar' : '+ Novo cliente' }}
       </Button>

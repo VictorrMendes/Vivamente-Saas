@@ -1,6 +1,11 @@
+<script setup lang="ts">
+import { Settings } from '@lucide/vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
+</script>
+
 <template>
   <div>
-    <h1 class="font-display text-h3 text-text">Configurações</h1>
-    <p class="mt-2 text-body text-text-muted">Edição de perfil e preferências chega no próximo step.</p>
+    <ModuleBanner :icon="Settings" title="Configurações" subtitle="Preferências da sua conta." />
+    <p class="mt-6 text-body text-text-muted">Edição de perfil e preferências chega no próximo step.</p>
   </div>
 </template>
