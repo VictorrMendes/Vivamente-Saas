@@ -6,13 +6,12 @@ import { useAppointments } from '@/composables/useAppointments';
 import { useAvailability } from '@/composables/useAvailability';
 import { formatTime, toDateOnly } from '@/lib/datetime';
 import type { Appointment } from '@/types/appointment';
-import { WEEKDAYS } from '@/types/availability';
 import { APPOINTMENT_STATUS_LABEL as STATUS_LABEL, APPOINTMENT_STATUS_VARIANT as STATUS_VARIANT } from '@/constants/appointmentStatus';
 import { CalendarDays } from '@lucide/vue';
 import Button from '@/components/ui/Button.vue';
 import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
-import AvailabilityCalendar from '@/components/calendar/AvailabilityCalendar.vue';
+import AvailabilityList from '@/components/calendar/AvailabilityList.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const { appointments, showLoading, error, actionError, pendingActionId, load, updateStatus } = useAppointments();
@@ -26,6 +25,7 @@ const {
   load: loadAvailability,
   create: createSlot,
   remove: removeSlot,
+  toggleBlock,
 } = useAvailability();
 
 const today = new Date();
@@ -36,7 +36,7 @@ onMounted(() => {
   loadAvailability();
 });
 
-const newSlot = reactive({ weekday: 1, startTime: '09:00', endTime: '12:00' });
+const newSlot = reactive({ date: toDateOnly(today), startTime: '09:00', endTime: '12:00' });
 const newSlotError = ref<string | null>(null);
 
 async function handleAddSlot() {
@@ -45,7 +45,10 @@ async function handleAddSlot() {
     newSlotError.value = 'O horário final precisa ser depois do inicial.';
     return;
   }
-  await createSlot({ ...newSlot });
+  await createSlot({
+    startsAt: new Date(`${newSlot.date}T${newSlot.startTime}:00`).toISOString(),
+    endsAt: new Date(`${newSlot.date}T${newSlot.endTime}:00`).toISOString(),
+  });
 }
 
 const appointmentsByDate = computed(() => {
@@ -89,7 +92,7 @@ function handleCancel(id: string) {
     <ModuleBanner
       :icon="CalendarDays"
       title="Agenda"
-      subtitle="Calendário de atendimentos e disponibilidade semanal."
+      subtitle="Calendário de atendimentos e horários de disponibilidade."
     />
 
     <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
@@ -169,18 +172,24 @@ function handleCancel(id: string) {
 
     <section class="mt-8">
       <h2 class="font-display text-h5 text-text">Disponibilidade</h2>
-      <p class="mt-1 text-body-sm text-text-muted">Horários recorrentes em que você atende, por dia da semana.</p>
+      <p class="mt-1 text-body-sm text-text-muted">Horários livres pra atendimento. Bloqueie um horário sem excluí-lo se precisar se ausentar.</p>
 
       <p v-if="availabilityError" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
         {{ availabilityError }}
       </p>
 
-      <div v-else-if="availabilityShowLoading" class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7" aria-busy="true">
-        <Skeleton v-for="n in 7" :key="n" variant="card" />
+      <div v-else-if="availabilityShowLoading" class="mt-4 space-y-2" aria-busy="true">
+        <Skeleton v-for="n in 3" :key="n" variant="card" />
       </div>
 
       <template v-else>
-        <AvailabilityCalendar :slots="slots" :removing-id="removingId" class="mt-4" @remove="removeSlot" />
+        <AvailabilityList
+          :slots="slots"
+          :pending-id="removingId"
+          class="mt-4"
+          @remove="removeSlot"
+          @toggle-block="toggleBlock"
+        />
 
         <form
           class="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4"
@@ -188,14 +197,14 @@ function handleCancel(id: string) {
           @submit.prevent="handleAddSlot"
         >
           <div>
-            <label for="slot-weekday" class="mb-1 block text-label uppercase tracking-label text-text-muted">Dia</label>
-            <select
-              id="slot-weekday"
-              v-model.number="newSlot.weekday"
+            <label for="slot-date" class="mb-1 block text-label uppercase tracking-label text-text-muted">Data</label>
+            <input
+              id="slot-date"
+              v-model="newSlot.date"
+              type="date"
+              required
               class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
-            >
-              <option v-for="(day, index) in WEEKDAYS" :key="day" :value="index">{{ day }}</option>
-            </select>
+            />
           </div>
           <div>
             <label for="slot-start" class="mb-1 block text-label uppercase tracking-label text-text-muted">Início</label>

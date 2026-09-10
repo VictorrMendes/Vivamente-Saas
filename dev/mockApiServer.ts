@@ -80,10 +80,10 @@ const appointments: MockAppointment[] = [
 ];
 
 const availability = [
-  { id: 'av1', weekday: 1, startTime: '09:00', endTime: '12:00' },
-  { id: 'av2', weekday: 1, startTime: '14:00', endTime: '18:00' },
-  { id: 'av3', weekday: 3, startTime: '09:00', endTime: '13:00' },
-  { id: 'av4', weekday: 5, startTime: '10:00', endTime: '16:00' },
+  { id: 'av1', startsAt: atHour(1, 9), endsAt: atHour(1, 12), isBlocked: false },
+  { id: 'av2', startsAt: atHour(1, 14), endsAt: atHour(1, 18), isBlocked: false },
+  { id: 'av3', startsAt: atHour(3, 9), endsAt: atHour(3, 13), isBlocked: true },
+  { id: 'av4', startsAt: atHour(5, 10), endsAt: atHour(5, 16), isBlocked: false },
 ];
 
 const leads: Lead[] = [
@@ -235,13 +235,19 @@ export function mockApiServer(): Plugin {
         }
         if (pathname === '/api/v1/availability' && method === 'POST') {
           const body = await readBody(req);
-          const slot = { id: nextId('av'), weekday: Number(body.weekday), startTime: String(body.startTime), endTime: String(body.endTime) };
+          const slot = { id: nextId('av'), startsAt: String(body.startsAt), endsAt: String(body.endsAt), isBlocked: false };
           availability.push(slot);
           return sendJson(res, 201, envelope(slot));
         }
-        const availDeleteMatch = pathname.match(/^\/api\/v1\/availability\/([^/]+)$/);
-        if (availDeleteMatch && method === 'DELETE') {
-          const index = availability.findIndex((s) => s.id === availDeleteMatch[1]);
+        const availMatch = pathname.match(/^\/api\/v1\/availability\/([^/]+)$/);
+        if (availMatch && method === 'PATCH') {
+          const body = await readBody(req);
+          const slot = availability.find((s) => s.id === availMatch[1]);
+          if (slot) Object.assign(slot, body);
+          return sendJson(res, 200, envelope(slot ?? {}));
+        }
+        if (availMatch && method === 'DELETE') {
+          const index = availability.findIndex((s) => s.id === availMatch[1]);
           if (index !== -1) availability.splice(index, 1);
           res.statusCode = 204;
           return res.end();

@@ -1,14 +1,13 @@
-export const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'] as const;
-
+// Confirmado no contrato real do Back: slot de data/hora específica, com
+// bloqueio manual — não é recorrência semanal (postman, pasta 10. Availability).
 export interface AvailabilitySlot {
   id: string;
-  weekday: number;
-  startTime: string;
-  endTime: string;
+  startsAt: string;
+  endsAt: string;
+  isBlocked: boolean;
 }
 
 export interface NewAvailabilitySlot {
-  weekday: number;
-  startTime: string;
-  endTime: string;
+  startsAt: string;
+  endsAt: string;
 }

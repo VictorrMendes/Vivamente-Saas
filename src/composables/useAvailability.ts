@@ -60,5 +60,22 @@ export function useAvailability() {
     }
   }
 
-  return { slots, loading, showLoading, error, saving, saveError, removingId, load, create, remove };
+  async function toggleBlock(id: string, isBlocked: boolean) {
+    saveError.value = null;
+    removingId.value = id;
+    try {
+      const res = await backApi<ApiEnvelope<AvailabilitySlot>>(`/api/v1/availability/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isBlocked }),
+      });
+      const slot = slots.value.find((s) => s.id === id);
+      if (slot) slot.isBlocked = res.data.isBlocked;
+    } catch {
+      saveError.value = 'Não foi possível atualizar o horário. Tente novamente.';
+    } finally {
+      removingId.value = null;
+    }
+  }
+
+  return { slots, loading, showLoading, error, saving, saveError, removingId, load, create, remove, toggleBlock };
 }
