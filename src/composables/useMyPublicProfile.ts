@@ -1,9 +1,8 @@
 import { ref } from 'vue';
 import { backApi } from '@/services/api/client';
+import type { PaginatedEnvelope } from '@/types/api';
 import type { ApiEnvelope } from '@/types/api';
-import type { AuthUser } from '@/types/auth';
-import type { Professional } from '@/types/professional';
-import type { PublicProfilePatch } from '@/types/publicProfile';
+import type { Professional, PublicProfilePatch } from '@/types/professional';
 
 export function useMyPublicProfile() {
   const profile = ref<Professional | null>(null);
@@ -22,12 +21,12 @@ export function useMyPublicProfile() {
     }, 300);
 
     try {
-      // /api/v1/me retorna o usuário autenticado (User), não o Professional —
-      // o perfil completo (com os campos da página pública) vem de
-      // /api/v1/professionals/{id}, usando o id do próprio /me.
-      const me = await backApi<ApiEnvelope<AuthUser>>('/api/v1/me');
-      const res = await backApi<ApiEnvelope<Professional>>(`/api/v1/professionals/${me.data.id}`);
-      profile.value = res.data;
+      // O id do Professional é diferente do id do User (/me) — não dá pra
+      // montar a URL direto. GET /professionals sem filtro já vem escopado
+      // pro próprio registro quando quem chama é THERAPIST.
+      const res = await backApi<PaginatedEnvelope<Professional>>('/api/v1/professionals?per_page=1');
+      profile.value = res.data[0] ?? null;
+      if (!profile.value) error.value = 'Nenhum perfil profissional encontrado pra sua conta.';
     } catch {
       error.value = 'Não foi possível carregar sua página. Tente novamente em instantes.';
     } finally {

@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProfessional } from '@/composables/useProfessional';
+import { useSpecialties } from '@/composables/useSpecialties';
 import { formatDateTime } from '@/lib/datetime';
 import { APPOINTMENT_STATUS_LABEL, APPOINTMENT_STATUS_VARIANT } from '@/constants/appointmentStatus';
 import Badge from '@/components/ui/Badge.vue';
@@ -26,28 +27,30 @@ const {
   update,
   remove,
 } = useProfessional();
+const { specialties, load: loadSpecialties } = useSpecialties();
+
+const specialtyNameById = computed(() => new Map(specialties.value.map((s) => [s.id, s.name])));
 
 const editing = ref(false);
-const editForm = reactive({ name: '', email: '', phone: '', specialties: '', active: true });
+const editForm = reactive({ fullName: '', bio: '', isPublic: true, specialtyIds: [] as string[] });
 
 function startEdit() {
   if (!professional.value) return;
-  editForm.name = professional.value.name;
-  editForm.email = professional.value.email;
-  editForm.phone = professional.value.phone;
-  editForm.specialties = professional.value.specialties.join(', ');
-  editForm.active = professional.value.active;
+  editForm.fullName = professional.value.fullName;
+  editForm.bio = professional.value.bio;
+  editForm.isPublic = professional.value.isPublic;
+  editForm.specialtyIds = [...professional.value.specialtyIds];
   editing.value = true;
 }
 
+function toggleEditSpecialty(id: string) {
+  const index = editForm.specialtyIds.indexOf(id);
+  if (index === -1) editForm.specialtyIds.push(id);
+  else editForm.specialtyIds.splice(index, 1);
+}
+
 async function handleSave() {
-  const ok = await update(props.id, {
-    name: editForm.name,
-    email: editForm.email,
-    phone: editForm.phone,
-    specialties: editForm.specialties.split(',').map((s) => s.trim()).filter(Boolean),
-    active: editForm.active,
-  });
+  const ok = await update(props.id, { ...editForm });
   if (ok) editing.value = false;
 }
 
@@ -71,6 +74,7 @@ const pastAppointments = computed(() =>
 onMounted(() => {
   load(props.id);
   loadAppointments(props.id);
+  loadSpecialties();
 });
 </script>
 
@@ -89,11 +93,13 @@ onMounted(() => {
     <template v-else-if="professional">
       <div class="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 class="font-display text-h3 text-text">{{ professional.name }}</h1>
-          <p class="mt-1 text-body-sm text-text-muted">Profissional desde {{ formatDateTime(professional.createdAt) }}</p>
+          <h1 class="font-display text-h3 text-text">{{ professional.fullName }}</h1>
+          <p v-if="professional.createdAt" class="mt-1 text-body-sm text-text-muted">
+            Profissional desde {{ formatDateTime(professional.createdAt) }}
+          </p>
         </div>
-        <Badge :variant="professional.active ? 'success' : 'neutral'">
-          {{ professional.active ? 'Ativo' : 'Inativo' }}
+        <Badge :variant="professional.isPublic ? 'success' : 'neutral'">
+          {{ professional.isPublic ? 'Visível' : 'Oculto' }}
         </Badge>
       </div>
 
@@ -108,49 +114,45 @@ onMounted(() => {
 
           <form v-if="editing" class="space-y-3" novalidate @submit.prevent="handleSave">
             <div>
-              <label for="edit-name" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nome</label>
+              <label for="edit-name" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nome completo</label>
               <input
                 id="edit-name"
-                v-model="editForm.name"
+                v-model="editForm.fullName"
                 type="text"
                 required
                 class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
               />
             </div>
             <div>
-              <label for="edit-email" class="mb-1 block text-label uppercase tracking-label text-text-muted">E-mail</label>
-              <input
-                id="edit-email"
-                v-model="editForm.email"
-                type="email"
-                required
-                class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+              <label for="edit-bio" class="mb-1 block text-label uppercase tracking-label text-text-muted">Bio</label>
+              <textarea
+                id="edit-bio"
+                v-model="editForm.bio"
+                rows="3"
+                class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:border-primary-600"
               />
             </div>
             <div>
-              <label for="edit-phone" class="mb-1 block text-label uppercase tracking-label text-text-muted">Telefone</label>
-              <input
-                id="edit-phone"
-                v-model="editForm.phone"
-                type="tel"
-                required
-                class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
-              />
-            </div>
-            <div>
-              <label for="edit-specialties" class="mb-1 block text-label uppercase tracking-label text-text-muted">
-                Especialidades (separadas por vírgula)
-              </label>
-              <input
-                id="edit-specialties"
-                v-model="editForm.specialties"
-                type="text"
-                class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
-              />
+              <span class="mb-1 block text-label uppercase tracking-label text-text-muted">Especialidades</span>
+              <div class="flex flex-wrap gap-3">
+                <label
+                  v-for="specialty in specialties"
+                  :key="specialty.id"
+                  class="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-1.5 text-body-sm text-text"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="editForm.specialtyIds.includes(specialty.id)"
+                    class="h-4 w-4 rounded border-border"
+                    @change="toggleEditSpecialty(specialty.id)"
+                  />
+                  {{ specialty.name }}
+                </label>
+              </div>
             </div>
             <label class="flex items-center gap-2 text-body-sm text-text">
-              <input v-model="editForm.active" type="checkbox" class="h-4 w-4 rounded border-border" />
-              Ativo
+              <input v-model="editForm.isPublic" type="checkbox" class="h-4 w-4 rounded border-border" />
+              Visível na página pública
             </label>
             <p v-if="saveError" role="alert" class="text-body-sm text-error">{{ saveError }}</p>
             <div class="flex gap-2">
@@ -162,18 +164,17 @@ onMounted(() => {
           <template v-else>
             <dl class="space-y-2 text-body-sm">
               <div class="flex justify-between gap-4">
-                <dt class="text-text-muted">E-mail</dt>
-                <dd class="text-text">{{ professional.email }}</dd>
-              </div>
-              <div class="flex justify-between gap-4">
-                <dt class="text-text-muted">Telefone</dt>
-                <dd class="text-text">{{ professional.phone }}</dd>
+                <dt class="text-text-muted">Slug</dt>
+                <dd class="text-text">{{ professional.slug }}</dd>
               </div>
               <div class="flex justify-between gap-4">
                 <dt class="text-text-muted">Especialidades</dt>
-                <dd class="text-text">{{ professional.specialties.join(', ') || '—' }}</dd>
+                <dd class="text-text">
+                  {{ professional.specialtyIds.map((id) => specialtyNameById.get(id)).filter(Boolean).join(', ') || '—' }}
+                </dd>
               </div>
             </dl>
+            <p v-if="professional.bio" class="mt-3 text-body-sm text-text">{{ professional.bio }}</p>
 
             <Button class="mt-6" variant="ghost" :loading="deleting" @click="handleDelete">Excluir profissional</Button>
           </template>

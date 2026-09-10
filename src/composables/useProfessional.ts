@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { backApi } from '@/services/api/client';
 import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
-import type { Professional } from '@/types/professional';
+import type { Professional, ProfessionalPatch } from '@/types/professional';
 import type { Appointment } from '@/types/appointment';
 
 export function useProfessional() {
@@ -51,7 +51,7 @@ export function useProfessional() {
     }
   }
 
-  async function update(id: string, patch: Partial<Pick<Professional, 'name' | 'email' | 'phone' | 'specialties' | 'active'>>) {
+  async function update(id: string, patch: ProfessionalPatch) {
     saveError.value = null;
     saving.value = true;
     try {

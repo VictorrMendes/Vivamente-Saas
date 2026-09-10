@@ -105,24 +105,36 @@ const services = [
   { id: 's3', name: 'Terapia infantil', description: 'Atendimento infantil, 45 minutos.', durationMinutes: 45, price: 160 },
 ];
 
+const specialties = [
+  { id: 'sp1', name: 'Ansiedade' },
+  { id: 'sp2', name: 'TCC' },
+  { id: 'sp3', name: 'Casais' },
+  { id: 'sp4', name: 'Família' },
+];
+
 const professionals = [
   {
     id: 'p1',
-    name: 'Dra. Ana Reis',
-    email: 'ana.reis@vivamente.dev',
-    phone: '(11) 93333-0001',
-    specialties: ['Ansiedade', 'TCC'],
-    active: true,
-    createdAt: atHour(-200, 10),
-    // Campos da página pública — mesma entidade, editada via Minha Página.
+    user: 'u1',
     slug: 'ana-reis',
-    photoUrl: '',
+    fullName: 'Dra. Ana Reis',
     bio: 'Psicóloga clínica com foco em ansiedade e terapia cognitivo-comportamental.',
-    services: ['Terapia individual'],
-    modality: 'online' as const,
-    location: 'São Paulo, SP',
+    isPublic: true,
+    specialtyIds: ['sp1', 'sp2'],
+    photoUrl: '',
+    createdAt: atHour(-200, 10),
   },
-  { id: 'p2', name: 'Dr. Pedro Alves', email: 'pedro.alves@vivamente.dev', phone: '(11) 93333-0002', specialties: ['Casais', 'Família'], active: true, createdAt: atHour(-150, 10) },
+  {
+    id: 'p2',
+    user: 'u2',
+    slug: 'pedro-alves',
+    fullName: 'Dr. Pedro Alves',
+    bio: 'Psicólogo especialista em terapia de casal e família.',
+    isPublic: true,
+    specialtyIds: ['sp3', 'sp4'],
+    photoUrl: '',
+    createdAt: atHour(-150, 10),
+  },
 ];
 
 const notifications = [
@@ -329,22 +341,37 @@ export function mockApiServer(): Plugin {
           return res.end();
         }
 
+        // ---- Specialties ----
+        if (pathname === '/api/v1/specialties' && method === 'GET') {
+          return sendJson(res, 200, paginated(specialties, 1, 100));
+        }
+        if (pathname === '/api/v1/specialties' && method === 'POST') {
+          const body = await readBody(req);
+          const specialty = { id: nextId('sp'), name: String(body.name) };
+          specialties.push(specialty);
+          return sendJson(res, 201, envelope(specialty));
+        }
+
         // ---- Professionals ----
         if (pathname === '/api/v1/professionals' && method === 'GET') {
+          // ponytail: o mock não distingue role por token — sempre devolve a
+          // lista inteira, mesmo onde o Back real escopa pro próprio THERAPIST.
           let list = professionals;
           const search = url.searchParams.get('search');
-          if (search) list = list.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+          if (search) list = list.filter((p) => p.fullName.toLowerCase().includes(search.toLowerCase()));
           return sendJson(res, 200, paginated(list, page, perPage));
         }
         if (pathname === '/api/v1/professionals' && method === 'POST') {
           const body = await readBody(req);
           const professional = {
             id: nextId('p'),
-            name: String(body.name),
-            email: String(body.email),
-            phone: String(body.phone),
-            specialties: Array.isArray(body.specialties) ? (body.specialties as string[]) : [],
-            active: Boolean(body.active),
+            user: String(body.user),
+            slug: String(body.slug),
+            fullName: String(body.fullName),
+            bio: String(body.bio ?? ''),
+            isPublic: Boolean(body.isPublic),
+            specialtyIds: Array.isArray(body.specialtyIds) ? (body.specialtyIds as string[]) : [],
+            photoUrl: '',
             createdAt: new Date().toISOString(),
           };
           professionals.push(professional);
