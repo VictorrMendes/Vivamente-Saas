@@ -138,6 +138,11 @@ const professionals = [
   },
 ];
 
+const clinicalRecords = [
+  { id: 'cr1', client: 'c1', content: 'Primeira sessão: paciente relata ansiedade relacionada ao trabalho.', createdAt: atHour(-10, 10) },
+  { id: 'cr2', client: 'c1', content: 'Evolução positiva, técnicas de respiração incorporadas na rotina.', createdAt: atHour(-3, 9) },
+];
+
 const notifications = [
   { id: 'n1', title: 'Novo lead', message: 'João Silva enviou uma solicitação de contato.', read: false, createdAt: atHour(0, 8) },
   { id: 'n2', title: 'Agendamento confirmado', message: 'Maria Souza confirmou o horário de hoje.', read: false, createdAt: atHour(0, 7) },
@@ -329,6 +334,38 @@ export function mockApiServer(): Plugin {
         if (clientMatch && method === 'DELETE') {
           const index = clients.findIndex((c) => c.id === clientMatch[1]);
           if (index !== -1) clients.splice(index, 1);
+          res.statusCode = 204;
+          return res.end();
+        }
+
+        // ---- Clinical Records ----
+        // Só existe GET filtrado por client (sem listagem geral) — reflete o Back real.
+        if (pathname === '/api/v1/clinical-records' && method === 'GET') {
+          const clientId = url.searchParams.get('client');
+          const list = clientId ? clinicalRecords.filter((r) => r.client === clientId) : [];
+          return sendJson(res, 200, paginated(list, page, perPage));
+        }
+        if (pathname === '/api/v1/clinical-records' && method === 'POST') {
+          const body = await readBody(req);
+          const record = {
+            id: nextId('cr'),
+            client: String(body.client),
+            content: String(body.content),
+            createdAt: new Date().toISOString(),
+          };
+          clinicalRecords.unshift(record);
+          return sendJson(res, 201, envelope(record));
+        }
+        const clinicalRecordMatch = pathname.match(/^\/api\/v1\/clinical-records\/([^/]+)$/);
+        if (clinicalRecordMatch && method === 'PATCH') {
+          const body = await readBody(req);
+          const record = clinicalRecords.find((r) => r.id === clinicalRecordMatch[1]);
+          if (record) Object.assign(record, body);
+          return sendJson(res, 200, envelope(record ?? {}));
+        }
+        if (clinicalRecordMatch && method === 'DELETE') {
+          const index = clinicalRecords.findIndex((r) => r.id === clinicalRecordMatch[1]);
+          if (index !== -1) clinicalRecords.splice(index, 1);
           res.statusCode = 204;
           return res.end();
         }

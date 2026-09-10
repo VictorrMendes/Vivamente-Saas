@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { ClipboardList, Package, Wallet } from '@lucide/vue';
+import { Package, Wallet } from '@lucide/vue';
 import { useAuthStore } from '@/stores/auth';
 import { safeLoginRedirect } from './redirect';
 
@@ -45,16 +45,6 @@ const router = createRouter({
         },
         { path: 'notificacoes', name: 'notificacoes', component: () => import('@/pages/Notificacoes/NotificacoesPage.vue') },
         { path: 'configuracoes', name: 'configuracoes', component: () => import('@/pages/Configuracoes/ConfiguracoesPage.vue') },
-        {
-          path: 'prontuarios',
-          name: 'prontuarios',
-          component: () => import('@/pages/ComingSoon/ComingSoonPage.vue'),
-          props: {
-            title: 'Prontuários',
-            description: 'Registro clínico por cliente, com controle de acesso reforçado. Ainda não exposto pelo Back.',
-            icon: ClipboardList,
-          },
-        },
         {
           path: 'pacotes',
           name: 'pacotes',

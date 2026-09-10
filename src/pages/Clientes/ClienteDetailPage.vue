@@ -2,6 +2,8 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClient } from '@/composables/useClient';
+import { useClinicalRecords } from '@/composables/useClinicalRecords';
+import { useAuthStore } from '@/stores/auth';
 import { formatDateTime } from '@/lib/datetime';
 import { APPOINTMENT_STATUS_LABEL, APPOINTMENT_STATUS_VARIANT } from '@/constants/appointmentStatus';
 import Badge from '@/components/ui/Badge.vue';
@@ -10,6 +12,7 @@ import Skeleton from '@/components/ui/Skeleton.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
+const auth = useAuthStore();
 
 const {
   client,
@@ -26,6 +29,45 @@ const {
   update,
   remove,
 } = useClient();
+
+const {
+  records,
+  loading: recordsLoading,
+  error: recordsError,
+  saving: recordSaving,
+  saveError: recordSaveError,
+  removingId: recordRemovingId,
+  load: loadRecords,
+  create: createRecord,
+  update: updateRecord,
+  remove: removeRecord,
+} = useClinicalRecords();
+
+const newRecordContent = ref('');
+const editingRecordId = ref<string | null>(null);
+const editingRecordContent = ref('');
+
+async function handleAddRecord() {
+  if (!newRecordContent.value.trim()) return;
+  const ok = await createRecord(props.id, newRecordContent.value.trim());
+  if (ok) newRecordContent.value = '';
+}
+
+function startEditRecord(id: string, content: string) {
+  editingRecordId.value = id;
+  editingRecordContent.value = content;
+}
+
+async function handleSaveRecord() {
+  if (!editingRecordId.value) return;
+  const ok = await updateRecord(editingRecordId.value, editingRecordContent.value.trim());
+  if (ok) editingRecordId.value = null;
+}
+
+async function handleDeleteRecord(id: string) {
+  if (!window.confirm('Excluir este registro de prontuário? Essa ação não pode ser desfeita.')) return;
+  await removeRecord(id);
+}
 
 const editing = ref(false);
 const editForm = reactive({ name: '', email: '', phone: '', birthDate: '', document: '', administrativeNotes: '' });
@@ -73,6 +115,7 @@ const pastAppointments = computed(() =>
 onMounted(() => {
   load(props.id);
   loadAppointments(props.id);
+  if (auth.role === 'THERAPIST') loadRecords(props.id);
 });
 </script>
 
@@ -238,6 +281,66 @@ onMounted(() => {
                 <Badge :variant="APPOINTMENT_STATUS_VARIANT[appt.status]" size="sm">
                   {{ APPOINTMENT_STATUS_LABEL[appt.status] }}
                 </Badge>
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="auth.role === 'THERAPIST'" class="rounded-lg border border-border bg-surface p-4">
+            <h2 class="mb-3 font-display text-h6 text-text">Prontuário</h2>
+            <p class="mb-3 text-body-sm text-text-muted">Visível apenas para o terapeuta responsável.</p>
+
+            <form class="mb-4 space-y-2" novalidate @submit.prevent="handleAddRecord">
+              <label for="new-record" class="sr-only">Novo registro</label>
+              <textarea
+                id="new-record"
+                v-model="newRecordContent"
+                rows="3"
+                placeholder="Registrar evolução, observações da sessão..."
+                class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm text-text focus-visible:border-primary-600"
+              />
+              <Button type="submit" size="sm" :loading="recordSaving">Adicionar registro</Button>
+            </form>
+            <p v-if="recordSaveError" role="alert" class="mb-3 text-body-sm text-error">{{ recordSaveError }}</p>
+
+            <p v-if="recordsError" role="alert" class="text-body-sm text-error">{{ recordsError }}</p>
+            <p v-else-if="recordsLoading" class="text-body-sm text-text-muted">Carregando...</p>
+            <p v-else-if="records.length === 0" class="text-body-sm text-text-muted">Nenhum registro ainda.</p>
+            <ul v-else class="space-y-3">
+              <li v-for="record in records" :key="record.id" class="rounded-md bg-surface-sunken p-3">
+                <template v-if="editingRecordId === record.id">
+                  <textarea
+                    v-model="editingRecordContent"
+                    rows="3"
+                    class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm text-text focus-visible:border-primary-600"
+                  />
+                  <div class="mt-2 flex gap-2">
+                    <Button size="sm" :loading="recordSaving" @click="handleSaveRecord">Salvar</Button>
+                    <Button size="sm" variant="ghost" @click="editingRecordId = null">Cancelar</Button>
+                  </div>
+                </template>
+                <template v-else>
+                  <p class="whitespace-pre-wrap text-body-sm text-text">{{ record.content }}</p>
+                  <div class="mt-2 flex items-center justify-between">
+                    <span class="text-body-sm text-text-muted">{{ formatDateTime(record.createdAt) }}</span>
+                    <div class="flex gap-3">
+                      <button
+                        type="button"
+                        class="text-body-sm text-primary-700 hover:underline"
+                        @click="startEditRecord(record.id, record.content)"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        class="text-body-sm text-error hover:underline"
+                        :disabled="recordRemovingId === record.id"
+                        @click="handleDeleteRecord(record.id)"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                </template>
               </li>
             </ul>
           </div>
