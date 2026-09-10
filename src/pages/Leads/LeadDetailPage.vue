@@ -100,13 +100,13 @@ async function handleDelete() {
           <LeadStatusSelect
             id="lead-status"
             :model-value="lead.status"
-            :disabled="statusSaving || lead.status === 'client'"
+            :disabled="statusSaving || lead.status === 'CONVERTED'"
             @update:model-value="handleStatusChange"
           />
           <p v-if="statusError" role="alert" class="mt-2 text-body-sm text-error">{{ statusError }}</p>
 
           <div class="mt-6 flex flex-wrap gap-2">
-            <Button v-if="lead.status !== 'client'" variant="primary" :loading="converting" @click="handleConvert">
+            <Button v-if="lead.status !== 'CONVERTED'" variant="primary" :loading="converting" @click="handleConvert">
               Converter em cliente
             </Button>
             <Button variant="ghost" :loading="deleting" @click="handleDelete">Excluir lead</Button>

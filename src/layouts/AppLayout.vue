@@ -65,7 +65,7 @@ async function handleLogout() {
 
 <template>
   <div class="flex min-h-screen bg-background">
-    <aside class="hidden w-64 shrink-0 flex-col rounded-r-3xl bg-primary-900 lg:flex">
+    <aside class="sidebar-dark hidden w-64 shrink-0 flex-col rounded-r-3xl bg-primary-900 lg:flex">
       <div class="flex h-16 items-center gap-2 px-6">
         <span class="font-display text-h6 tracking-tight text-text-inverse">VivaMente</span>
       </div>
@@ -77,7 +77,7 @@ async function handleLogout() {
       <DialogPortal>
         <DialogOverlay class="fixed inset-0 z-40 bg-black/50 lg:hidden" />
         <DialogContent
-          class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-primary-900 focus:outline-none lg:hidden"
+          class="sidebar-dark fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-primary-900 focus:outline-none lg:hidden"
         >
           <VisuallyHidden as-child>
             <DialogTitle>Menu de navegação</DialogTitle>
@@ -131,3 +131,19 @@ async function handleLogout() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/*
+ * A sidebar tem fundo escuro fixo (marca), independente do tema do sistema.
+ * --color-primary-700 e --color-text-inverse trocam de valor no dark mode
+ * (pra funcionar em fundos claros que também trocam) — combinados com um
+ * fundo que NUNCA muda, isso vira texto escuro em fundo escuro. Fixamos os
+ * dois no valor de tema claro (mesmo valor de tokens.css) só nesta área.
+ * CSS vars atravessam fronteira de componente normalmente, então isso
+ * também corrige SidebarNav e SidebarProfile sem tocar neles.
+ */
+.sidebar-dark {
+  --color-primary-700: #17423a;
+  --color-text-inverse: #f3f6f4;
+}
+</style>

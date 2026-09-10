@@ -2,6 +2,7 @@ import { useAuthStore } from '@/stores/auth';
 import { router } from '@/router';
 import { ApiError } from './errors';
 import { parseErrorMessage } from './problemDetails';
+import { deepCamelCase, deepSnakeCase } from './caseConvert';
 
 const OAUTH_URL = import.meta.env.VITE_OAUTH_API_URL as string;
 const BACK_URL = import.meta.env.VITE_BACK_API_URL as string;
@@ -9,6 +10,28 @@ const BACK_URL = import.meta.env.VITE_BACK_API_URL as string;
 interface RequestOptions extends RequestInit {
   /** Anexa o Bearer token e tenta refresh em 401. Default true. */
   auth?: boolean;
+}
+
+/** Corpo em JSON (string) sai em snake_case pro Back; FormData passa direto. */
+function toWireBody(body: BodyInit | null | undefined): BodyInit | null | undefined {
+  if (typeof body !== 'string') return body;
+  try {
+    return JSON.stringify(deepSnakeCase(JSON.parse(body)));
+  } catch {
+    return body;
+  }
+}
+
+/** Só o payload em `data` vira camelCase — meta/pagination já batem com nossos tipos. */
+function fromWireBody(json: unknown): unknown {
+  if (isPlainObject(json) && 'data' in json) {
+    return { ...json, data: deepCamelCase(json.data) };
+  }
+  return deepCamelCase(json);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 async function request<T>(baseUrl: string, path: string, options: RequestOptions = {}): Promise<T> {
@@ -25,6 +48,7 @@ async function request<T>(baseUrl: string, path: string, options: RequestOptions
 
   const res = await fetch(`${baseUrl}${path}`, {
     ...rest,
+    body: toWireBody(rest.body),
     headers: requestHeaders,
   });
 
@@ -33,7 +57,7 @@ async function request<T>(baseUrl: string, path: string, options: RequestOptions
     throw new ApiError(res.status, parseErrorMessage(body, res.statusText), body);
   }
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  return fromWireBody(await res.json()) as Promise<T>;
 }
 
 /**

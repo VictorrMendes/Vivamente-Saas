@@ -1,4 +1,5 @@
-export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+// Valores confirmados no contrato real do Back (postman/VivaMente-Back.postman_collection.json).
+export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
 
 export interface Appointment {
   id: string;

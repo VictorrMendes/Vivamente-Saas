@@ -135,7 +135,7 @@ function handleCancel(id: string) {
               <Badge :variant="STATUS_VARIANT[appt.status]" size="sm">{{ STATUS_LABEL[appt.status] }}</Badge>
 
               <Button
-                v-if="appt.status === 'pending'"
+                v-if="appt.status === 'PENDING'"
                 size="sm"
                 variant="primary"
                 :loading="pendingActionId === appt.id"
@@ -144,7 +144,7 @@ function handleCancel(id: string) {
                 Confirmar
               </Button>
               <Button
-                v-if="appt.status === 'confirmed'"
+                v-if="appt.status === 'CONFIRMED'"
                 size="sm"
                 variant="primary"
                 :loading="pendingActionId === appt.id"
@@ -153,7 +153,7 @@ function handleCancel(id: string) {
                 Concluir
               </Button>
               <Button
-                v-if="appt.status === 'pending' || appt.status === 'confirmed'"
+                v-if="appt.status === 'PENDING' || appt.status === 'CONFIRMED'"
                 size="sm"
                 variant="ghost"
                 :loading="pendingActionId === appt.id"

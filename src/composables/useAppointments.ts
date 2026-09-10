@@ -5,9 +5,9 @@ import type { Appointment, AppointmentAction, AppointmentStatus } from '@/types/
 import { startOfMonth, endOfMonth } from '@/lib/datetime';
 
 const STATUS_AFTER_ACTION: Record<AppointmentAction, AppointmentStatus> = {
-  confirm: 'confirmed',
-  cancel: 'cancelled',
-  complete: 'completed',
+  confirm: 'CONFIRMED',
+  cancel: 'CANCELLED',
+  complete: 'COMPLETED',
 };
 
 export function useAppointments() {

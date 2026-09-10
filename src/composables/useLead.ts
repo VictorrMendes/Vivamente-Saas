@@ -54,11 +54,12 @@ export function useLead() {
     convertError.value = null;
     converting.value = true;
     try {
-      const res = await backApi<ApiEnvelope<{ clientId: string }>>(`/api/v1/leads/${id}/convert`, {
+      // POST /leads/{id}/convert devolve o Client recém-criado (não um { clientId }).
+      const res = await backApi<ApiEnvelope<{ id: string }>>(`/api/v1/leads/${id}/convert`, {
         method: 'POST',
       });
-      if (lead.value) lead.value.status = 'client';
-      return res.data.clientId;
+      if (lead.value) lead.value.status = 'CONVERTED';
+      return res.data.id;
     } catch {
       convertError.value = 'Não foi possível converter este lead em cliente. Tente novamente.';
       return null;

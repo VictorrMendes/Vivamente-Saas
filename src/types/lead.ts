@@ -1,4 +1,5 @@
-export type LeadStatus = 'new' | 'contacted' | 'awaiting_response' | 'scheduled' | 'client';
+// Valores confirmados no contrato real do Back (postman/VivaMente-Back.postman_collection.json).
+export type LeadStatus = 'NEW' | 'CONTACTED' | 'AWAITING_RESPONSE' | 'SCHEDULED' | 'CONVERTED';
 
 export interface Lead {
   id: string;

@@ -11,14 +11,21 @@ import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Appointment } from '../src/types/appointment';
 import type { Lead } from '../src/types/lead';
+import { deepCamelCase } from '../src/services/api/caseConvert';
 
+/**
+ * client.ts manda o corpo em snake_case pro Back de verdade; aqui dentro do
+ * mock convertemos de volta pra camelCase na entrada, já que os dados
+ * internos do mock (e os types do app) são todos camelCase. Um ponto só de
+ * conversão em vez de trocar cada `body.xxx` espalhado pelos handlers.
+ */
 function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve) => {
     let raw = '';
     req.on('data', (chunk) => (raw += chunk));
     req.on('end', () => {
       try {
-        resolve(raw ? JSON.parse(raw) : {});
+        resolve(raw ? deepCamelCase(JSON.parse(raw)) : {});
       } catch {
         resolve({});
       }
@@ -66,10 +73,10 @@ function atHour(daysFromNow: number, hour: number, minute = 0) {
 type MockAppointment = Appointment & { clientId: string; professionalId: string };
 
 const appointments: MockAppointment[] = [
-  { id: 'a1', clientId: 'c1', professionalId: 'p1', clientName: 'Maria Souza', serviceName: 'Terapia individual', startsAt: atHour(0, 10), endsAt: atHour(0, 11), status: 'confirmed' as const },
-  { id: 'a2', clientId: 'c2', professionalId: 'p1', clientName: 'Carlos Lima', serviceName: 'Terapia de casal', startsAt: atHour(1, 15), endsAt: atHour(1, 16), status: 'pending' as const },
-  { id: 'a3', clientId: 'c1', professionalId: 'p2', clientName: 'Maria Souza', serviceName: 'Terapia individual', startsAt: atHour(-3, 9), endsAt: atHour(-3, 10), status: 'completed' as const },
-  { id: 'a4', clientId: 'c3', professionalId: 'p1', clientName: 'Beatriz Costa', serviceName: 'Terapia individual', startsAt: atHour(4, 11), endsAt: atHour(4, 12), status: 'pending' as const },
+  { id: 'a1', clientId: 'c1', professionalId: 'p1', clientName: 'Maria Souza', serviceName: 'Terapia individual', startsAt: atHour(0, 10), endsAt: atHour(0, 11), status: 'CONFIRMED' as const },
+  { id: 'a2', clientId: 'c2', professionalId: 'p1', clientName: 'Carlos Lima', serviceName: 'Terapia de casal', startsAt: atHour(1, 15), endsAt: atHour(1, 16), status: 'PENDING' as const },
+  { id: 'a3', clientId: 'c1', professionalId: 'p2', clientName: 'Maria Souza', serviceName: 'Terapia individual', startsAt: atHour(-3, 9), endsAt: atHour(-3, 10), status: 'COMPLETED' as const },
+  { id: 'a4', clientId: 'c3', professionalId: 'p1', clientName: 'Beatriz Costa', serviceName: 'Terapia individual', startsAt: atHour(4, 11), endsAt: atHour(4, 12), status: 'PENDING' as const },
 ];
 
 const availability = [
@@ -80,10 +87,10 @@ const availability = [
 ];
 
 const leads: Lead[] = [
-  { id: 'l1', name: 'João Silva', email: 'joao.silva@example.com', phone: '(11) 91111-0001', serviceInterest: 'Terapia individual', message: 'Gostaria de agendar uma primeira sessão.', status: 'new' as const, createdAt: atHour(-1, 9) },
-  { id: 'l2', name: 'Ana Pereira', email: 'ana.pereira@example.com', phone: '(11) 91111-0002', serviceInterest: 'Terapia de casal', message: 'Eu e meu marido queremos iniciar terapia de casal.', status: 'contacted' as const, createdAt: atHour(-2, 14) },
-  { id: 'l3', name: 'Beatriz Costa', email: 'beatriz.costa@example.com', phone: '(11) 91111-0003', serviceInterest: 'Terapia individual', message: 'Fico no aguardo de retorno.', status: 'awaiting_response' as const, createdAt: atHour(-4, 11) },
-  { id: 'l4', name: 'Rafael Nunes', email: 'rafael.nunes@example.com', phone: '(11) 91111-0004', serviceInterest: 'Terapia individual', message: 'Já agendamos a primeira sessão.', status: 'scheduled' as const, createdAt: atHour(-6, 16) },
+  { id: 'l1', name: 'João Silva', email: 'joao.silva@example.com', phone: '(11) 91111-0001', serviceInterest: 'Terapia individual', message: 'Gostaria de agendar uma primeira sessão.', status: 'NEW' as const, createdAt: atHour(-1, 9) },
+  { id: 'l2', name: 'Ana Pereira', email: 'ana.pereira@example.com', phone: '(11) 91111-0002', serviceInterest: 'Terapia de casal', message: 'Eu e meu marido queremos iniciar terapia de casal.', status: 'CONTACTED' as const, createdAt: atHour(-2, 14) },
+  { id: 'l3', name: 'Beatriz Costa', email: 'beatriz.costa@example.com', phone: '(11) 91111-0003', serviceInterest: 'Terapia individual', message: 'Fico no aguardo de retorno.', status: 'AWAITING_RESPONSE' as const, createdAt: atHour(-4, 11) },
+  { id: 'l4', name: 'Rafael Nunes', email: 'rafael.nunes@example.com', phone: '(11) 91111-0004', serviceInterest: 'Terapia individual', message: 'Já agendamos a primeira sessão.', status: 'SCHEDULED' as const, createdAt: atHour(-6, 16) },
 ];
 
 const clients = [
@@ -125,7 +132,7 @@ const notifications = [
 ];
 
 const dashboardMetrics = {
-  newLeads: leads.filter((l) => l.status === 'new').length,
+  newLeads: leads.filter((l) => l.status === 'NEW').length,
   activeClients: clients.length,
   todayAppointments: appointments.filter((a) => a.startsAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length,
   monthlyIndicators: [{ label: 'Conversão do mês', value: 34 }],
@@ -205,7 +212,7 @@ export function mockApiServer(): Plugin {
           const [, id, action] = apptActionMatch;
           const appt = appointments.find((a) => a.id === id);
           if (appt) {
-            appt.status = action === 'confirm' ? 'confirmed' : action === 'cancel' ? 'cancelled' : 'completed';
+            appt.status = action === 'confirm' ? 'CONFIRMED' : action === 'cancel' ? 'CANCELLED' : 'COMPLETED';
           }
           return sendJson(res, 200, envelope(appt ?? {}));
         }
@@ -261,8 +268,9 @@ export function mockApiServer(): Plugin {
           const lead = leads.find((l) => l.id === leadConvertMatch[1]);
           const newClient = { id: nextId('c'), name: lead?.name ?? 'Novo cliente', email: lead?.email ?? '', phone: lead?.phone ?? '', createdAt: new Date().toISOString() };
           clients.push(newClient);
-          if (lead) lead.status = 'client';
-          return sendJson(res, 200, envelope({ clientId: newClient.id }));
+          if (lead) lead.status = 'CONVERTED';
+          // POST /leads/{id}/convert devolve o Client criado (não um { clientId }).
+          return sendJson(res, 200, envelope(newClient));
         }
 
         // ---- Clients ----

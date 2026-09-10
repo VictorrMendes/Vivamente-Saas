@@ -5,19 +5,19 @@ import type { LeadStatus } from '@/types/lead';
  * novas por tela. Usado tanto na lista quanto no detalhe do lead.
  */
 export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {
-  new: 'Novo',
-  contacted: 'Em contato',
-  awaiting_response: 'Aguardando resposta',
-  scheduled: 'Agendamento',
-  client: 'Cliente',
+  NEW: 'Novo',
+  CONTACTED: 'Em contato',
+  AWAITING_RESPONSE: 'Aguardando resposta',
+  SCHEDULED: 'Agendamento',
+  CONVERTED: 'Cliente',
 };
 
 export const LEAD_STATUS_VARIANT: Record<LeadStatus, 'info' | 'warning' | 'secondary' | 'primary' | 'success'> = {
-  new: 'info',
-  contacted: 'warning',
-  awaiting_response: 'secondary',
-  scheduled: 'primary',
-  client: 'success',
+  NEW: 'info',
+  CONTACTED: 'warning',
+  AWAITING_RESPONSE: 'secondary',
+  SCHEDULED: 'primary',
+  CONVERTED: 'success',
 };
 
-export const LEAD_STATUS_ORDER: LeadStatus[] = ['new', 'contacted', 'awaiting_response', 'scheduled', 'client'];
+export const LEAD_STATUS_ORDER: LeadStatus[] = ['NEW', 'CONTACTED', 'AWAITING_RESPONSE', 'SCHEDULED', 'CONVERTED'];
