@@ -143,6 +143,11 @@ const clinicalRecords = [
   { id: 'cr2', client: 'c1', content: 'Evolução positiva, técnicas de respiração incorporadas na rotina.', createdAt: atHour(-3, 9) },
 ];
 
+const packages = [
+  { id: 'pk1', client: 'c1', name: 'Pacote mensal', totalSessions: 4, usedSessions: 2, remainingSessions: 2, totalValue: 640, startDate: '2026-08-01' },
+  { id: 'pk2', client: 'c2', name: 'Pacote trimestral', totalSessions: 12, usedSessions: 1, remainingSessions: 11, totalValue: 2160, startDate: '2026-09-01' },
+];
+
 const notifications = [
   { id: 'n1', title: 'Novo lead', message: 'João Silva enviou uma solicitação de contato.', read: false, createdAt: atHour(0, 8) },
   { id: 'n2', title: 'Agendamento confirmado', message: 'Maria Souza confirmou o horário de hoje.', read: false, createdAt: atHour(0, 7) },
@@ -366,6 +371,40 @@ export function mockApiServer(): Plugin {
         if (clinicalRecordMatch && method === 'DELETE') {
           const index = clinicalRecords.findIndex((r) => r.id === clinicalRecordMatch[1]);
           if (index !== -1) clinicalRecords.splice(index, 1);
+          res.statusCode = 204;
+          return res.end();
+        }
+
+        // ---- Packages ----
+        if (pathname === '/api/v1/packages' && method === 'GET') {
+          return sendJson(res, 200, paginated(packages, page, perPage));
+        }
+        if (pathname === '/api/v1/packages' && method === 'POST') {
+          const body = await readBody(req);
+          const totalSessions = Number(body.totalSessions);
+          const pkg = {
+            id: nextId('pk'),
+            client: String(body.client),
+            name: String(body.name),
+            totalSessions,
+            usedSessions: 0,
+            remainingSessions: totalSessions,
+            totalValue: Number(body.totalValue),
+            startDate: String(body.startDate),
+          };
+          packages.push(pkg);
+          return sendJson(res, 201, envelope(pkg));
+        }
+        const packageMatch = pathname.match(/^\/api\/v1\/packages\/([^/]+)$/);
+        if (packageMatch && method === 'PATCH') {
+          const body = await readBody(req);
+          const pkg = packages.find((p) => p.id === packageMatch[1]);
+          if (pkg) Object.assign(pkg, body);
+          return sendJson(res, 200, envelope(pkg ?? {}));
+        }
+        if (packageMatch && method === 'DELETE') {
+          const index = packages.findIndex((p) => p.id === packageMatch[1]);
+          if (index !== -1) packages.splice(index, 1);
           res.statusCode = 204;
           return res.end();
         }

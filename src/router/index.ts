@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { Package, Wallet } from '@lucide/vue';
+import { Wallet } from '@lucide/vue';
 import { useAuthStore } from '@/stores/auth';
 import { safeLoginRedirect } from './redirect';
 
@@ -45,16 +45,7 @@ const router = createRouter({
         },
         { path: 'notificacoes', name: 'notificacoes', component: () => import('@/pages/Notificacoes/NotificacoesPage.vue') },
         { path: 'configuracoes', name: 'configuracoes', component: () => import('@/pages/Configuracoes/ConfiguracoesPage.vue') },
-        {
-          path: 'pacotes',
-          name: 'pacotes',
-          component: () => import('@/pages/ComingSoon/ComingSoonPage.vue'),
-          props: {
-            title: 'Pacotes',
-            description: 'Pacotes e planos vinculados a serviços. Ainda não exposto pelo Back.',
-            icon: Package,
-          },
-        },
+        { path: 'pacotes', name: 'pacotes', component: () => import('@/pages/Pacotes/PacotesPage.vue') },
         {
           path: 'financeiro',
           name: 'financeiro',
