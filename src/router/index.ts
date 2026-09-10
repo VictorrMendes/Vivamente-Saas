@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { Wallet } from '@lucide/vue';
 import { useAuthStore } from '@/stores/auth';
 import { safeLoginRedirect } from './redirect';
 
@@ -46,16 +45,7 @@ const router = createRouter({
         { path: 'notificacoes', name: 'notificacoes', component: () => import('@/pages/Notificacoes/NotificacoesPage.vue') },
         { path: 'configuracoes', name: 'configuracoes', component: () => import('@/pages/Configuracoes/ConfiguracoesPage.vue') },
         { path: 'pacotes', name: 'pacotes', component: () => import('@/pages/Pacotes/PacotesPage.vue') },
-        {
-          path: 'financeiro',
-          name: 'financeiro',
-          component: () => import('@/pages/ComingSoon/ComingSoonPage.vue'),
-          props: {
-            title: 'Financeiro',
-            description: 'Lançamentos, status de pagamento e relatórios. Ainda não exposto pelo Back.',
-            icon: Wallet,
-          },
-        },
+        { path: 'financeiro', name: 'financeiro', component: () => import('@/pages/Financeiro/FinanceiroPage.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },

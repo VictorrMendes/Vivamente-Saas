@@ -148,6 +148,12 @@ const packages = [
   { id: 'pk2', client: 'c2', name: 'Pacote trimestral', totalSessions: 12, usedSessions: 1, remainingSessions: 11, totalValue: 2160, startDate: '2026-09-01' },
 ];
 
+let paymentReceiptSeq = 2;
+const payments = [
+  { id: 'pay1', client: 'c1', amount: 180, dueDate: '2026-09-05', status: 'PAID' as const, receiptNumber: 'REC-000001', paidAt: atHour(-5, 10) },
+  { id: 'pay2', client: 'c2', amount: 250, dueDate: '2026-09-20', status: 'PENDING' as const, receiptNumber: 'REC-000002' },
+];
+
 const notifications = [
   { id: 'n1', title: 'Novo lead', message: 'João Silva enviou uma solicitação de contato.', read: false, createdAt: atHour(0, 8) },
   { id: 'n2', title: 'Agendamento confirmado', message: 'Maria Souza confirmou o horário de hoje.', read: false, createdAt: atHour(0, 7) },
@@ -405,6 +411,53 @@ export function mockApiServer(): Plugin {
         if (packageMatch && method === 'DELETE') {
           const index = packages.findIndex((p) => p.id === packageMatch[1]);
           if (index !== -1) packages.splice(index, 1);
+          res.statusCode = 204;
+          return res.end();
+        }
+
+        // ---- Payments ----
+        // GET /payments/balance existe no Back real mas a forma exata da resposta não está
+        // documentada no Postman — não implementado aqui nem consumido pelo front por ora.
+        if (pathname === '/api/v1/payments' && method === 'GET') {
+          let list = payments;
+          const clientId = url.searchParams.get('client');
+          const status = url.searchParams.get('status');
+          if (clientId) list = list.filter((p) => p.client === clientId);
+          if (status) list = list.filter((p) => p.status === status);
+          return sendJson(res, 200, paginated(list, page, perPage));
+        }
+        if (pathname === '/api/v1/payments' && method === 'POST') {
+          const body = await readBody(req);
+          paymentReceiptSeq += 1;
+          const payment = {
+            id: nextId('pay'),
+            client: String(body.client),
+            amount: Number(body.amount),
+            dueDate: String(body.dueDate),
+            status: 'PENDING' as const,
+            receiptNumber: `REC-${String(paymentReceiptSeq).padStart(6, '0')}`,
+          };
+          payments.push(payment);
+          return sendJson(res, 201, envelope(payment));
+        }
+        const paymentMatch = pathname.match(/^\/api\/v1\/payments\/([^/]+)$/);
+        if (paymentMatch && method === 'GET') {
+          const payment = payments.find((p) => p.id === paymentMatch[1]);
+          if (!payment) return sendJson(res, 404, { message: 'Pagamento não encontrado.' });
+          return sendJson(res, 200, envelope(payment));
+        }
+        if (paymentMatch && method === 'PATCH') {
+          const body = await readBody(req);
+          const payment = payments.find((p) => p.id === paymentMatch[1]);
+          if (payment) {
+            Object.assign(payment, body);
+            if (body.status === 'PAID' && !('paidAt' in body)) (payment as { paidAt?: string }).paidAt = new Date().toISOString();
+          }
+          return sendJson(res, 200, envelope(payment ?? {}));
+        }
+        if (paymentMatch && method === 'DELETE') {
+          const index = payments.findIndex((p) => p.id === paymentMatch[1]);
+          if (index !== -1) payments.splice(index, 1);
           res.statusCode = 204;
           return res.end();
         }

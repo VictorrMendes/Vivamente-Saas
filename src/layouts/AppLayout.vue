@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
   { to: '/servicos', label: 'Serviços', icon: Briefcase },
   { to: '/profissionais', label: 'Profissionais', icon: UserCog, roles: ['ADMIN'] },
   { to: '/pacotes', label: 'Pacotes', icon: Package },
-  { to: '/financeiro', label: 'Financeiro', icon: Wallet, comingSoon: true },
+  { to: '/financeiro', label: 'Financeiro', icon: Wallet },
   { to: '/minha-pagina', label: 'Minha Página', icon: FileEdit, roles: ['THERAPIST'] },
   { to: '/notificacoes', label: 'Notificações', icon: Bell },
   { to: '/configuracoes', label: 'Configurações', icon: Settings },
