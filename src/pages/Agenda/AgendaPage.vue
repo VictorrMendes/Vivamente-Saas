@@ -135,6 +135,7 @@ function handleCancel(id: string) {
     <div v-else class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[auto_1fr]">
       <Calendar
         :attributes="calendarAttributes"
+        is-dark="system"
         expanded
         borderless
         transparent
