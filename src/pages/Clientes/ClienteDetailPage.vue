@@ -3,9 +3,12 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClient } from '@/composables/useClient';
 import { useClinicalRecords } from '@/composables/useClinicalRecords';
+import { useServices } from '@/composables/useServices';
 import { useAuthStore } from '@/stores/auth';
 import { formatDateTime } from '@/lib/datetime';
 import { APPOINTMENT_STATUS_LABEL, APPOINTMENT_STATUS_VARIANT } from '@/constants/appointmentStatus';
+import { APPOINTMENT_MODALITY_LABEL } from '@/constants/appointmentModality';
+import type { Appointment } from '@/types/appointment';
 import Badge from '@/components/ui/Badge.vue';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
@@ -29,6 +32,16 @@ const {
   update,
   remove,
 } = useClient();
+
+const { services, load: loadServices } = useServices();
+const serviceName = computed(() => {
+  const map = new Map(services.value.map((s) => [s.id, s.name]));
+  return (id: string) => map.get(id) ?? id;
+});
+function appointmentDetail(appt: Appointment) {
+  if (appt.service) return serviceName.value(appt.service);
+  return appt.modality ? APPOINTMENT_MODALITY_LABEL[appt.modality] : 'Sem detalhes';
+}
 
 const {
   records,
@@ -115,6 +128,7 @@ const pastAppointments = computed(() =>
 onMounted(() => {
   load(props.id);
   loadAppointments(props.id);
+  loadServices();
   if (auth.role === 'THERAPIST') loadRecords(props.id);
 });
 </script>
@@ -260,7 +274,7 @@ onMounted(() => {
                 :key="appt.id"
                 class="flex items-center justify-between gap-3 rounded-md bg-surface-sunken px-3 py-2 text-body-sm"
               >
-                <span class="text-text">{{ appt.serviceName }} — {{ formatDateTime(appt.startsAt) }}</span>
+                <span class="text-text">{{ appointmentDetail(appt) }} — {{ formatDateTime(appt.startsAt) }}</span>
                 <Badge :variant="APPOINTMENT_STATUS_VARIANT[appt.status]" size="sm">
                   {{ APPOINTMENT_STATUS_LABEL[appt.status] }}
                 </Badge>
@@ -277,7 +291,7 @@ onMounted(() => {
                 :key="appt.id"
                 class="flex items-center justify-between gap-3 rounded-md bg-surface-sunken px-3 py-2 text-body-sm"
               >
-                <span class="text-text">{{ appt.serviceName }} — {{ formatDateTime(appt.startsAt) }}</span>
+                <span class="text-text">{{ appointmentDetail(appt) }} — {{ formatDateTime(appt.startsAt) }}</span>
                 <Badge :variant="APPOINTMENT_STATUS_VARIANT[appt.status]" size="sm">
                   {{ APPOINTMENT_STATUS_LABEL[appt.status] }}
                 </Badge>

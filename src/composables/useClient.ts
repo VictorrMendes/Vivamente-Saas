@@ -4,6 +4,11 @@ import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
 import type { Client } from '@/types/client';
 import type { Appointment } from '@/types/appointment';
 
+// O Back serializa price como string decimal (ou null), igual em Services/Packages/Payments.
+function parsePrice(appt: Appointment): Appointment {
+  return { ...appt, price: appt.price != null ? Number(appt.price) : undefined };
+}
+
 export function useClient() {
   const client = ref<Client | null>(null);
   const loading = ref(false);
@@ -43,7 +48,7 @@ export function useClient() {
     appointmentsError.value = null;
     try {
       const res = await backApi<PaginatedEnvelope<Appointment>>(`/api/v1/appointments?client=${id}&per_page=50`);
-      appointments.value = res.data;
+      appointments.value = res.data.map(parsePrice);
     } catch {
       appointmentsError.value = 'Não foi possível carregar os agendamentos deste cliente.';
     } finally {

@@ -71,13 +71,13 @@ function atHour(daysFromNow: number, hour: number, minute = 0) {
 
 // ---------- seed data ----------
 
-type MockAppointment = Appointment & { clientId: string; professionalId: string };
+type MockAppointment = Appointment & { professional: string };
 
 const appointments: MockAppointment[] = [
-  { id: 'a1', clientId: 'c1', professionalId: 'p1', clientName: 'Maria Souza', serviceName: 'Terapia individual', startsAt: atHour(0, 10), endsAt: atHour(0, 11), status: 'CONFIRMED' as const },
-  { id: 'a2', clientId: 'c2', professionalId: 'p1', clientName: 'Carlos Lima', serviceName: 'Terapia de casal', startsAt: atHour(1, 15), endsAt: atHour(1, 16), status: 'PENDING' as const },
-  { id: 'a3', clientId: 'c1', professionalId: 'p2', clientName: 'Maria Souza', serviceName: 'Terapia individual', startsAt: atHour(-3, 9), endsAt: atHour(-3, 10), status: 'COMPLETED' as const },
-  { id: 'a4', clientId: 'c3', professionalId: 'p1', clientName: 'Beatriz Costa', serviceName: 'Terapia individual', startsAt: atHour(4, 11), endsAt: atHour(4, 12), status: 'PENDING' as const },
+  { id: 'a1', client: 'c1', professional: 'p1', service: 's1', startsAt: atHour(0, 10), endsAt: atHour(0, 11), status: 'CONFIRMED' as const, modality: 'ONLINE' as const, price: 180, notes: '' },
+  { id: 'a2', client: 'c2', professional: 'p1', service: 's2', startsAt: atHour(1, 15), endsAt: atHour(1, 16), status: 'PENDING' as const, modality: 'IN_PERSON' as const, price: 250, notes: '' },
+  { id: 'a3', client: 'c1', professional: 'p2', service: 's1', startsAt: atHour(-3, 9), endsAt: atHour(-3, 10), status: 'COMPLETED' as const, modality: 'ONLINE' as const, price: 180, notes: 'Sessão de acompanhamento.' },
+  { id: 'a4', client: 'c3', professional: 'p1', service: 's1', startsAt: atHour(4, 11), endsAt: atHour(4, 12), status: 'PENDING' as const, modality: 'ONLINE' as const, callLink: 'https://meet.example.com/sala-1', price: 180, notes: '' },
 ];
 
 const availability = [
@@ -160,20 +160,46 @@ const notifications = [
   { id: 'n3', title: 'Agendamento concluído', message: 'Sessão com Maria Souza foi concluída.', read: true, createdAt: atHour(-3, 10) },
 ];
 
-const dashboardMetrics = {
-  newLeads: leads.filter((l) => l.status === 'NEW').length,
-  activeClients: clients.length,
-  todayAppointments: appointments.filter((a) => a.startsAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length,
-  monthlyIndicators: [{ label: 'Conversão do mês', value: 34 }],
-  upcomingAppointments: appointments
-    .filter((a) => new Date(a.startsAt).getTime() >= Date.now())
-    .slice(0, 5)
-    .map((a) => ({ id: a.id, clientName: a.clientName, serviceName: a.serviceName, startsAt: a.startsAt })),
-  recentActivity: [
-    { id: 'e1', description: "Lead João Silva com status 'Novo'", occurredAt: atHour(0, 8) },
-    { id: 'e2', description: 'Agendamento com Maria Souza confirmado', occurredAt: atHour(0, 7) },
-  ],
-};
+// Espelha config/dashboard.py::_compute_metrics do Back real (mesmos nomes de campo).
+function buildDashboardMetrics() {
+  const now = new Date();
+  const activeAppointments = appointments.filter((a) => a.status !== 'CANCELLED');
+  const thisMonthAppointments = activeAppointments.filter((a) => {
+    const d = new Date(a.startsAt);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+  const pendingPayments = payments.filter((p) => p.status === 'PENDING');
+  const monthlyPaid = payments.filter((p) => {
+    if (p.status !== 'PAID') return false;
+    const d = new Date(p.dueDate);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+
+  return {
+    newLeads: leads.filter((l) => l.status === 'NEW').length,
+    activeClients: clients.length,
+    sessionsThisMonth: thisMonthAppointments.length,
+    appointmentsToday: activeAppointments.filter((a) => a.startsAt.slice(0, 10) === now.toISOString().slice(0, 10)).length,
+    upcomingAppointments: activeAppointments
+      .filter((a) => new Date(a.startsAt).getTime() >= Date.now())
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+      .slice(0, 5)
+      .map((a) => ({ id: a.id, client: a.client, startsAt: a.startsAt, status: a.status })),
+    pendingPayments: {
+      count: pendingPayments.length,
+      total: pendingPayments.reduce((sum, p) => sum + p.amount, 0),
+    },
+    monthlySummary: {
+      receivedTotal: monthlyPaid.reduce((sum, p) => sum + p.amount, 0),
+      sessionsCount: thisMonthAppointments.length,
+    },
+    recentActivity: [
+      { action: 'create', resource: 'lead', resourceId: 'l1', createdAt: atHour(-1, 9) },
+      { action: 'confirmed', resource: 'appointment', resourceId: 'a1', createdAt: atHour(0, 8) },
+      { action: 'create', resource: 'payment', resourceId: 'pay2', createdAt: atHour(-2, 10) },
+    ],
+  };
+}
 
 // ---------- router ----------
 
@@ -224,7 +250,7 @@ export function mockApiServer(): Plugin {
 
         // ---- Dashboard ----
         if (pathname === '/api/v1/dashboard/metrics' && method === 'GET') {
-          return sendJson(res, 200, envelope(dashboardMetrics));
+          return sendJson(res, 200, envelope(buildDashboardMetrics()));
         }
 
         // ---- Appointments ----
@@ -232,8 +258,8 @@ export function mockApiServer(): Plugin {
           let list = appointments;
           const clientId = url.searchParams.get('client');
           const professionalId = url.searchParams.get('professional');
-          if (clientId) list = list.filter((a) => a.clientId === clientId);
-          if (professionalId) list = list.filter((a) => a.professionalId === professionalId);
+          if (clientId) list = list.filter((a) => a.client === clientId);
+          if (professionalId) list = list.filter((a) => a.professional === professionalId);
           return sendJson(res, 200, paginated(list, page, perPage || 100));
         }
         const apptActionMatch = pathname.match(/^\/api\/v1\/appointments\/([^/]+)\/(confirm|cancel|complete)$/);

@@ -3,8 +3,11 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProfessional } from '@/composables/useProfessional';
 import { useSpecialties } from '@/composables/useSpecialties';
+import { backApi } from '@/services/api/client';
 import { formatDateTime } from '@/lib/datetime';
 import { APPOINTMENT_STATUS_LABEL, APPOINTMENT_STATUS_VARIANT } from '@/constants/appointmentStatus';
+import type { PaginatedEnvelope } from '@/types/api';
+import type { Client } from '@/types/client';
 import Badge from '@/components/ui/Badge.vue';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
@@ -30,6 +33,16 @@ const {
 const { specialties, load: loadSpecialties } = useSpecialties();
 
 const specialtyNameById = computed(() => new Map(specialties.value.map((s) => [s.id, s.name])));
+
+const clients = ref<Client[]>([]);
+const clientName = computed(() => {
+  const map = new Map(clients.value.map((c) => [c.id, c.name]));
+  return (id: string) => map.get(id) ?? id;
+});
+async function loadClients() {
+  const res = await backApi<PaginatedEnvelope<Client>>('/api/v1/clients?per_page=100');
+  clients.value = res.data;
+}
 
 const editing = ref(false);
 const editForm = reactive({ fullName: '', bio: '', isPublic: true, specialtyIds: [] as string[] });
@@ -75,6 +88,7 @@ onMounted(() => {
   load(props.id);
   loadAppointments(props.id);
   loadSpecialties();
+  loadClients();
 });
 </script>
 
@@ -197,7 +211,7 @@ onMounted(() => {
                 :key="appt.id"
                 class="flex items-center justify-between gap-3 rounded-md bg-surface-sunken px-3 py-2 text-body-sm"
               >
-                <span class="text-text">{{ appt.clientName }} — {{ formatDateTime(appt.startsAt) }}</span>
+                <span class="text-text">{{ clientName(appt.client) }} — {{ formatDateTime(appt.startsAt) }}</span>
                 <Badge :variant="APPOINTMENT_STATUS_VARIANT[appt.status]" size="sm">
                   {{ APPOINTMENT_STATUS_LABEL[appt.status] }}
                 </Badge>
@@ -214,7 +228,7 @@ onMounted(() => {
                 :key="appt.id"
                 class="flex items-center justify-between gap-3 rounded-md bg-surface-sunken px-3 py-2 text-body-sm"
               >
-                <span class="text-text">{{ appt.clientName }} — {{ formatDateTime(appt.startsAt) }}</span>
+                <span class="text-text">{{ clientName(appt.client) }} — {{ formatDateTime(appt.startsAt) }}</span>
                 <Badge :variant="APPOINTMENT_STATUS_VARIANT[appt.status]" size="sm">
                   {{ APPOINTMENT_STATUS_LABEL[appt.status] }}
                 </Badge>

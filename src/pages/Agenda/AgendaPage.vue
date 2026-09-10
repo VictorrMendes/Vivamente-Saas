@@ -4,9 +4,15 @@ import { Calendar } from 'v-calendar';
 import 'v-calendar/style.css';
 import { useAppointments } from '@/composables/useAppointments';
 import { useAvailability } from '@/composables/useAvailability';
+import { useServices } from '@/composables/useServices';
+import { backApi } from '@/services/api/client';
+import { formatCurrency } from '@/lib/currency';
 import { formatTime, toDateOnly } from '@/lib/datetime';
+import type { PaginatedEnvelope } from '@/types/api';
 import type { Appointment } from '@/types/appointment';
+import type { Client } from '@/types/client';
 import { APPOINTMENT_STATUS_LABEL as STATUS_LABEL, APPOINTMENT_STATUS_VARIANT as STATUS_VARIANT } from '@/constants/appointmentStatus';
+import { APPOINTMENT_MODALITY_LABEL } from '@/constants/appointmentModality';
 import { CalendarDays } from '@lucide/vue';
 import Button from '@/components/ui/Button.vue';
 import Badge from '@/components/ui/Badge.vue';
@@ -15,6 +21,26 @@ import AvailabilityList from '@/components/calendar/AvailabilityList.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const { appointments, showLoading, error, actionError, pendingActionId, load, updateStatus } = useAppointments();
+const { services, load: loadServices } = useServices();
+
+const clients = ref<Client[]>([]);
+const clientName = computed(() => {
+  const map = new Map(clients.value.map((c) => [c.id, c.name]));
+  return (id: string) => map.get(id) ?? id;
+});
+const serviceName = computed(() => {
+  const map = new Map(services.value.map((s) => [s.id, s.name]));
+  return (id: string) => map.get(id) ?? id;
+});
+function appointmentDetail(appt: Appointment) {
+  if (appt.service) return serviceName.value(appt.service);
+  return appt.modality ? APPOINTMENT_MODALITY_LABEL[appt.modality] : 'Sem detalhes';
+}
+
+async function loadClients() {
+  const res = await backApi<PaginatedEnvelope<Client>>('/api/v1/clients?per_page=100');
+  clients.value = res.data;
+}
 const {
   slots,
   showLoading: availabilityShowLoading,
@@ -34,6 +60,8 @@ const selectedDate = ref(toDateOnly(today));
 onMounted(() => {
   load(today);
   loadAvailability();
+  loadClients();
+  loadServices();
 });
 
 const newSlot = reactive({ date: toDateOnly(today), startTime: '09:00', endTime: '12:00' });
@@ -130,8 +158,11 @@ function handleCancel(id: string) {
         <ul v-else class="mt-3 divide-y divide-border">
           <li v-for="appt in selectedDayAppointments" :key="appt.id" class="flex flex-wrap items-center justify-between gap-3 py-3">
             <div>
-              <p class="text-body-sm font-medium text-text">{{ appt.clientName }} — {{ appt.serviceName }}</p>
-              <p class="text-caption text-text-muted">{{ formatTime(appt.startsAt) }} – {{ formatTime(appt.endsAt) }}</p>
+              <p class="text-body-sm font-medium text-text">{{ clientName(appt.client) }} — {{ appointmentDetail(appt) }}</p>
+              <p class="text-caption text-text-muted">
+                {{ formatTime(appt.startsAt) }} – {{ formatTime(appt.endsAt) }}
+                <template v-if="appt.price != null"> · {{ formatCurrency(appt.price) }}</template>
+              </p>
             </div>
 
             <div class="flex items-center gap-2">

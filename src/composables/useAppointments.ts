@@ -10,6 +10,11 @@ const STATUS_AFTER_ACTION: Record<AppointmentAction, AppointmentStatus> = {
   complete: 'COMPLETED',
 };
 
+// O Back serializa price como string decimal (ou null), igual em Services/Packages/Payments.
+function parsePrice(appt: Appointment): Appointment {
+  return { ...appt, price: appt.price != null ? Number(appt.price) : undefined };
+}
+
 export function useAppointments() {
   const appointments = ref<Appointment[]>([]);
   const loading = ref(false);
@@ -41,7 +46,7 @@ export function useAppointments() {
 
     try {
       const res = await backApi<PaginatedEnvelope<Appointment>>(`/api/v1/appointments?${params}`);
-      appointments.value = res.data;
+      appointments.value = res.data.map(parsePrice);
     } catch {
       error.value = 'Não foi possível carregar a agenda. Tente novamente em instantes.';
     } finally {
