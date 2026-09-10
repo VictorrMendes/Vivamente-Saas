@@ -11,6 +11,7 @@ import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Appointment } from '../src/types/appointment';
 import type { Lead } from '../src/types/lead';
+import type { ServiceModality } from '../src/types/service';
 import { deepCamelCase } from '../src/services/api/caseConvert';
 
 /**
@@ -100,9 +101,9 @@ const clients = [
 ];
 
 const services = [
-  { id: 's1', name: 'Terapia individual', description: 'Sessão 1:1, 50 minutos.', durationMinutes: 50, price: 180 },
-  { id: 's2', name: 'Terapia de casal', description: 'Sessão para casais, 60 minutos.', durationMinutes: 60, price: 250 },
-  { id: 's3', name: 'Terapia infantil', description: 'Atendimento infantil, 45 minutos.', durationMinutes: 45, price: 160 },
+  { id: 's1', name: 'Terapia individual', description: 'Sessão 1:1, 50 minutos.', durationMinutes: 50, price: 180, modality: 'ONLINE' as const },
+  { id: 's2', name: 'Terapia de casal', description: 'Sessão para casais, 60 minutos.', durationMinutes: 60, price: 250, modality: 'BOTH' as const },
+  { id: 's3', name: 'Terapia infantil', description: 'Atendimento infantil, 45 minutos.', durationMinutes: 45, price: 160, modality: 'IN_PERSON' as const },
 ];
 
 const specialties = [
@@ -300,7 +301,16 @@ export function mockApiServer(): Plugin {
         }
         if (pathname === '/api/v1/clients' && method === 'POST') {
           const body = await readBody(req);
-          const client = { id: nextId('c'), name: String(body.name), email: String(body.email), phone: String(body.phone), createdAt: new Date().toISOString() };
+          const client = {
+            id: nextId('c'),
+            name: String(body.name),
+            email: String(body.email),
+            phone: String(body.phone),
+            birthDate: body.birthDate ? String(body.birthDate) : undefined,
+            document: body.document ? String(body.document) : undefined,
+            administrativeNotes: body.administrativeNotes ? String(body.administrativeNotes) : undefined,
+            createdAt: new Date().toISOString(),
+          };
           clients.push(client);
           return sendJson(res, 201, envelope(client));
         }
@@ -329,7 +339,14 @@ export function mockApiServer(): Plugin {
         }
         if (pathname === '/api/v1/services' && method === 'POST') {
           const body = await readBody(req);
-          const service = { id: nextId('s'), name: String(body.name), description: String(body.description ?? ''), durationMinutes: Number(body.durationMinutes), price: Number(body.price) };
+          const service = {
+            id: nextId('s'),
+            name: String(body.name),
+            description: String(body.description ?? ''),
+            durationMinutes: Number(body.durationMinutes),
+            price: Number(body.price),
+            modality: (body.modality as ServiceModality) ?? 'ONLINE',
+          };
           services.push(service);
           return sendJson(res, 201, envelope(service));
         }

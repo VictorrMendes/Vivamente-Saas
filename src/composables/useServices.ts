@@ -3,6 +3,17 @@ import { backApi } from '@/services/api/client';
 import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
 import type { NewService, Service } from '@/types/service';
 
+// O Back serializa `price` como string decimal ("150.00") — convertemos pra
+// number na entrada e de volta pra string só na saída, pro resto do app
+// (inputs numéricos, formatCurrency) trabalhar normal.
+function parsePrice(service: Service): Service {
+  return { ...service, price: Number(service.price) };
+}
+
+function toWirePrice(service: NewService) {
+  return { ...service, price: service.price.toFixed(2) };
+}
+
 export function useServices() {
   const services = ref<Service[]>([]);
   const loading = ref(false);
@@ -21,7 +32,7 @@ export function useServices() {
 
     try {
       const res = await backApi<PaginatedEnvelope<Service>>('/api/v1/services?per_page=100');
-      services.value = res.data;
+      services.value = res.data.map(parsePrice);
     } catch {
       error.value = 'Não foi possível carregar os serviços. Tente novamente em instantes.';
     } finally {
@@ -37,9 +48,9 @@ export function useServices() {
     try {
       const res = await backApi<ApiEnvelope<Service>>('/api/v1/services', {
         method: 'POST',
-        body: JSON.stringify(service),
+        body: JSON.stringify(toWirePrice(service)),
       });
-      services.value.push(res.data);
+      services.value.push(parsePrice(res.data));
       return true;
     } catch {
       saveError.value = 'Não foi possível salvar o serviço. Tente novamente.';
@@ -55,10 +66,10 @@ export function useServices() {
     try {
       const res = await backApi<ApiEnvelope<Service>>(`/api/v1/services/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify(patch),
+        body: JSON.stringify(toWirePrice(patch)),
       });
       const index = services.value.findIndex((s) => s.id === id);
-      if (index !== -1) services.value[index] = res.data;
+      if (index !== -1) services.value[index] = parsePrice(res.data);
       return true;
     } catch {
       saveError.value = 'Não foi possível salvar o serviço. Tente novamente.';

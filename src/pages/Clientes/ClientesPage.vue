@@ -14,7 +14,7 @@ const { clients, pagination, showLoading, error, saving, saveError, load, create
 const search = ref('');
 const page = ref(1);
 const showNewForm = ref(false);
-const newClient = reactive({ name: '', email: '', phone: '' });
+const newClient = reactive({ name: '', email: '', phone: '', birthDate: '', document: '', administrativeNotes: '' });
 
 function fetchClients() {
   load({ page: page.value, search: search.value || undefined });
@@ -35,7 +35,14 @@ function changePage(next: number) {
 }
 
 async function handleCreate() {
-  const id = await create({ ...newClient });
+  const id = await create({
+    name: newClient.name,
+    email: newClient.email,
+    phone: newClient.phone,
+    birthDate: newClient.birthDate || undefined,
+    document: newClient.document || undefined,
+    administrativeNotes: newClient.administrativeNotes || undefined,
+  });
   if (id) router.push(`/clientes/${id}`);
 }
 
@@ -86,6 +93,36 @@ onMounted(fetchClients);
           type="tel"
           required
           class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+        />
+      </div>
+      <div>
+        <label for="client-birth" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nascimento</label>
+        <input
+          id="client-birth"
+          v-model="newClient.birthDate"
+          type="date"
+          class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+        />
+      </div>
+      <div>
+        <label for="client-document" class="mb-1 block text-label uppercase tracking-label text-text-muted">Documento</label>
+        <input
+          id="client-document"
+          v-model="newClient.document"
+          type="text"
+          placeholder="CPF"
+          class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+        />
+      </div>
+      <div class="min-w-[200px] flex-1">
+        <label for="client-notes" class="mb-1 block text-label uppercase tracking-label text-text-muted">
+          Observações administrativas
+        </label>
+        <input
+          id="client-notes"
+          v-model="newClient.administrativeNotes"
+          type="text"
+          class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
         />
       </div>
       <Button type="submit" :loading="saving">Salvar</Button>

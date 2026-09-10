@@ -28,18 +28,28 @@ const {
 } = useClient();
 
 const editing = ref(false);
-const editForm = reactive({ name: '', email: '', phone: '' });
+const editForm = reactive({ name: '', email: '', phone: '', birthDate: '', document: '', administrativeNotes: '' });
 
 function startEdit() {
   if (!client.value) return;
   editForm.name = client.value.name;
   editForm.email = client.value.email;
   editForm.phone = client.value.phone;
+  editForm.birthDate = client.value.birthDate ?? '';
+  editForm.document = client.value.document ?? '';
+  editForm.administrativeNotes = client.value.administrativeNotes ?? '';
   editing.value = true;
 }
 
 async function handleSave() {
-  const ok = await update(props.id, { ...editForm });
+  const ok = await update(props.id, {
+    name: editForm.name,
+    email: editForm.email,
+    phone: editForm.phone,
+    birthDate: editForm.birthDate || undefined,
+    document: editForm.document || undefined,
+    administrativeNotes: editForm.administrativeNotes || undefined,
+  });
   if (ok) editing.value = false;
 }
 
@@ -127,6 +137,35 @@ onMounted(() => {
                 class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
               />
             </div>
+            <div>
+              <label for="edit-birth" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nascimento</label>
+              <input
+                id="edit-birth"
+                v-model="editForm.birthDate"
+                type="date"
+                class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+              />
+            </div>
+            <div>
+              <label for="edit-document" class="mb-1 block text-label uppercase tracking-label text-text-muted">Documento</label>
+              <input
+                id="edit-document"
+                v-model="editForm.document"
+                type="text"
+                class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+              />
+            </div>
+            <div>
+              <label for="edit-notes" class="mb-1 block text-label uppercase tracking-label text-text-muted">
+                Observações administrativas
+              </label>
+              <textarea
+                id="edit-notes"
+                v-model="editForm.administrativeNotes"
+                rows="2"
+                class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:border-primary-600"
+              />
+            </div>
             <p v-if="saveError" role="alert" class="text-body-sm text-error">{{ saveError }}</p>
             <div class="flex gap-2">
               <Button type="submit" size="sm" :loading="saving">Salvar</Button>
@@ -143,7 +182,18 @@ onMounted(() => {
               <dt class="text-text-muted">Telefone</dt>
               <dd class="text-text">{{ client.phone }}</dd>
             </div>
+            <div v-if="client.birthDate" class="flex justify-between gap-4">
+              <dt class="text-text-muted">Nascimento</dt>
+              <dd class="text-text">{{ client.birthDate }}</dd>
+            </div>
+            <div v-if="client.document" class="flex justify-between gap-4">
+              <dt class="text-text-muted">Documento</dt>
+              <dd class="text-text">{{ client.document }}</dd>
+            </div>
           </dl>
+          <p v-if="client.administrativeNotes" class="mt-3 rounded-md bg-surface-sunken p-3 text-body-sm text-text">
+            {{ client.administrativeNotes }}
+          </p>
 
           <Button v-if="!editing" class="mt-6" variant="ghost" :loading="deleting" @click="handleDelete">
             Excluir cliente

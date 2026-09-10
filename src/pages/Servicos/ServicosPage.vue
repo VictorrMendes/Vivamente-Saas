@@ -3,11 +3,17 @@ import { onMounted, ref } from 'vue';
 import { Briefcase } from '@lucide/vue';
 import { useServices } from '@/composables/useServices';
 import { formatCurrency } from '@/lib/currency';
-import type { NewService } from '@/types/service';
+import type { NewService, ServiceModality } from '@/types/service';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import ServiceForm from '@/components/forms/ServiceForm.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
+
+const MODALITY_LABEL: Record<ServiceModality, string> = {
+  ONLINE: 'Online',
+  IN_PERSON: 'Presencial',
+  BOTH: 'Online ou presencial',
+};
 
 const { services, showLoading, error, saving, saveError, removingId, load, create, update, remove } = useServices();
 
@@ -74,7 +80,7 @@ onMounted(load);
             <div>
               <p class="font-medium text-text">{{ service.name }}</p>
               <p class="text-body-sm text-text-muted">
-                {{ service.durationMinutes }} min · {{ formatCurrency(service.price) }}
+                {{ service.durationMinutes }} min · {{ formatCurrency(service.price) }} · {{ MODALITY_LABEL[service.modality] }}
               </p>
               <p v-if="service.description" class="mt-1 text-body-sm text-text-muted">{{ service.description }}</p>
             </div>

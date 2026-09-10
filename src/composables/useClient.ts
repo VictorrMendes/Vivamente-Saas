@@ -51,7 +51,10 @@ export function useClient() {
     }
   }
 
-  async function update(id: string, patch: Partial<Pick<Client, 'name' | 'email' | 'phone'>>) {
+  async function update(
+    id: string,
+    patch: Partial<Pick<Client, 'name' | 'email' | 'phone' | 'birthDate' | 'document' | 'administrativeNotes'>>,
+  ) {
     saveError.value = null;
     saving.value = true;
     try {
