@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b1a2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
     "name": "VivaMente - Back",
-    "description": "API de negocio da VivaMente (terapeutas, clientes, leads, agendamentos). Fonte de verdade do contrato: docs/back.md + /api/schema/swagger-ui/ (gerado do codigo, sempre atualizado).\n\n## Como autenticar (ambiente local/dev)\nO Back valida o ID Token do Firebase sozinho. Enquanto o servico Oauth nao emite tokens reais, existe uma porta dos fundos SOMENTE em DEBUG=True: `POST /api/v1/dev/fake-token`.\n\nRode a pasta **1. Dev Auth** primeiro (ou clique em cada request e mande) - os tokens sao salvos automaticamente nas variaveis `{{admin_token}}` e `{{therapist_token}}` da collection, usados no resto das requests.\n\nQuando o Oauth estiver rodando de verdade, troque o valor de `{{therapist_token}}`/`{{admin_token}}` por um ID Token real do Firebase - o resto da collection continua funcionando igual.\n\n## Envelope de resposta\n- Sucesso (item): `{ \"data\": {...}, \"meta\": { \"request_id\", \"timestamp\" } }`\n- Sucesso (lista): `{ \"data\": [...], \"pagination\": { \"page\", \"per_page\", \"total\", \"total_pages\" } }`\n- Erro (RFC 9457): `{ \"type\", \"title\", \"status\", \"detail\", \"request_id\" }`\n\n## Sobre os requests de DELETE\nSao exemplos ilustrativos de cada recurso. Varias pastas dependem de IDs criados em pastas anteriores (ex.: Services/Leads/Appointments usam `{{professional_id}}` e `{{client_id}}`) - rodar um DELETE de um recurso usado mais adiante quebra o restante do fluxo se voce rodar a collection inteira via Collection Runner. Para uma exploracao segura, rode pasta por pasta e pule os DELETEs ate o final.",
+    "description": "API de negocio da VivaMente (terapeutas, clientes, leads, agendamentos). Fonte de verdade do contrato: docs/back.md + /api/schema/swagger-ui/ (gerado do codigo, sempre atualizado).\n\n## Como autenticar (ambiente local/dev)\nO Back valida o ID Token do Firebase sozinho. Enquanto o servico Oauth nao emite tokens reais, existe uma porta dos fundos SOMENTE em DEBUG=True: `POST /api/v1/dev/fake-token`.\n\nRode a pasta **1. Dev Auth** primeiro (ou clique em cada request e mande) - os tokens sao salvos automaticamente nas variaveis `{{admin_token}}` e `{{therapist_token}}` da collection, usados no resto das requests.\n\nQuando o Oauth estiver rodando de verdade, troque o valor de `{{therapist_token}}`/`{{admin_token}}` por um ID Token real do Firebase - o resto da collection continua funcionando igual.\n\n## Envelope de resposta\n- Sucesso (item): `{ \"data\": {...}, \"meta\": { \"request_id\", \"timestamp\" } }`\n- Sucesso (lista): `{ \"data\": [...], \"pagination\": { \"page\", \"per_page\", \"total\", \"total_pages\" } }`\n- Erro (RFC 9457): `{ \"type\", \"title\", \"status\", \"detail\", \"request_id\" }`\n\n## Dominios cobertos\nProfessionals/Specialties/Services, Leads (+ captacao publica), Clients, Availability/Appointments, Notifications, Audit Logs, Dashboard, **Clinical Records** (prontuario, restrito ao terapeuta responsavel - ADMIN nunca acessa conteudo clinico), **Packages** (pacotes de sessao) e **Payments** (recibo gerado no servidor, balanco mensal).\n\n## Sobre os requests de DELETE\nSao exemplos ilustrativos de cada recurso. Varias pastas dependem de IDs criados em pastas anteriores (ex.: Services/Leads/Appointments usam `{{professional_id}}` e `{{client_id}}`) - rodar um DELETE de um recurso usado mais adiante quebra o restante do fluxo se voce rodar a collection inteira via Collection Runner. Para uma exploracao segura, rode pasta por pasta e pule os DELETEs ate o final.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -73,6 +73,21 @@
     },
     {
       "key": "audit_log_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "clinical_record_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "package_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "payment_id",
       "value": "",
       "type": "string"
     }
@@ -1247,7 +1262,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Cliente Direto\",\n  \"email\": \"direto@teste.com\",\n  \"phone\": \"+55 11 97777-6666\"\n}"
+              "raw": "{\n  \"name\": \"Cliente Direto\",\n  \"email\": \"direto@teste.com\",\n  \"phone\": \"+55 11 97777-6666\",\n  \"birth_date\": \"1990-05-20\",\n  \"document\": \"123.456.789-00\",\n  \"administrative_notes\": \"Prefere pagamento via Pix.\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/clients",
@@ -1517,7 +1532,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"client\": {{client_id}},\n  \"starts_at\": \"2026-10-02T14:00:00Z\",\n  \"ends_at\": \"2026-10-02T14:50:00Z\"\n}"
+              "raw": "{\n  \"client\": \"{{client_id}}\",\n  \"starts_at\": \"2026-10-02T14:00:00Z\",\n  \"ends_at\": \"2026-10-02T14:50:00Z\",\n  \"modality\": \"ONLINE\",\n  \"call_link\": \"https://meet.example.com/sala-1\",\n  \"price\": \"150.00\",\n  \"notes\": \"Primeira sessao apos avaliacao inicial.\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/appointments",
@@ -1530,7 +1545,7 @@
                 "appointments"
               ]
             },
-            "description": "`client` precisa pertencer ao mesmo profissional (senao 400). Nao pode sobrepor outro agendamento existente do profissional (banco garante isso, nao so a validacao)."
+            "description": "`client` precisa pertencer ao mesmo profissional (senao 400). Nao pode sobrepor outro agendamento existente (banco garante isso, nao so a validacao). `package` e opcional (ver pasta 17. Packages para um exemplo completo). `modality`: ONLINE | IN_PERSON | HYBRID."
           }
         },
         {
@@ -1892,7 +1907,7 @@
                 "dashboard"
               ]
             },
-            "description": "Mesmo payload de /dashboard/metrics. THERAPIST ve so os proprios numeros; ADMIN ve o total da plataforma."
+            "description": "Retorna agora tambem: appointments_today, upcoming_appointments (proximos 5), pending_payments {count,total}, monthly_summary {received_total,sessions_count} e recent_activity (ultimas 10 acoes do PROPRIO usuario logado, via AuditLog - nunca conteudo sensivel). THERAPIST ve so o proprio escopo; ADMIN ve a plataforma inteira. Mesmo payload de /dashboard/metrics. THERAPIST ve so os proprios numeros; ADMIN ve o total da plataforma."
           }
         },
         {
@@ -1920,13 +1935,608 @@
                 "dashboard",
                 "metrics"
               ]
-            }
+            },
+            "description": "Retorna agora tambem: appointments_today, upcoming_appointments (proximos 5), pending_payments {count,total}, monthly_summary {received_total,sessions_count} e recent_activity (ultimas 10 acoes do PROPRIO usuario logado, via AuditLog - nunca conteudo sensivel). THERAPIST ve so o proprio escopo; ADMIN ve a plataforma inteira."
           }
         }
       ]
     },
     {
-      "name": "15. Docs",
+      "name": "15. Clinical Records (prontuario - restrito ao terapeuta responsavel)",
+      "item": [
+        {
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinical-records",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clinical-records"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client\": \"{{client_id}}\",\n  \"content\": \"Paciente relatou melhora no sono e reducao da ansiedade.\"\n}"
+            },
+            "description": "So o terapeuta responsavel pelo `client` pode criar/ler/editar/excluir. ADMIN recebe 403 em qualquer acao aqui - nao ha bypass."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('clinical_record_id', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "name": "POST /clinical-records (cria)"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinical-records?client={{client_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clinical-records?client={{client_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "name": "GET /clinical-records?client={id} (lista filtrada)"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinical-records/{{clinical_record_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clinical-records",
+                "{{clinical_record_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "name": "GET /clinical-records/{id}"
+        },
+        {
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinical-records/{{clinical_record_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clinical-records",
+                "{{clinical_record_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Atualizacao da evolucao do paciente.\"\n}"
+            }
+          },
+          "name": "PATCH /clinical-records/{id}"
+        },
+        {
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinical-records/{{clinical_record_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clinical-records",
+                "{{clinical_record_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "name": "DELETE /clinical-records/{id}"
+        }
+      ]
+    },
+    {
+      "name": "16. Packages (pacotes de sessao)",
+      "item": [
+        {
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "packages"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client\": \"{{client_id}}\",\n  \"name\": \"Pacote 10 sessoes\",\n  \"total_sessions\": 10,\n  \"total_value\": \"1500.00\",\n  \"start_date\": \"2026-01-01\"\n}"
+            },
+            "description": "THERAPIST nao manda `professional` (forcado pro proprio); ADMIN precisa mandar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('package_id', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "name": "POST /packages (cria)"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "packages"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "name": "GET /packages (lista)"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "`used_sessions`/`remaining_sessions` sao computados ao vivo a partir dos agendamentos vinculados (nao e um contador manual)."
+          },
+          "name": "GET /packages/{id} (mostra used_sessions/remaining_sessions)"
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/appointments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "appointments"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client\": \"{{client_id}}\",\n  \"package\": \"{{package_id}}\",\n  \"starts_at\": \"2026-11-01T14:00:00Z\",\n  \"ends_at\": \"2026-11-01T14:50:00Z\"\n}"
+            },
+            "description": "Bloqueia (400) se o pacote estiver CANCELLED/COMPLETED, expirado ou sem saldo. Se restar <=1 sessao apos essa reserva, o terapeuta recebe uma notificacao automatica."
+          },
+          "name": "POST /appointments (agenda usando este pacote)"
+        },
+        {
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/api/v1/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Cliente pediu para renovar ao final.\"\n}"
+            }
+          },
+          "name": "PATCH /packages/{id}"
+        },
+        {
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/packages/{{package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "packages",
+                "{{package_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "name": "DELETE /packages/{id}"
+        }
+      ]
+    },
+    {
+      "name": "17. Payments",
+      "item": [
+        {
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client\": \"{{client_id}}\",\n  \"amount\": \"150.00\",\n  \"due_date\": \"2026-09-20\"\n}"
+            },
+            "description": "`receipt_number` e sempre gerado no servidor (formato REC-000001) - qualquer valor enviado pelo cliente e ignorado. Nasce PENDING e notifica o terapeuta."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('payment_id', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ],
+          "name": "POST /payments (cria - gera recibo)"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "name": "GET /payments (lista, filtros client/status)"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/{{payment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "{{payment_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "name": "GET /payments/{id}"
+        },
+        {
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/{{payment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "{{payment_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PAID\"\n}"
+            },
+            "description": "`paid_at` e preenchido automaticamente se nao informado. Transicoes: PENDING -> PAID|CANCELLED; PAID/CANCELLED sao finais."
+          },
+          "name": "PATCH /payments/{id} (marcar como pago)"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/balance?month=2026-09",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "balance?month=2026-09"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Agrega por `due_date` dentro do mes. THERAPIST ve so o proprio escopo; ADMIN ve a plataforma inteira. `month` e obrigatorio."
+          },
+          "name": "GET /payments/balance?month=YYYY-MM"
+        },
+        {
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payments/{{payment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "{{payment_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{therapist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "name": "DELETE /payments/{id}"
+        }
+      ]
+    },
+    {
+      "name": "18. Docs",
       "item": [
         {
           "name": "Swagger UI (abrir no navegador)",
