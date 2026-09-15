@@ -12,10 +12,13 @@ import type { Appointment } from '@/types/appointment';
 import Badge from '@/components/ui/Badge.vue';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
 const auth = useAuthStore();
+// Vue Router só entrega params como string — convertemos na fronteira, aqui.
+const clientId = computed(() => Number(props.id));
 
 const {
   client,
@@ -36,7 +39,7 @@ const {
 const { services, load: loadServices } = useServices();
 const serviceName = computed(() => {
   const map = new Map(services.value.map((s) => [s.id, s.name]));
-  return (id: string) => map.get(id) ?? id;
+  return (id: number) => map.get(id) ?? String(id);
 });
 function appointmentDetail(appt: Appointment) {
   if (appt.service) return serviceName.value(appt.service);
@@ -57,16 +60,27 @@ const {
 } = useClinicalRecords();
 
 const newRecordContent = ref('');
-const editingRecordId = ref<string | null>(null);
+const newRecordAppointment = ref<number | ''>('');
+const editingRecordId = ref<number | null>(null);
 const editingRecordContent = ref('');
+
+function appointmentLabel(appt: Appointment) {
+  return `${formatDateTime(appt.startsAt)} — ${appointmentDetail(appt)}`;
+}
+function relatedAppointment(id: number) {
+  return appointments.value.find((a) => a.id === id);
+}
 
 async function handleAddRecord() {
   if (!newRecordContent.value.trim()) return;
-  const ok = await createRecord(props.id, newRecordContent.value.trim());
-  if (ok) newRecordContent.value = '';
+  const ok = await createRecord(clientId.value, newRecordContent.value.trim(), newRecordAppointment.value || undefined);
+  if (ok) {
+    newRecordContent.value = '';
+    newRecordAppointment.value = '';
+  }
 }
 
-function startEditRecord(id: string, content: string) {
+function startEditRecord(id: number, content: string) {
   editingRecordId.value = id;
   editingRecordContent.value = content;
 }
@@ -77,13 +91,15 @@ async function handleSaveRecord() {
   if (ok) editingRecordId.value = null;
 }
 
-async function handleDeleteRecord(id: string) {
-  if (!window.confirm('Excluir este registro de prontuário? Essa ação não pode ser desfeita.')) return;
-  await removeRecord(id);
+const deleteRecordTargetId = ref<number | null>(null);
+function handleDeleteRecordConfirmed() {
+  if (deleteRecordTargetId.value != null) removeRecord(deleteRecordTargetId.value);
+  deleteRecordTargetId.value = null;
 }
 
 const editing = ref(false);
 const editForm = reactive({ name: '', email: '', phone: '', birthDate: '', document: '', administrativeNotes: '' });
+const editFormError = ref<string | null>(null);
 
 function startEdit() {
   if (!client.value) return;
@@ -97,7 +113,11 @@ function startEdit() {
 }
 
 async function handleSave() {
-  const ok = await update(props.id, {
+  editFormError.value = null;
+  if (!editForm.name.trim()) { editFormError.value = 'Informe o nome do cliente.'; return; }
+  if (!editForm.email.trim()) { editFormError.value = 'Informe o e-mail do cliente.'; return; }
+  if (!editForm.phone.trim()) { editFormError.value = 'Informe o telefone do cliente.'; return; }
+  const ok = await update(clientId.value, {
     name: editForm.name,
     email: editForm.email,
     phone: editForm.phone,
@@ -108,10 +128,10 @@ async function handleSave() {
   if (ok) editing.value = false;
 }
 
-async function handleDelete() {
-  // ponytail: confirm() nativo — mesmo padrão já usado em Agenda e Leads.
-  if (!window.confirm('Excluir este cliente? Essa ação não pode ser desfeita.')) return;
-  const ok = await remove(props.id);
+const deleteClientConfirmOpen = ref(false);
+async function handleDeleteConfirmed() {
+  deleteClientConfirmOpen.value = false;
+  const ok = await remove(clientId.value);
   if (ok) router.push('/clientes');
 }
 
@@ -126,10 +146,10 @@ const pastAppointments = computed(() =>
 );
 
 onMounted(() => {
-  load(props.id);
-  loadAppointments(props.id);
+  load(clientId.value);
+  loadAppointments(clientId.value);
   loadServices();
-  if (auth.role === 'THERAPIST') loadRecords(props.id);
+  if (auth.role === 'THERAPIST') loadRecords(clientId.value);
 });
 </script>
 
@@ -146,8 +166,26 @@ onMounted(() => {
     </div>
 
     <template v-else-if="client">
-      <h1 class="mt-4 font-display text-h3 text-text">{{ client.name }}</h1>
-      <p class="mt-1 text-body-sm text-text-muted">Cliente desde {{ formatDateTime(client.createdAt) }}</p>
+      <div class="mt-4 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="font-display text-h3 text-text">{{ client.name }}</h1>
+          <p class="mt-1 text-body-sm text-text-muted">Cliente desde {{ formatDateTime(client.createdAt) }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <RouterLink
+            :to="`/agenda?client=${client.id}`"
+            class="inline-flex h-8 items-center rounded-md bg-secondary-500 px-3 text-body-sm font-medium text-text-inverse hover:bg-secondary-600"
+          >
+            + Consulta
+          </RouterLink>
+          <RouterLink
+            :to="`/financeiro?client=${client.id}`"
+            class="inline-flex h-8 items-center rounded-md bg-secondary-500 px-3 text-body-sm font-medium text-text-inverse hover:bg-secondary-600"
+          >
+            + Pagamento
+          </RouterLink>
+        </div>
+      </div>
 
       <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div class="rounded-lg border border-border bg-surface p-4">
@@ -223,7 +261,7 @@ onMounted(() => {
                 class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:border-primary-600"
               />
             </div>
-            <p v-if="saveError" role="alert" class="text-body-sm text-error">{{ saveError }}</p>
+            <p v-if="editFormError || saveError" role="alert" class="text-body-sm text-error">{{ editFormError || saveError }}</p>
             <div class="flex gap-2">
               <Button type="submit" size="sm" :loading="saving">Salvar</Button>
               <Button type="button" size="sm" variant="ghost" @click="editing = false">Cancelar</Button>
@@ -252,7 +290,7 @@ onMounted(() => {
             {{ client.administrativeNotes }}
           </p>
 
-          <Button v-if="!editing" class="mt-6" variant="ghost" :loading="deleting" @click="handleDelete">
+          <Button v-if="!editing" class="mt-6" variant="ghost" :loading="deleting" @click="deleteClientConfirmOpen = true">
             Excluir cliente
           </Button>
           <p v-if="deleteError" role="alert" class="mt-2 text-body-sm text-error">{{ deleteError }}</p>
@@ -299,7 +337,7 @@ onMounted(() => {
             </ul>
           </div>
 
-          <div v-if="auth.role === 'THERAPIST'" class="rounded-lg border border-border bg-surface p-4">
+          <div v-if="auth.role === 'THERAPIST'" id="prontuario" class="rounded-lg border border-border bg-surface p-4">
             <h2 class="mb-3 font-display text-h6 text-text">Prontuário</h2>
             <p class="mb-3 text-body-sm text-text-muted">Visível apenas para o terapeuta responsável.</p>
 
@@ -312,6 +350,19 @@ onMounted(() => {
                 placeholder="Registrar evolução, observações da sessão..."
                 class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body-sm text-text focus-visible:border-primary-600"
               />
+              <div>
+                <label for="new-record-appointment" class="mb-1 block text-label uppercase tracking-label text-text-muted">
+                  Consulta relacionada (opcional)
+                </label>
+                <select
+                  id="new-record-appointment"
+                  v-model="newRecordAppointment"
+                  class="h-9 rounded-md border border-border bg-surface px-3 text-body-sm text-text focus-visible:border-primary-600"
+                >
+                  <option value="">Nenhuma</option>
+                  <option v-for="appt in appointments" :key="appt.id" :value="appt.id">{{ appointmentLabel(appt) }}</option>
+                </select>
+              </div>
               <Button type="submit" size="sm" :loading="recordSaving">Adicionar registro</Button>
             </form>
             <p v-if="recordSaveError" role="alert" class="mb-3 text-body-sm text-error">{{ recordSaveError }}</p>
@@ -334,8 +385,11 @@ onMounted(() => {
                 </template>
                 <template v-else>
                   <p class="whitespace-pre-wrap text-body-sm text-text">{{ record.content }}</p>
+                  <p v-if="record.appointment && relatedAppointment(record.appointment)" class="mt-1 text-caption text-text-muted">
+                    Consulta: {{ appointmentLabel(relatedAppointment(record.appointment)!) }}
+                  </p>
                   <div class="mt-2 flex items-center justify-between">
-                    <span class="text-body-sm text-text-muted">{{ formatDateTime(record.createdAt) }}</span>
+                    <span class="text-body-sm text-text-muted">{{ formatDateTime(record.recordedAt) }} · Você</span>
                     <div class="flex gap-3">
                       <button
                         type="button"
@@ -348,7 +402,7 @@ onMounted(() => {
                         type="button"
                         class="text-body-sm text-error hover:underline"
                         :disabled="recordRemovingId === record.id"
-                        @click="handleDeleteRecord(record.id)"
+                        @click="deleteRecordTargetId = record.id"
                       >
                         Excluir
                       </button>
@@ -361,5 +415,20 @@ onMounted(() => {
         </div>
       </div>
     </template>
+
+    <ConfirmDialog
+      :open="deleteClientConfirmOpen"
+      title="Excluir cliente"
+      description="Essa ação não pode ser desfeita."
+      @update:open="(v) => { deleteClientConfirmOpen = v; }"
+      @confirm="handleDeleteConfirmed"
+    />
+    <ConfirmDialog
+      :open="deleteRecordTargetId !== null"
+      title="Excluir registro de prontuário"
+      description="Essa ação não pode ser desfeita."
+      @update:open="(v) => { if (!v) deleteRecordTargetId = null; }"
+      @confirm="handleDeleteRecordConfirmed"
+    />
   </div>
 </template>

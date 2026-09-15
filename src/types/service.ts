@@ -2,7 +2,7 @@
 export type ServiceModality = 'ONLINE' | 'IN_PERSON' | 'BOTH';
 
 export interface Service {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   durationMinutes: number;

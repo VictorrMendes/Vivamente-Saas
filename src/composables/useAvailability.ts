@@ -10,7 +10,7 @@ export function useAvailability() {
   const error = ref<string | null>(null);
   const saving = ref(false);
   const saveError = ref<string | null>(null);
-  const removingId = ref<string | null>(null);
+  const removingId = ref<number | null>(null);
 
   async function load() {
     loading.value = true;
@@ -47,7 +47,7 @@ export function useAvailability() {
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: number) {
     saveError.value = null;
     removingId.value = id;
     try {
@@ -60,7 +60,7 @@ export function useAvailability() {
     }
   }
 
-  async function toggleBlock(id: string, isBlocked: boolean) {
+  async function toggleBlock(id: number, isBlocked: boolean) {
     saveError.value = null;
     removingId.value = id;
     try {

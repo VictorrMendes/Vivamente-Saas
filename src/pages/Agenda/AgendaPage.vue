@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { Calendar } from 'v-calendar';
 import 'v-calendar/style.css';
 import { useAppointments } from '@/composables/useAppointments';
 import { useAvailability } from '@/composables/useAvailability';
 import { useServices } from '@/composables/useServices';
-import { backApi } from '@/services/api/client';
+import { usePackages } from '@/composables/usePackages';
+import { useClientOptions } from '@/composables/useClientOptions';
+import { useProfessionalOptions } from '@/composables/useProfessionalOptions';
+import { useTheme } from '@/composables/useTheme';
+import { useAuthStore } from '@/stores/auth';
 import { formatCurrency } from '@/lib/currency';
 import { formatTime, toDateOnly } from '@/lib/datetime';
-import type { PaginatedEnvelope } from '@/types/api';
-import type { Appointment } from '@/types/appointment';
-import type { Client } from '@/types/client';
+import type { Appointment, AppointmentStatus, NewAppointment } from '@/types/appointment';
 import { APPOINTMENT_STATUS_LABEL as STATUS_LABEL, APPOINTMENT_STATUS_VARIANT as STATUS_VARIANT } from '@/constants/appointmentStatus';
 import { APPOINTMENT_MODALITY_LABEL } from '@/constants/appointmentModality';
 import { CalendarDays } from '@lucide/vue';
@@ -18,29 +21,29 @@ import Button from '@/components/ui/Button.vue';
 import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import AvailabilityList from '@/components/calendar/AvailabilityList.vue';
+import AppointmentForm from '@/components/forms/AppointmentForm.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
-const { appointments, showLoading, error, actionError, pendingActionId, load, updateStatus } = useAppointments();
+const auth = useAuthStore();
+const route = useRoute();
+const { appointments, showLoading, error, actionError, pendingActionId, saving, saveError, load, updateStatus, create, update } =
+  useAppointments();
 const { services, load: loadServices } = useServices();
+const { packages, load: loadPackages } = usePackages();
+const { clients, clientName, load: loadClients } = useClientOptions();
+const { professionals, load: loadProfessionals } = useProfessionalOptions();
+const { isDark } = useTheme();
 
-const clients = ref<Client[]>([]);
-const clientName = computed(() => {
-  const map = new Map(clients.value.map((c) => [c.id, c.name]));
-  return (id: string) => map.get(id) ?? id;
-});
 const serviceName = computed(() => {
   const map = new Map(services.value.map((s) => [s.id, s.name]));
-  return (id: string) => map.get(id) ?? id;
+  return (id: number) => map.get(id) ?? String(id);
 });
 function appointmentDetail(appt: Appointment) {
   if (appt.service) return serviceName.value(appt.service);
   return appt.modality ? APPOINTMENT_MODALITY_LABEL[appt.modality] : 'Sem detalhes';
 }
 
-async function loadClients() {
-  const res = await backApi<PaginatedEnvelope<Client>>('/api/v1/clients?per_page=100');
-  clients.value = res.data;
-}
 const {
   slots,
   showLoading: availabilityShowLoading,
@@ -57,12 +60,64 @@ const {
 const today = new Date();
 const selectedDate = ref(toDateOnly(today));
 
+const filterStatus = ref<AppointmentStatus | ''>('');
+const filterClient = ref<number | ''>('');
+const filterService = ref<number | ''>('');
+
+// Mês exibido no calendário — a Agenda recarrega sempre que o mês muda (v-calendar @update:pages),
+// combinando com status/client (suportados pelo filterset_fields real do Back) na própria requisição.
+const displayedMonth = reactive({ year: today.getFullYear(), month: today.getMonth() + 1 });
+
+function reload() {
+  load({
+    year: displayedMonth.year,
+    month: displayedMonth.month,
+    status: filterStatus.value || undefined,
+    client: filterClient.value || undefined,
+  });
+}
+
+function onPagesUpdate(pages: { year: number; month: number }[]) {
+  const page = pages[0];
+  if (!page) return;
+  if (page.year === displayedMonth.year && page.month === displayedMonth.month) return;
+  displayedMonth.year = page.year;
+  displayedMonth.month = page.month;
+  reload();
+}
+
+watch([filterStatus, filterClient], reload);
+
+// Link "Nova consulta" a partir de um Pacote (Pacotes) ou de um Cliente chega com ?client=&package=.
+// "+ Agendamento" no Dashboard chega só com ?new=1.
+const presetClient = route.query.client ? Number(route.query.client) : undefined;
+const presetPackage = route.query.package ? Number(route.query.package) : undefined;
+
 onMounted(() => {
-  load(today);
+  reload();
   loadAvailability();
   loadClients();
   loadServices();
+  loadPackages();
+  if (auth.role === 'ADMIN') loadProfessionals();
 });
+
+const showNewForm = ref(Boolean(presetClient) || route.query.new === '1');
+const editingId = ref<number | null>(null);
+
+async function handleCreate(appt: NewAppointment) {
+  const ok = await create(appt);
+  if (ok) showNewForm.value = false;
+}
+
+async function handleUpdate(id: number, appt: NewAppointment) {
+  const ok = await update(id, appt);
+  if (ok) editingId.value = null;
+}
+
+const filteredAppointments = computed(() =>
+  appointments.value.filter((a) => !filterService.value || a.service === filterService.value),
+);
 
 const newSlot = reactive({ date: toDateOnly(today), startTime: '09:00', endTime: '12:00' });
 const newSlotError = ref<string | null>(null);
@@ -81,7 +136,7 @@ async function handleAddSlot() {
 
 const appointmentsByDate = computed(() => {
   const map = new Map<string, Appointment[]>();
-  for (const appt of appointments.value) {
+  for (const appt of filteredAppointments.value) {
     const key = toDateOnly(new Date(appt.startsAt));
     const bucket = map.get(key) ?? [];
     bucket.push(appt);
@@ -106,12 +161,10 @@ function onDayClick(day: { id: string }) {
   selectedDate.value = day.id;
 }
 
-function handleCancel(id: string) {
-  // ponytail: confirm() nativo em vez do Dialog estilizado do design system —
-  // trocar quando o componente Modal/Dialog existir (várias telas vão precisar).
-  if (window.confirm('Cancelar este agendamento? Essa ação não pode ser desfeita.')) {
-    updateStatus(id, 'cancel');
-  }
+const cancelTargetId = ref<number | null>(null);
+function handleCancelConfirmed() {
+  if (cancelTargetId.value != null) updateStatus(cancelTargetId.value, 'cancel');
+  cancelTargetId.value = null;
 }
 </script>
 
@@ -122,6 +175,63 @@ function handleCancel(id: string) {
       title="Agenda"
       subtitle="Calendário de atendimentos e horários de disponibilidade."
     />
+
+    <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
+      <div class="flex flex-wrap gap-3">
+        <div>
+          <label for="filter-status" class="mb-1 block text-label uppercase tracking-label text-text-muted">Status</label>
+          <select
+            id="filter-status"
+            v-model="filterStatus"
+            class="h-9 rounded-md border border-border bg-surface px-3 text-body-sm text-text focus-visible:border-primary-600"
+          >
+            <option value="">Todos</option>
+            <option v-for="(label, value) in STATUS_LABEL" :key="value" :value="value">{{ label }}</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-client" class="mb-1 block text-label uppercase tracking-label text-text-muted">Cliente</label>
+          <select
+            id="filter-client"
+            v-model="filterClient"
+            class="h-9 rounded-md border border-border bg-surface px-3 text-body-sm text-text focus-visible:border-primary-600"
+          >
+            <option value="">Todos</option>
+            <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-service" class="mb-1 block text-label uppercase tracking-label text-text-muted">Serviço</label>
+          <select
+            id="filter-service"
+            v-model="filterService"
+            class="h-9 rounded-md border border-border bg-surface px-3 text-body-sm text-text focus-visible:border-primary-600"
+          >
+            <option value="">Todos</option>
+            <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }}</option>
+          </select>
+        </div>
+      </div>
+      <Button variant="primary" size="sm" @click="showNewForm = !showNewForm">
+        {{ showNewForm ? 'Cancelar' : '+ Nova consulta' }}
+      </Button>
+    </div>
+
+    <div v-if="showNewForm" class="mt-4 rounded-lg border border-border bg-surface p-4">
+      <AppointmentForm
+        :preset-client="presetClient"
+        :preset-package="presetPackage"
+        :role="auth.role"
+        :clients="clients"
+        :services="services"
+        :packages="packages"
+        :professionals="professionals"
+        :saving="saving"
+        :save-error="saveError"
+        @submit="handleCreate"
+        @cancel="showNewForm = false"
+      />
+    </div>
 
     <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
       {{ error }}
@@ -135,12 +245,13 @@ function handleCancel(id: string) {
     <div v-else class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[auto_1fr]">
       <Calendar
         :attributes="calendarAttributes"
-        is-dark="system"
+        :is-dark="isDark"
         expanded
         borderless
         transparent
         title-position="left"
         @dayclick="onDayClick"
+        @update:pages="onPagesUpdate"
       />
 
       <div class="rounded-lg border border-border bg-surface p-4">
@@ -157,45 +268,74 @@ function handleCancel(id: string) {
         </p>
 
         <ul v-else class="mt-3 divide-y divide-border">
-          <li v-for="appt in selectedDayAppointments" :key="appt.id" class="flex flex-wrap items-center justify-between gap-3 py-3">
-            <div>
-              <p class="text-body-sm font-medium text-text">{{ clientName(appt.client) }} — {{ appointmentDetail(appt) }}</p>
-              <p class="text-caption text-text-muted">
-                {{ formatTime(appt.startsAt) }} – {{ formatTime(appt.endsAt) }}
-                <template v-if="appt.price != null"> · {{ formatCurrency(appt.price) }}</template>
-              </p>
-            </div>
+          <li v-for="appt in selectedDayAppointments" :key="appt.id" class="py-3">
+            <AppointmentForm
+              v-if="editingId === appt.id"
+              :initial="appt"
+              :role="auth.role"
+              :clients="clients"
+              :services="services"
+              :packages="packages"
+              :professionals="professionals"
+              :saving="saving"
+              :save-error="saveError"
+              @submit="(a) => handleUpdate(appt.id, a)"
+              @cancel="editingId = null"
+            />
+            <div v-else class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-body-sm font-medium text-text">{{ clientName(appt.client) }} — {{ appointmentDetail(appt) }}</p>
+                <p class="text-caption text-text-muted">
+                  {{ formatTime(appt.startsAt) }} – {{ formatTime(appt.endsAt) }}
+                  <template v-if="appt.price != null"> · {{ formatCurrency(appt.price) }}</template>
+                </p>
+                <div class="mt-1 flex gap-3 text-caption">
+                  <RouterLink :to="`/clientes/${appt.client}`" class="text-primary-700 hover:underline">Ver cliente</RouterLink>
+                  <RouterLink v-if="auth.role === 'THERAPIST'" :to="`/clientes/${appt.client}#prontuario`" class="text-primary-700 hover:underline">
+                    Abrir prontuário
+                  </RouterLink>
+                </div>
+              </div>
 
-            <div class="flex items-center gap-2">
-              <Badge :variant="STATUS_VARIANT[appt.status]" size="sm">{{ STATUS_LABEL[appt.status] }}</Badge>
+              <div class="flex flex-wrap items-center gap-2">
+                <Badge :variant="STATUS_VARIANT[appt.status]" size="sm">{{ STATUS_LABEL[appt.status] }}</Badge>
 
-              <Button
-                v-if="appt.status === 'PENDING'"
-                size="sm"
-                variant="primary"
-                :loading="pendingActionId === appt.id"
-                @click="updateStatus(appt.id, 'confirm')"
-              >
-                Confirmar
-              </Button>
-              <Button
-                v-if="appt.status === 'CONFIRMED'"
-                size="sm"
-                variant="primary"
-                :loading="pendingActionId === appt.id"
-                @click="updateStatus(appt.id, 'complete')"
-              >
-                Concluir
-              </Button>
-              <Button
-                v-if="appt.status === 'PENDING' || appt.status === 'CONFIRMED'"
-                size="sm"
-                variant="ghost"
-                :loading="pendingActionId === appt.id"
-                @click="handleCancel(appt.id)"
-              >
-                Cancelar
-              </Button>
+                <Button
+                  v-if="appt.status === 'PENDING' || appt.status === 'CONFIRMED'"
+                  size="sm"
+                  variant="ghost"
+                  @click="editingId = appt.id"
+                >
+                  Editar
+                </Button>
+                <Button
+                  v-if="appt.status === 'PENDING'"
+                  size="sm"
+                  variant="primary"
+                  :loading="pendingActionId === appt.id"
+                  @click="updateStatus(appt.id, 'confirm')"
+                >
+                  Confirmar
+                </Button>
+                <Button
+                  v-if="appt.status === 'CONFIRMED'"
+                  size="sm"
+                  variant="primary"
+                  :loading="pendingActionId === appt.id"
+                  @click="updateStatus(appt.id, 'complete')"
+                >
+                  Concluir
+                </Button>
+                <Button
+                  v-if="appt.status === 'PENDING' || appt.status === 'CONFIRMED'"
+                  size="sm"
+                  variant="ghost"
+                  :loading="pendingActionId === appt.id"
+                  @click="cancelTargetId = appt.id"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           </li>
         </ul>
@@ -266,5 +406,14 @@ function handleCancel(id: string) {
         </p>
       </template>
     </section>
+
+    <ConfirmDialog
+      :open="cancelTargetId !== null"
+      title="Cancelar consulta"
+      description="Essa ação não pode ser desfeita."
+      confirm-label="Cancelar consulta"
+      @update:open="(v) => { if (!v) cancelTargetId = null; }"
+      @confirm="handleCancelConfirmed"
+    />
   </div>
 </template>

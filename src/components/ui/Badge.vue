@@ -7,10 +7,14 @@ const props = withDefaults(defineProps<{ variant?: Variant; size?: Size }>(), {
   size: 'md',
 });
 
+// primary/secondary usam bg-surface-sunken (não um tom -50 fixo): só
+// primary-700/secondary-600 têm par redefinido pro tema escuro em tokens.css
+// (--color-primary-50 e --color-secondary-700 não têm variante dark, então
+// combinados ficavam claro-sobre-claro no dark mode — texto ilegível).
 const variantClasses: Record<Variant, string> = {
   neutral: 'bg-surface-sunken text-text-muted',
-  primary: 'bg-primary-50 text-primary-700',
-  secondary: 'bg-secondary-50 text-secondary-700',
+  primary: 'bg-surface-sunken text-primary-700',
+  secondary: 'bg-surface-sunken text-secondary-600',
   success: 'bg-success-bg text-success',
   warning: 'bg-warning-bg text-warning',
   error: 'bg-error-bg text-error',

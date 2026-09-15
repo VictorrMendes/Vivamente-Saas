@@ -102,7 +102,7 @@ onMounted(fetchLeads);
           >
             <div>
               <p class="font-medium text-text">{{ lead.name }}</p>
-              <p class="text-body-sm text-text-muted">{{ lead.serviceInterest }}</p>
+              <p class="text-body-sm text-text-muted">{{ lead.email }}</p>
             </div>
             <Badge :variant="LEAD_STATUS_VARIANT[lead.status]" size="sm">{{ LEAD_STATUS_LABEL[lead.status] }}</Badge>
           </RouterLink>

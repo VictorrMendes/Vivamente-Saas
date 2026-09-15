@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { Users } from '@lucide/vue';
 import { useClients } from '@/composables/useClients';
 import Button from '@/components/ui/Button.vue';
@@ -9,12 +9,21 @@ import Pagination from '@/components/ui/Pagination.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const router = useRouter();
+const route = useRoute();
 const { clients, pagination, showLoading, error, saving, saveError, load, create } = useClients();
 
 const search = ref('');
 const page = ref(1);
-const showNewForm = ref(false);
+const showNewForm = ref(route.query.new === '1');
 const newClient = reactive({ name: '', email: '', phone: '', birthDate: '', document: '', administrativeNotes: '' });
+const formError = ref<string | null>(null);
+
+function validate(): string | null {
+  if (!newClient.name.trim()) return 'Informe o nome do cliente.';
+  if (!newClient.email.trim()) return 'Informe o e-mail do cliente.';
+  if (!newClient.phone.trim()) return 'Informe o telefone do cliente.';
+  return null;
+}
 
 function fetchClients() {
   load({ page: page.value, search: search.value || undefined });
@@ -35,6 +44,8 @@ function changePage(next: number) {
 }
 
 async function handleCreate() {
+  formError.value = validate();
+  if (formError.value) return;
   const id = await create({
     name: newClient.name,
     email: newClient.email,
@@ -127,7 +138,7 @@ onMounted(fetchClients);
       </div>
       <Button type="submit" :loading="saving">Salvar</Button>
     </form>
-    <p v-if="saveError" role="alert" class="mt-2 text-body-sm text-error">{{ saveError }}</p>
+    <p v-if="formError || saveError" role="alert" class="mt-2 text-body-sm text-error">{{ formError || saveError }}</p>
 
     <input
       v-model="search"

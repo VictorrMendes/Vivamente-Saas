@@ -15,7 +15,7 @@ export function useLead() {
   const deleting = ref(false);
   const deleteError = ref<string | null>(null);
 
-  async function load(id: string) {
+  async function load(id: number) {
     loading.value = true;
     error.value = null;
     const delayTimer = setTimeout(() => {
@@ -34,7 +34,7 @@ export function useLead() {
     }
   }
 
-  async function updateStatus(id: string, status: LeadStatus) {
+  async function updateStatus(id: number, status: LeadStatus) {
     statusError.value = null;
     statusSaving.value = true;
     try {
@@ -50,12 +50,12 @@ export function useLead() {
     }
   }
 
-  async function convert(id: string) {
+  async function convert(id: number) {
     convertError.value = null;
     converting.value = true;
     try {
       // POST /leads/{id}/convert devolve o Client recém-criado (não um { clientId }).
-      const res = await backApi<ApiEnvelope<{ id: string }>>(`/api/v1/leads/${id}/convert`, {
+      const res = await backApi<ApiEnvelope<{ id: number }>>(`/api/v1/leads/${id}/convert`, {
         method: 'POST',
       });
       if (lead.value) lead.value.status = 'CONVERTED';
@@ -68,7 +68,7 @@ export function useLead() {
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: number) {
     deleteError.value = null;
     deleting.value = true;
     try {

@@ -24,7 +24,7 @@ export function useClient() {
   const deleting = ref(false);
   const deleteError = ref<string | null>(null);
 
-  async function load(id: string) {
+  async function load(id: number) {
     loading.value = true;
     error.value = null;
     const delayTimer = setTimeout(() => {
@@ -43,7 +43,7 @@ export function useClient() {
     }
   }
 
-  async function loadAppointments(id: string) {
+  async function loadAppointments(id: number) {
     appointmentsLoading.value = true;
     appointmentsError.value = null;
     try {
@@ -57,7 +57,7 @@ export function useClient() {
   }
 
   async function update(
-    id: string,
+    id: number,
     patch: Partial<Pick<Client, 'name' | 'email' | 'phone' | 'birthDate' | 'document' | 'administrativeNotes'>>,
   ) {
     saveError.value = null;
@@ -77,7 +77,7 @@ export function useClient() {
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: number) {
     deleteError.value = null;
     deleting.value = true;
     try {

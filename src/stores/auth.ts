@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import type { AuthUser, UserRole } from '@/types/auth';
 import { ApiError } from '@/services/api/errors';
-import { mapOAuthSession, requestOAuthSession, type OAuthSessionDto } from '@/services/api/oauth';
+import { mapOAuthSession, requestOAuthLogin, requestOAuthRefresh, type OAuthSessionDto } from '@/services/api/oauth';
 
 const OAUTH_URL = import.meta.env.VITE_OAUTH_API_URL as string;
 
@@ -28,7 +28,7 @@ export const useAuthStore = defineStore('auth', {
       }
       this.clearSession();
       const version = this.sessionVersion;
-      const session = await requestOAuthSession('login', { email: email.trim(), senha });
+      const session = await requestOAuthLogin({ email: email.trim(), senha });
       if (version !== this.sessionVersion) throw new ApiError(401, 'Sessão encerrada.');
       this.setSession(session);
     },
@@ -40,12 +40,12 @@ export const useAuthStore = defineStore('auth', {
       if (existing?.version === version) return existing.promise;
       const promise = (async () => {
         try {
-          const session = await requestOAuthSession('refresh', { refreshToken: this.refreshToken });
+          // O Back só devolve idToken + expiresIn no refresh — usuário e
+          // refreshToken atuais são preservados, nunca reenviados.
+          const refreshed = await requestOAuthRefresh({ refreshToken: this.refreshToken as string });
           if (version !== this.sessionVersion) throw new ApiError(401, 'Sessão encerrada.');
-          this.idToken = session.idToken;
-          this.refreshToken = session.refreshToken;
-          this.user = session.user;
-          this.expiresAt = Date.now() + session.expiresIn * 1000;
+          this.idToken = refreshed.idToken;
+          this.expiresAt = Date.now() + refreshed.expiresIn * 1000;
         } catch (error) {
           if (version === this.sessionVersion) this.clearSession();
           throw error;

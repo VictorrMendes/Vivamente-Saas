@@ -1,6 +1,6 @@
 // Confirmado no contrato real do Back (postman, pasta 9. Clients).
 export interface Client {
-  id: string;
+  id: number;
   name: string;
   email: string;
   phone: string;

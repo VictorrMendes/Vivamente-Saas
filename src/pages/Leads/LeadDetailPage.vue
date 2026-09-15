@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useLead } from '@/composables/useLead';
+import { useServices } from '@/composables/useServices';
 import { LEAD_STATUS_LABEL, LEAD_STATUS_VARIANT } from '@/constants/leadStatus';
 import { formatDateTime } from '@/lib/datetime';
 import type { LeadStatus } from '@/types/lead';
 import Badge from '@/components/ui/Badge.vue';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import LeadStatusSelect from '@/components/forms/LeadStatusSelect.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
+// Vue Router só entrega params como string — convertemos na fronteira, aqui.
+const leadId = computed(() => Number(props.id));
 
 const {
   lead,
@@ -29,21 +33,30 @@ const {
   remove,
 } = useLead();
 
-onMounted(() => load(props.id));
+const { services, load: loadServices } = useServices();
+const serviceName = computed(() => {
+  const map = new Map(services.value.map((s) => [s.id, s.name]));
+  return (id: number) => map.get(id) ?? String(id);
+});
+
+onMounted(() => {
+  load(leadId.value);
+  loadServices();
+});
 
 function handleStatusChange(status: LeadStatus) {
-  updateStatus(props.id, status);
+  updateStatus(leadId.value, status);
 }
 
 async function handleConvert() {
-  const clientId = await convert(props.id);
+  const clientId = await convert(leadId.value);
   if (clientId) router.push(`/clientes/${clientId}`);
 }
 
-async function handleDelete() {
-  // ponytail: confirm() nativo — mesmo padrão já usado no cancelamento de agendamento.
-  if (!window.confirm('Excluir este lead? Essa ação não pode ser desfeita.')) return;
-  const ok = await remove(props.id);
+const deleteConfirmOpen = ref(false);
+async function handleDeleteConfirmed() {
+  deleteConfirmOpen.value = false;
+  const ok = await remove(leadId.value);
   if (ok) router.push('/leads');
 }
 </script>
@@ -81,9 +94,9 @@ async function handleDelete() {
               <dt class="text-text-muted">Telefone</dt>
               <dd class="text-text">{{ lead.phone }}</dd>
             </div>
-            <div class="flex justify-between gap-4">
+            <div v-if="lead.service" class="flex justify-between gap-4">
               <dt class="text-text-muted">Interesse</dt>
-              <dd class="text-text">{{ lead.serviceInterest }}</dd>
+              <dd class="text-text">{{ serviceName(lead.service) }}</dd>
             </div>
           </dl>
           <p v-if="lead.message" class="mt-4 rounded-md bg-surface-sunken p-3 text-body-sm text-text">
@@ -109,12 +122,20 @@ async function handleDelete() {
             <Button v-if="lead.status !== 'CONVERTED'" variant="primary" :loading="converting" @click="handleConvert">
               Converter em cliente
             </Button>
-            <Button variant="ghost" :loading="deleting" @click="handleDelete">Excluir lead</Button>
+            <Button variant="destructive" :loading="deleting" @click="deleteConfirmOpen = true">Excluir lead</Button>
           </div>
           <p v-if="convertError" role="alert" class="mt-2 text-body-sm text-error">{{ convertError }}</p>
           <p v-if="deleteError" role="alert" class="mt-2 text-body-sm text-error">{{ deleteError }}</p>
         </div>
       </div>
     </template>
+
+    <ConfirmDialog
+      :open="deleteConfirmOpen"
+      title="Excluir lead"
+      description="Essa ação não pode ser desfeita."
+      @update:open="(v) => { deleteConfirmOpen = v; }"
+      @confirm="handleDeleteConfirmed"
+    />
   </div>
 </template>

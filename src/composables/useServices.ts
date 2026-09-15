@@ -21,7 +21,7 @@ export function useServices() {
   const error = ref<string | null>(null);
   const saving = ref(false);
   const saveError = ref<string | null>(null);
-  const removingId = ref<string | null>(null);
+  const removingId = ref<number | null>(null);
 
   async function load() {
     loading.value = true;
@@ -60,7 +60,7 @@ export function useServices() {
     }
   }
 
-  async function update(id: string, patch: NewService) {
+  async function update(id: number, patch: NewService) {
     saveError.value = null;
     saving.value = true;
     try {
@@ -79,7 +79,7 @@ export function useServices() {
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: number) {
     saveError.value = null;
     removingId.value = id;
     try {

@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { backApi } from '@/services/api/client';
-import type { PaginatedEnvelope } from '@/types/api';
+import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
 import type { Notification } from '@/types/notification';
 
 export function useNotifications() {
@@ -11,7 +11,7 @@ export function useNotifications() {
   const error = ref<string | null>(null);
   const actionError = ref<string | null>(null);
   const markingAllRead = ref(false);
-  const markingId = ref<string | null>(null);
+  const markingId = ref<number | null>(null);
 
   async function load(page = 1) {
     loading.value = true;
@@ -33,13 +33,13 @@ export function useNotifications() {
     }
   }
 
-  async function markAsRead(id: string) {
+  async function markAsRead(id: number) {
     actionError.value = null;
     markingId.value = id;
     try {
-      await backApi<void>(`/api/v1/notifications/${id}/read`, { method: 'PATCH' });
-      const target = notifications.value.find((n) => n.id === id);
-      if (target) target.read = true;
+      const res = await backApi<ApiEnvelope<Notification>>(`/api/v1/notifications/${id}/read`, { method: 'PATCH' });
+      const index = notifications.value.findIndex((n) => n.id === id);
+      if (index !== -1) notifications.value[index] = res.data;
     } catch {
       actionError.value = 'Não foi possível marcar como lida. Tente novamente.';
     } finally {
@@ -52,8 +52,9 @@ export function useNotifications() {
     markingAllRead.value = true;
     try {
       await backApi<void>('/api/v1/notifications/read-all', { method: 'PATCH' });
+      const now = new Date().toISOString();
       notifications.value.forEach((n) => {
-        n.read = true;
+        n.readAt = n.readAt ?? now;
       });
     } catch {
       actionError.value = 'Não foi possível marcar todas como lidas. Tente novamente.';

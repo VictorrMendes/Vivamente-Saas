@@ -22,7 +22,7 @@ const {
 } = useNotifications();
 
 const page = ref(1);
-const hasUnread = computed(() => notifications.value.some((n) => !n.read));
+const hasUnread = computed(() => notifications.value.some((n) => !n.readAt));
 
 function changePage(next: number) {
   page.value = next;
@@ -62,23 +62,23 @@ onMounted(() => load(page.value));
           v-for="notification in notifications"
           :key="notification.id"
           class="flex items-start justify-between gap-4 rounded-lg border border-border p-4"
-          :class="notification.read ? 'bg-surface' : 'bg-surface-sunken'"
+          :class="notification.readAt ? 'bg-surface' : 'bg-surface-sunken'"
         >
           <div class="flex items-start gap-3">
             <span
-              v-if="!notification.read"
+              v-if="!notification.readAt"
               class="mt-1.5 h-2 w-2 shrink-0 rounded-pill bg-primary-600"
               aria-hidden="true"
             />
             <div>
               <p class="text-body-sm font-medium text-text">{{ notification.title }}</p>
-              <p class="text-body-sm text-text-muted">{{ notification.message }}</p>
+              <p class="text-body-sm text-text-muted">{{ notification.body }}</p>
               <p class="mt-1 text-caption text-text-muted">{{ formatDateTime(notification.createdAt) }}</p>
             </div>
           </div>
 
           <button
-            v-if="!notification.read"
+            v-if="!notification.readAt"
             type="button"
             class="shrink-0 text-body-sm text-primary-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="markingId === notification.id"

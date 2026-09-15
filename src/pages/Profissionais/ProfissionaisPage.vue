@@ -17,12 +17,12 @@ const { specialties, load: loadSpecialties, create: createSpecialty } = useSpeci
 const search = ref('');
 const page = ref(1);
 const showNewForm = ref(false);
-const newProfessional = reactive({ user: '', slug: '', fullName: '', bio: '', isPublic: true, specialtyIds: [] as string[] });
+const newProfessional = reactive({ user: 0, slug: '', fullName: '', bio: '', isPublic: true, specialtyIds: [] as number[] });
 const newSpecialtyName = ref('');
 
 const specialtyNameById = computed(() => new Map(specialties.value.map((s) => [s.id, s.name])));
 
-function toggleSpecialty(id: string) {
+function toggleSpecialty(id: number) {
   const index = newProfessional.specialtyIds.indexOf(id);
   if (index === -1) newProfessional.specialtyIds.push(id);
   else newProfessional.specialtyIds.splice(index, 1);
@@ -92,8 +92,8 @@ onMounted(() => {
           <label for="prof-user" class="mb-1 block text-label uppercase tracking-label text-text-muted">ID do usuário</label>
           <input
             id="prof-user"
-            v-model="newProfessional.user"
-            type="text"
+            v-model.number="newProfessional.user"
+            type="number"
             required
             class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
           />

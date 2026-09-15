@@ -9,9 +9,9 @@ export function useClinicalRecords() {
   const error = ref<string | null>(null);
   const saving = ref(false);
   const saveError = ref<string | null>(null);
-  const removingId = ref<string | null>(null);
+  const removingId = ref<number | null>(null);
 
-  async function load(clientId: string) {
+  async function load(clientId: number) {
     loading.value = true;
     error.value = null;
     try {
@@ -24,13 +24,13 @@ export function useClinicalRecords() {
     }
   }
 
-  async function create(clientId: string, content: string) {
+  async function create(clientId: number, content: string, appointmentId?: number) {
     saveError.value = null;
     saving.value = true;
     try {
       const res = await backApi<ApiEnvelope<ClinicalRecord>>('/api/v1/clinical-records', {
         method: 'POST',
-        body: JSON.stringify({ client: clientId, content }),
+        body: JSON.stringify({ client: clientId, content, appointment: appointmentId }),
       });
       records.value.unshift(res.data);
       return true;
@@ -42,7 +42,7 @@ export function useClinicalRecords() {
     }
   }
 
-  async function update(id: string, content: string) {
+  async function update(id: number, content: string) {
     saveError.value = null;
     saving.value = true;
     try {
@@ -61,7 +61,7 @@ export function useClinicalRecords() {
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: number) {
     saveError.value = null;
     removingId.value = id;
     try {

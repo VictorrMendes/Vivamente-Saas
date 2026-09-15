@@ -2,8 +2,8 @@
 import type { AppointmentStatus } from './appointment';
 
 export interface UpcomingAppointment {
-  id: string;
-  client: string;
+  id: number;
+  client: number;
   startsAt: string;
   status: AppointmentStatus;
 }

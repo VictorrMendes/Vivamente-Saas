@@ -7,10 +7,10 @@ import Badge from '@/components/ui/Badge.vue';
 
 const props = defineProps<{
   slots: AvailabilitySlot[];
-  pendingId: string | null;
+  pendingId: number | null;
 }>();
 
-const emit = defineEmits<{ remove: [id: string]; toggleBlock: [id: string, isBlocked: boolean] }>();
+const emit = defineEmits<{ remove: [id: number]; toggleBlock: [id: number, isBlocked: boolean] }>();
 
 const sortedSlots = computed(() => [...props.slots].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
 </script>

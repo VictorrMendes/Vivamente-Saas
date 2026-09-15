@@ -3,17 +3,18 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProfessional } from '@/composables/useProfessional';
 import { useSpecialties } from '@/composables/useSpecialties';
-import { backApi } from '@/services/api/client';
+import { useClientOptions } from '@/composables/useClientOptions';
 import { formatDateTime } from '@/lib/datetime';
 import { APPOINTMENT_STATUS_LABEL, APPOINTMENT_STATUS_VARIANT } from '@/constants/appointmentStatus';
-import type { PaginatedEnvelope } from '@/types/api';
-import type { Client } from '@/types/client';
 import Badge from '@/components/ui/Badge.vue';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
+// Vue Router só entrega params como string — convertemos na fronteira, aqui.
+const professionalId = computed(() => Number(props.id));
 
 const {
   professional,
@@ -34,18 +35,10 @@ const { specialties, load: loadSpecialties } = useSpecialties();
 
 const specialtyNameById = computed(() => new Map(specialties.value.map((s) => [s.id, s.name])));
 
-const clients = ref<Client[]>([]);
-const clientName = computed(() => {
-  const map = new Map(clients.value.map((c) => [c.id, c.name]));
-  return (id: string) => map.get(id) ?? id;
-});
-async function loadClients() {
-  const res = await backApi<PaginatedEnvelope<Client>>('/api/v1/clients?per_page=100');
-  clients.value = res.data;
-}
+const { clientName, load: loadClients } = useClientOptions();
 
 const editing = ref(false);
-const editForm = reactive({ fullName: '', bio: '', isPublic: true, specialtyIds: [] as string[] });
+const editForm = reactive({ fullName: '', bio: '', isPublic: true, specialtyIds: [] as number[] });
 
 function startEdit() {
   if (!professional.value) return;
@@ -56,21 +49,21 @@ function startEdit() {
   editing.value = true;
 }
 
-function toggleEditSpecialty(id: string) {
+function toggleEditSpecialty(id: number) {
   const index = editForm.specialtyIds.indexOf(id);
   if (index === -1) editForm.specialtyIds.push(id);
   else editForm.specialtyIds.splice(index, 1);
 }
 
 async function handleSave() {
-  const ok = await update(props.id, { ...editForm });
+  const ok = await update(professionalId.value, { ...editForm });
   if (ok) editing.value = false;
 }
 
-async function handleDelete() {
-  // ponytail: confirm() nativo — mesmo padrão já usado em Agenda/Leads/Clientes.
-  if (!window.confirm('Excluir este profissional? Essa ação não pode ser desfeita.')) return;
-  const ok = await remove(props.id);
+const deleteConfirmOpen = ref(false);
+async function handleDeleteConfirmed() {
+  deleteConfirmOpen.value = false;
+  const ok = await remove(professionalId.value);
   if (ok) router.push('/profissionais');
 }
 
@@ -85,8 +78,8 @@ const pastAppointments = computed(() =>
 );
 
 onMounted(() => {
-  load(props.id);
-  loadAppointments(props.id);
+  load(professionalId.value);
+  loadAppointments(professionalId.value);
   loadSpecialties();
   loadClients();
 });
@@ -190,7 +183,7 @@ onMounted(() => {
             </dl>
             <p v-if="professional.bio" class="mt-3 text-body-sm text-text">{{ professional.bio }}</p>
 
-            <Button class="mt-6" variant="ghost" :loading="deleting" @click="handleDelete">Excluir profissional</Button>
+            <Button class="mt-6" variant="ghost" :loading="deleting" @click="deleteConfirmOpen = true">Excluir profissional</Button>
           </template>
           <p v-if="deleteError" role="alert" class="mt-2 text-body-sm text-error">{{ deleteError }}</p>
         </div>
@@ -238,5 +231,13 @@ onMounted(() => {
         </div>
       </div>
     </template>
+
+    <ConfirmDialog
+      :open="deleteConfirmOpen"
+      title="Excluir profissional"
+      description="Essa ação não pode ser desfeita."
+      @update:open="(v) => { deleteConfirmOpen = v; }"
+      @confirm="handleDeleteConfirmed"
+    />
   </div>
 </template>

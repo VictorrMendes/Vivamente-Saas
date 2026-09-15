@@ -6,24 +6,24 @@
  * `user`), não duplicado no Professional.
  */
 export interface Professional {
-  id: string;
-  user: string;
+  id: number;
+  user: number;
   slug: string;
   fullName: string;
   bio: string;
   isPublic: boolean;
-  specialtyIds: string[];
+  specialtyIds: number[];
   photoUrl?: string;
   createdAt?: string;
 }
 
 export interface NewProfessional {
-  user: string;
+  user: number;
   slug: string;
   fullName: string;
   bio: string;
   isPublic: boolean;
-  specialtyIds: string[];
+  specialtyIds: number[];
 }
 
 export type ProfessionalPatch = Partial<Pick<Professional, 'fullName' | 'bio' | 'isPublic' | 'specialtyIds'>>;

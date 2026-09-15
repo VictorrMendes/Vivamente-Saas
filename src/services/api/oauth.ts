@@ -8,6 +8,13 @@ export interface OAuthSessionDto {
   user: AuthUser;
 }
 
+// Confirmado em backend/Oauth/apps/auth/serializers.py::RefreshResponseSerializer —
+// o refresh nunca reenvia refreshToken nem user, só o novo idToken + validade.
+export interface OAuthRefreshDto {
+  idToken: string;
+  expiresIn: number;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -33,19 +40,42 @@ export function mapOAuthSession(body: unknown): OAuthSessionDto {
   };
 }
 
-export async function requestOAuthSession(action: 'login' | 'refresh', input: unknown) {
-  const res = await fetch(`${import.meta.env.VITE_OAUTH_API_URL}/oauth/v1/${action}`, {
+/** Mapper próprio do refresh — não exige (nem aceita) refreshToken/user no corpo. */
+export function mapOAuthRefresh(body: unknown): OAuthRefreshDto {
+  const data = isRecord(body) ? body.data : undefined;
+  if (!isRecord(data) ||
+      typeof data.idToken !== 'string' || !data.idToken.trim() ||
+      typeof data.expiresIn !== 'number' || !Number.isFinite(data.expiresIn) || data.expiresIn <= 0) {
+    throw new ApiError(502, 'Resposta de autenticação inválida. Tente entrar novamente.');
+  }
+  return { idToken: data.idToken, expiresIn: data.expiresIn };
+}
+
+function authErrorMessage(status: number, action: 'login' | 'refresh') {
+  return status === 401
+    ? (action === 'login' ? 'E-mail ou senha inválidos.' : 'Sessão expirada. Entre novamente.')
+    : 'Não foi possível autenticar. Tente novamente em instantes.';
+}
+
+export async function requestOAuthLogin(input: { email: string; senha: string }): Promise<OAuthSessionDto> {
+  const res = await fetch(`${import.meta.env.VITE_OAUTH_API_URL}/oauth/v1/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    // O serializer real do Oauth espera o campo "password", não "senha".
+    body: JSON.stringify({ email: input.email, password: input.senha }),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new ApiError(res.status, authErrorMessage(res.status, 'login'));
+  return mapOAuthSession(await res.json().catch(() => undefined));
+}
+
+export async function requestOAuthRefresh(input: { refreshToken: string }): Promise<OAuthRefreshDto> {
+  const res = await fetch(`${import.meta.env.VITE_OAUTH_API_URL}/oauth/v1/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
     cache: 'no-store',
   });
-  if (!res.ok) {
-    // Mensagens fixas impedem que erros internos do OAuth apareçam na tela.
-    const message = res.status === 401
-      ? (action === 'login' ? 'E-mail ou senha inválidos.' : 'Sessão expirada. Entre novamente.')
-      : 'Não foi possível autenticar. Tente novamente em instantes.';
-    throw new ApiError(res.status, message);
-  }
-  return mapOAuthSession(await res.json().catch(() => undefined));
+  if (!res.ok) throw new ApiError(res.status, authErrorMessage(res.status, 'refresh'));
+  return mapOAuthRefresh(await res.json().catch(() => undefined));
 }

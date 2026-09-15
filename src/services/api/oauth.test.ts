@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { mapOAuthSession } from './oauth';
+import { mapOAuthSession, mapOAuthRefresh } from './oauth';
 
 const sessionDto = {
   idToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600,
   user: { id: '1', email: 'test@example.com', role: 'THERAPIST' as const },
 };
 
-describe('mapper OAuth', () => {
+describe('mapper OAuth — login', () => {
   it('desembrulha data, aceita meta e seleciona somente campos da sessão', () => {
     const result = mapOAuthSession({
       data: { ...sessionDto, internal: 'omit', user: { ...sessionDto.user, internal: 'omit' } },
@@ -28,5 +28,28 @@ describe('mapper OAuth', () => {
     try { mapOAuthSession(body); } catch (error) {
       expect(error).toHaveProperty('body', undefined);
     }
+  });
+});
+
+// Contrato real (backend/Oauth/apps/auth/serializers.py::RefreshResponseSerializer):
+// o refresh só devolve idToken + expiresIn, nunca refreshToken nem user.
+describe('mapper OAuth — refresh', () => {
+  it('aceita o envelope mínimo do refresh (idToken + expiresIn, sem refreshToken/user)', () => {
+    const result = mapOAuthRefresh({ data: { idToken: 'novo-token', expiresIn: 3600 } });
+    expect(result).toEqual({ idToken: 'novo-token', expiresIn: 3600 });
+  });
+
+  it('ignora campos extras que o Back real não envia mais nessa resposta', () => {
+    const result = mapOAuthRefresh({ data: { idToken: 'novo-token', expiresIn: 3600, refreshToken: 'nao-deveria-vir', user: {} } });
+    expect(result).toEqual({ idToken: 'novo-token', expiresIn: 3600 });
+  });
+
+  it.each([
+    undefined, null, {}, { data: null },
+    { data: { idToken: '', expiresIn: 3600 } },
+    { data: { idToken: 'tok', expiresIn: 0 } },
+    { data: { expiresIn: 3600 } },
+  ])('rejeita respostas de refresh inválidas (%#)', (body) => {
+    expect(() => mapOAuthRefresh(body)).toThrow('Resposta de autenticação inválida');
   });
 });

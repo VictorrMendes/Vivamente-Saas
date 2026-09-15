@@ -38,23 +38,43 @@ describe('authStore — envelope do Oauth', () => {
     expect(auth.isAuthenticated).toBe(true);
   });
 
-  it('atualiza tokens, usuário e validade do envelope completo no refresh', async () => {
+  it('no refresh, atualiza só idToken/expiresAt e preserva user/refreshToken (contrato real do Back só devolve idToken+expiresIn)', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: {
-        idToken: 'novo-token', refreshToken: 'novo-refresh', expiresIn: 7200,
-        user: { id: '1', email: 'test@example.com', role: 'THERAPIST' },
-      } }), { status: 200 })),
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { idToken: 'novo-token', expiresIn: 7200 } }), { status: 200 })),
     );
 
     const auth = useAuthStore();
-    auth.$patch({ refreshToken: 'ref-valido' });
+    auth.$patch({
+      idToken: 'antigo-token',
+      refreshToken: 'ref-valido',
+      user: { id: '1', email: 'test@example.com', role: 'THERAPIST' },
+    });
     await auth.refresh();
 
     expect(auth.idToken).toBe('novo-token');
-    expect(auth.refreshToken).toBe('novo-refresh');
+    expect(auth.refreshToken).toBe('ref-valido');
+    expect(auth.user?.email).toBe('test@example.com');
     expect(auth.role).toBe('THERAPIST');
     expect(auth.expiresAt).toBeGreaterThan(Date.now() + 7190000);
+  });
+
+  it('envia o campo "password" (não "senha") no corpo do login, conforme o serializer real do Oauth', async () => {
+    let sentBody: unknown;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+        sentBody = JSON.parse(init.body as string);
+        return Promise.resolve(new Response(JSON.stringify({
+          data: { idToken: 'tok', refreshToken: 'ref', expiresIn: 3600, user: { id: '1', email: 'a@a.com', role: 'ADMIN' } },
+        }), { status: 200 }));
+      }),
+    );
+
+    const auth = useAuthStore();
+    await auth.login('a@a.com', 'minhasenha');
+
+    expect(sentBody).toEqual({ email: 'a@a.com', password: 'minhasenha' });
   });
 
   it('limpa a sessão imediatamente mesmo se logout remoto falhar', async () => {
@@ -74,10 +94,7 @@ describe('authStore — envelope do Oauth', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((done) => { resolve = done; })));
     const refreshing = auth.refresh();
     auth.clearSession();
-    resolve(new Response(JSON.stringify({ data: {
-      idToken: 'late-token', refreshToken: 'late-refresh', expiresIn: 3600,
-      user: { id: '1', email: 'test@example.com', role: 'ADMIN' },
-    } })));
+    resolve(new Response(JSON.stringify({ data: { idToken: 'late-token', expiresIn: 3600 } })));
     await expect(refreshing).rejects.toThrow('Sessão encerrada');
     expect(auth.isAuthenticated).toBe(false);
     expect(auth.refreshToken).toBeNull();

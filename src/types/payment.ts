@@ -1,10 +1,10 @@
-// Confirmado no contrato real do Back (postman, pasta 17. Payments).
-// receipt_number e paid_at sao sempre gerados no servidor.
+// Confirmado direto no código real do Back (apps/payments/models.py e
+// serializers.py). receipt_number e paid_at sao sempre gerados no servidor.
 export type PaymentStatus = 'PENDING' | 'PAID' | 'CANCELLED';
 
 export interface Payment {
-  id: string;
-  client: string;
+  id: number;
+  client: number;
   amount: number;
   dueDate: string;
   status: PaymentStatus;
@@ -13,7 +13,19 @@ export interface Payment {
 }
 
 export interface NewPayment {
-  client: string;
+  client: number;
   amount: number;
   dueDate: string;
+}
+
+export type PaymentPatch = Partial<NewPayment> & { status?: PaymentStatus };
+
+// Confirmado em apps/payments/views.py::PaymentViewSet.balance.
+export interface PaymentBalance {
+  month: string;
+  receivedTotal: number;
+  receivedCount: number;
+  pendingTotal: number;
+  pendingCount: number;
+  sessionsCount: number;
 }

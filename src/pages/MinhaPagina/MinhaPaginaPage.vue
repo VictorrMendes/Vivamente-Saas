@@ -18,7 +18,7 @@ const form = reactive({
   photoUrl: '',
   bio: '',
   isPublic: true,
-  specialtyIds: [] as string[],
+  specialtyIds: [] as number[],
 });
 
 watch(
@@ -65,7 +65,7 @@ function removePhoto() {
   photoError.value = null;
 }
 
-function toggleSpecialty(id: string) {
+function toggleSpecialty(id: number) {
   const index = form.specialtyIds.indexOf(id);
   if (index === -1) form.specialtyIds.push(id);
   else form.specialtyIds.splice(index, 1);

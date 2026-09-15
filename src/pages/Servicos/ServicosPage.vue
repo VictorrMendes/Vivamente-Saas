@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/currency';
 import type { NewService, ServiceModality } from '@/types/service';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import ServiceForm from '@/components/forms/ServiceForm.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
@@ -18,23 +19,22 @@ const MODALITY_LABEL: Record<ServiceModality, string> = {
 const { services, showLoading, error, saving, saveError, removingId, load, create, update, remove } = useServices();
 
 const showNewForm = ref(false);
-const editingId = ref<string | null>(null);
+const editingId = ref<number | null>(null);
 
 async function handleCreate(service: NewService) {
   const ok = await create(service);
   if (ok) showNewForm.value = false;
 }
 
-async function handleUpdate(id: string, service: NewService) {
+async function handleUpdate(id: number, service: NewService) {
   const ok = await update(id, service);
   if (ok) editingId.value = null;
 }
 
-function handleDelete(id: string) {
-  // ponytail: confirm() nativo — mesmo padrão já usado em Agenda/Leads/Clientes.
-  if (window.confirm('Excluir este serviço? Essa ação não pode ser desfeita.')) {
-    remove(id);
-  }
+const deleteTargetId = ref<number | null>(null);
+function handleDeleteConfirmed() {
+  if (deleteTargetId.value != null) remove(deleteTargetId.value);
+  deleteTargetId.value = null;
 }
 
 onMounted(load);
@@ -84,11 +84,11 @@ onMounted(load);
               </p>
               <p v-if="service.description" class="mt-1 text-body-sm text-text-muted">{{ service.description }}</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <button type="button" class="text-body-sm text-primary-700 hover:underline" @click="editingId = service.id">
                 Editar
               </button>
-              <Button variant="ghost" size="sm" :loading="removingId === service.id" @click="handleDelete(service.id)">
+              <Button variant="ghost" size="sm" :loading="removingId === service.id" @click="deleteTargetId = service.id">
                 Excluir
               </Button>
             </div>
@@ -96,5 +96,13 @@ onMounted(load);
         </li>
       </ul>
     </template>
+
+    <ConfirmDialog
+      :open="deleteTargetId !== null"
+      title="Excluir serviço"
+      description="Essa ação não pode ser desfeita."
+      @update:open="(v) => { if (!v) deleteTargetId = null; }"
+      @confirm="handleDeleteConfirmed"
+    />
   </div>
 </template>
