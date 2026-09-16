@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { loadPublicProfessional, backendErrorMessage } from "@/lib/api/professionals";
+import { formatPrice, getInitials } from "@/lib/format";
 import type { PublicService } from "@/lib/api/types";
 
 type Props = {
@@ -12,22 +13,6 @@ const MODALITY_LABEL: Record<PublicService["modality"], string> = {
   IN_PERSON: "Presencial",
   BOTH: "Online ou presencial",
 };
-
-function getInitials(fullName: string): string {
-  return fullName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
-
-function formatPrice(price: string | null): string {
-  if (price === null) return "Valor sob consulta";
-  const value = Number(price);
-  if (Number.isNaN(value)) return "Valor sob consulta";
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

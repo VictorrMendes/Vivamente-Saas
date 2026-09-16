@@ -3,15 +3,14 @@
 import { redirect } from "next/navigation";
 import { createAppointmentRequest } from "@/lib/api/appointment-requests";
 import { BackApiError, BackUnavailableError } from "@/lib/api/back-client";
+import { validateContactFields, type ContactFieldErrors } from "./validate";
 
 export type ActionState = {
-  fieldErrors: Partial<Record<"name" | "email" | "message" | "service", string>>;
+  fieldErrors: ContactFieldErrors & Partial<Record<"service", string>>;
   formError: string | null;
 };
 
 export const initialActionState: ActionState = { fieldErrors: {}, formError: null };
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const GENERIC_UNAVAILABLE =
   "Não foi possível enviar sua solicitação agora. Tente novamente mais tarde.";
@@ -44,14 +43,7 @@ export async function submitAppointmentRequest(
   const serviceRaw = String(formData.get("service") ?? "");
   const preferredSlot = String(formData.get("preferredSlot") ?? "") || null;
 
-  const fieldErrors: ActionState["fieldErrors"] = {};
-  if (!name) fieldErrors.name = "Informe seu nome.";
-  if (!email) {
-    fieldErrors.email = "Informe seu e-mail.";
-  } else if (!EMAIL_RE.test(email)) {
-    fieldErrors.email = "Informe um e-mail válido.";
-  }
-  if (!message) fieldErrors.message = "Escreva uma mensagem para o profissional.";
+  const fieldErrors: ActionState["fieldErrors"] = validateContactFields({ name, email, message });
 
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors, formError: null };
