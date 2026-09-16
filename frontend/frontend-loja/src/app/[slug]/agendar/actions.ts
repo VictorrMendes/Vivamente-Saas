@@ -5,7 +5,7 @@ import { createAppointmentRequest } from "@/lib/api/appointment-requests";
 import { BackApiError, BackUnavailableError } from "@/lib/api/back-client";
 
 export type ActionState = {
-  fieldErrors: Partial<Record<"name" | "email" | "service", string>>;
+  fieldErrors: Partial<Record<"name" | "email" | "message" | "service", string>>;
   formError: string | null;
 };
 
@@ -51,6 +51,7 @@ export async function submitAppointmentRequest(
   } else if (!EMAIL_RE.test(email)) {
     fieldErrors.email = "Informe um e-mail válido.";
   }
+  if (!message) fieldErrors.message = "Escreva uma mensagem para o profissional.";
 
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors, formError: null };

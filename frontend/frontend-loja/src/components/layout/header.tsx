@@ -7,7 +7,6 @@ import { Menu, X } from "lucide-react";
 const NAV_ITEMS = [
   { href: "/", label: "Início" },
   { href: "/sobre", label: "Sobre" },
-  { href: "/contato", label: "Contato" },
 ];
 
 export function Header() {

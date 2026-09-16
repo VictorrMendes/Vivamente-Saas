@@ -180,7 +180,7 @@ export default async function ProfessionalPage({ params }: Props) {
           href={`/${slug}/agendar`}
           className="inline-flex h-12 items-center justify-center rounded-md bg-primary-600 px-6 font-button text-button text-text-inverse hover:bg-primary-700 focus-visible:outline-none focus-visible:shadow-focus"
         >
-          Solicitar atendimento
+          Contato
         </Link>
       </div>
     </div>

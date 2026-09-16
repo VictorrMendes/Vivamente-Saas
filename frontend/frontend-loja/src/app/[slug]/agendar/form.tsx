@@ -152,14 +152,22 @@ export function AppointmentForm({ slug, services, slots }: Props) {
 
       <div className="flex flex-col gap-1">
         <label htmlFor="message" className={LABEL_CLASS}>
-          Mensagem (opcional)
+          Mensagem
         </label>
         <textarea
           id="message"
           name="message"
           rows={4}
+          required
+          aria-invalid={Boolean(state.fieldErrors.message)}
+          aria-describedby={state.fieldErrors.message ? "message-error" : undefined}
           className="rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:outline-none focus-visible:shadow-focus"
         />
+        {state.fieldErrors.message && (
+          <p id="message-error" className="text-body-sm text-error">
+            {state.fieldErrors.message}
+          </p>
+        )}
       </div>
 
       <SubmitButton />
