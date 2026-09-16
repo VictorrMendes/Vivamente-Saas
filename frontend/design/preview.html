@@ -1,0 +1,811 @@
+<title>Cadência</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===================== TOKENS ===================== */
+  :root{
+    --color-primary-50:#EAF0EE; --color-primary-100:#CFE0DB; --color-primary-200:#A3C4BB;
+    --color-primary-300:#74A599; --color-primary-400:#4C8677; --color-primary-500:#2E6B5C;
+    --color-primary-600:#1F5548; --color-primary-700:#17423A; --color-primary-800:#123329; --color-primary-900:#0D251E;
+    --color-secondary-50:#F7EDDC; --color-secondary-100:#F0DBB4; --color-secondary-400:#D3A24F;
+    --color-secondary-500:#C08A3E; --color-secondary-600:#A16F2A; --color-secondary-700:#7D5720;
+    --color-background:#F1F3F1; --color-surface:#FFFFFF; --color-surface-sunken:#E9ECE9;
+    --color-border:#DCE1DD; --color-border-strong:#C3CBC5; --color-text:#16211D; --color-text-muted:#5B6B63; --color-text-inverse:#F3F6F4;
+    --color-success:#2E7D5B; --color-success-bg:#E6F3EC; --color-warning:#B8791F; --color-warning-bg:#FBF0DC;
+    --color-error:#B23A3A; --color-error-bg:#FBEAEA; --color-info:#3B6FA0; --color-info-bg:#E9F1F8;
+    --font-display:"Newsreader",Georgia,serif; --font-body:"Public Sans","Segoe UI",system-ui,sans-serif;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; --space-12:48px; --space-16:64px;
+    --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-pill:999px;
+    --shadow-sm:0 1px 2px rgba(15,23,20,.06); --shadow-md:0 4px 12px rgba(15,23,20,.08); --shadow-lg:0 16px 40px rgba(15,23,20,.16);
+    --focus-ring:0 0 0 3px rgba(31,85,72,.35);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --color-primary-600:#6FB3A0; --color-primary-700:#8CC7B5; --color-secondary-500:#D9A24F; --color-secondary-600:#E6B466;
+      --color-background:#0F1614; --color-surface:#17211D; --color-surface-sunken:#101815;
+      --color-border:#2A3733; --color-border-strong:#3B4B45; --color-text:#EDF2EF; --color-text-muted:#93A199; --color-text-inverse:#16211D;
+      --color-success:#5BAE86; --color-success-bg:#17332A; --color-warning:#D2A050; --color-warning-bg:#332A16;
+      --color-error:#E08585; --color-error-bg:#331A1A; --color-info:#7FADD6; --color-info-bg:#16232F;
+      --focus-ring:0 0 0 3px rgba(111,179,160,.4); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --color-primary-600:#6FB3A0; --color-primary-700:#8CC7B5; --color-secondary-500:#D9A24F; --color-secondary-600:#E6B466;
+    --color-background:#0F1614; --color-surface:#17211D; --color-surface-sunken:#101815;
+    --color-border:#2A3733; --color-border-strong:#3B4B45; --color-text:#EDF2EF; --color-text-muted:#93A199; --color-text-inverse:#16211D;
+    --color-success:#5BAE86; --color-success-bg:#17332A; --color-warning:#D2A050; --color-warning-bg:#332A16;
+    --color-error:#E08585; --color-error-bg:#331A1A; --color-info:#7FADD6; --color-info-bg:#16232F;
+    --focus-ring:0 0 0 3px rgba(111,179,160,.4); color-scheme: dark;
+  }
+
+  /* ===================== BASE ===================== */
+  *{box-sizing:border-box;}
+  body{
+    background:var(--color-background); color:var(--color-text); font-family:var(--font-body);
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:var(--font-display); letter-spacing:-.01em; text-wrap:balance; margin:0;}
+  h4,h5,h6{font-family:var(--font-body); font-weight:600; margin:0;}
+  p{margin:0;}
+  a{color:var(--color-primary-600);}
+  ::selection{background:var(--color-secondary-100); color:var(--color-primary-900);}
+  :focus-visible{outline:none; box-shadow:var(--focus-ring); border-radius:var(--radius-sm);}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+
+  .label{font-size:.75rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--color-text-muted);}
+  .caption{font-size:.813rem; line-height:1.4; color:var(--color-text-muted);}
+  code, .mono{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace; font-size:.85em;}
+
+  /* ===================== LAYOUT ===================== */
+  .shell{display:grid; grid-template-columns:240px 1fr; max-width:1280px; margin:0 auto;}
+  @media (max-width:1024px){ .shell{grid-template-columns:1fr;} }
+
+  .rail{position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto; padding:var(--space-8) var(--space-4); border-right:1px solid var(--color-border);}
+  @media (max-width:1024px){ .rail{position:static; height:auto; border-right:none; border-bottom:1px solid var(--color-border); padding:var(--space-4);} }
+  .rail-brand{display:flex; align-items:center; gap:var(--space-2); margin-bottom:var(--space-8);}
+  .rail-mark{width:28px; height:28px; border-radius:var(--radius-sm); background:var(--color-primary-600); display:grid; place-items:center; color:var(--color-text-inverse); font-family:var(--font-display); font-style:italic; font-size:1rem;}
+  .rail-name{font-family:var(--font-display); font-size:1.1rem;}
+  .rail nav{display:flex; flex-direction:column; gap:2px;}
+  @media (max-width:1024px){ .rail nav{flex-direction:row; overflow-x:auto; gap:var(--space-2); padding-bottom:4px;} }
+  .rail nav a{display:block; padding:6px 10px; border-radius:var(--radius-sm); color:var(--color-text-muted); text-decoration:none; font-size:.9rem; white-space:nowrap;}
+  .rail nav a:hover{background:var(--color-surface-sunken); color:var(--color-text);}
+
+  .main{padding:var(--space-8) var(--space-8) var(--space-24);}
+  @media (max-width:640px){ .main{padding:var(--space-6) var(--space-4) var(--space-16);} }
+  section{padding-top:var(--space-16); scroll-margin-top:var(--space-6);}
+  section:first-of-type{padding-top:0;}
+  .section-head{margin-bottom:var(--space-6); max-width:640px;}
+  .section-head .label{margin-bottom:var(--space-2); display:block;}
+  .section-head h2{font-size:2.05rem;}
+  .section-head p{margin-top:var(--space-2); color:var(--color-text-muted);}
+  .group-title{font-size:.95rem; margin:var(--space-8) 0 var(--space-3); color:var(--color-text-muted); font-weight:600;}
+  .group-title:first-of-type{margin-top:var(--space-6);}
+
+  /* ===================== MASTHEAD ===================== */
+  .masthead{display:grid; grid-template-columns:1.3fr 1fr; gap:var(--space-12); align-items:center; padding-bottom:var(--space-16); border-bottom:1px solid var(--color-border); margin-bottom:var(--space-8);}
+  @media (max-width:900px){ .masthead{grid-template-columns:1fr;} }
+  .masthead h1{font-size:3.4rem; font-style:italic; font-weight:500; line-height:1.05;}
+  .masthead .lede{margin-top:var(--space-4); font-size:1.05rem; color:var(--color-text-muted); max-width:46ch;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-6);}
+  .chip{font-size:.8rem; padding:5px 12px; border:1px solid var(--color-border-strong); border-radius:var(--radius-pill); color:var(--color-text-muted);}
+  .theme-toggle{margin-top:var(--space-6); display:inline-flex; align-items:center; gap:8px; background:none; border:1px solid var(--color-border-strong); color:var(--color-text); font-family:var(--font-body); font-size:.85rem; padding:8px 14px; border-radius:var(--radius-pill); cursor:pointer;}
+  .theme-toggle:hover{background:var(--color-surface-sunken);}
+
+  /* mini "next appointment" hero card */
+  .hero-card{background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:var(--space-6); box-shadow:var(--shadow-md);}
+  .hero-card .label{margin-bottom:var(--space-3); display:block;}
+  .hc-row{display:flex; align-items:center; gap:var(--space-3);}
+  .hc-name{font-weight:600;}
+  .hc-meta{color:var(--color-text-muted); font-size:.85rem;}
+  .hc-divider{height:1px; background:var(--color-border); margin:var(--space-4) 0;}
+
+  /* ===================== SWATCHES ===================== */
+  .swatch-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:var(--space-3);}
+  .swatch{border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden;}
+  .swatch-fill{height:64px;}
+  .swatch-meta{padding:var(--space-2) var(--space-3); background:var(--color-surface);}
+  .swatch-meta .name{font-size:.8rem; font-weight:600;}
+  .swatch-meta .hex{font-size:.75rem; color:var(--color-text-muted);}
+
+  /* ===================== TYPE SCALE ===================== */
+  .type-row{display:flex; align-items:baseline; gap:var(--space-6); padding:var(--space-4) 0; border-bottom:1px solid var(--color-border);}
+  .type-row:last-child{border-bottom:none;}
+  .type-meta{width:150px; flex-shrink:0;}
+  .type-meta .tag{font-size:.75rem; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.04em;}
+  .type-meta .spec{font-size:.75rem; color:var(--color-text-muted); display:block; margin-top:2px;}
+  .type-sample{font-family:var(--font-display);}
+
+  /* ===================== SCALE RULER (spacing) ===================== */
+  .ruler{display:flex; align-items:flex-end; gap:var(--space-4); flex-wrap:wrap; padding:var(--space-4) 0;}
+  .ruler-item{text-align:center;}
+  .ruler-bar{background:var(--color-primary-300); border-radius:2px; width:28px;}
+  .ruler-item .lbl{font-size:.75rem; color:var(--color-text-muted); margin-top:6px; font-variant-numeric:tabular-nums;}
+
+  /* radius/shadow swatches */
+  .demo-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:var(--space-6);}
+  .demo-box{width:100%; height:88px; background:var(--color-surface); border:1px solid var(--color-border); display:grid; place-items:center;}
+  .demo-cap{margin-top:var(--space-2);}
+
+  /* ===================== COMPONENT CARD WRAPPER ===================== */
+  .demo{background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:var(--space-6); margin-bottom:var(--space-4);}
+  .demo-row{display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3);}
+  .demo-row + .demo-row{margin-top:var(--space-4);}
+
+  /* ===================== BUTTONS ===================== */
+  .btn{font-family:var(--font-body); font-size:.938rem; font-weight:600; border-radius:var(--radius-md); border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:background .12s,border-color .12s,opacity .12s;}
+  .btn-sm{height:32px; padding:0 12px; font-size:.85rem;}
+  .btn-md{height:40px; padding:0 16px;}
+  .btn-lg{height:48px; padding:0 22px; font-size:1rem;}
+  .btn-primary{background:var(--color-primary-600); color:var(--color-text-inverse);}
+  .btn-primary:hover{background:var(--color-primary-700);}
+  .btn-secondary{background:var(--color-surface); color:var(--color-text); border-color:var(--color-border-strong);}
+  .btn-secondary:hover{background:var(--color-surface-sunken);}
+  .btn-ghost{background:transparent; color:var(--color-primary-600);}
+  .btn-ghost:hover{background:var(--color-primary-50);}
+  .btn-destructive{background:var(--color-error); color:#fff;}
+  .btn-destructive:hover{opacity:.88;}
+  .btn-link{background:transparent; color:var(--color-primary-600); padding:0; height:auto; text-decoration:underline; text-underline-offset:3px;}
+  .btn[disabled]{opacity:.5; cursor:not-allowed;}
+  .spinner{width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; animation:spin .6s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ===================== FORM CONTROLS ===================== */
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:.85rem; font-weight:600;}
+  .field .hint{font-size:.78rem; color:var(--color-text-muted);}
+  .field .error-text{font-size:.78rem; color:var(--color-error);}
+  .input, select.input, textarea.input{
+    font-family:var(--font-body); font-size:.938rem; color:var(--color-text); background:var(--color-surface);
+    border:1px solid var(--color-border-strong); border-radius:var(--radius-sm); height:40px; padding:0 12px; width:100%;
+  }
+  textarea.input{height:auto; padding:10px 12px; resize:vertical;}
+  .input:hover{border-color:var(--color-text-muted);}
+  .input:focus-visible{border-color:var(--color-primary-600);}
+  .input.has-error{border-color:var(--color-error);}
+  .input[disabled]{background:var(--color-surface-sunken); color:var(--color-text-muted); cursor:not-allowed;}
+
+  .check-row{display:flex; align-items:center; gap:8px; font-size:.9rem;}
+  input[type="checkbox"],input[type="radio"]{width:18px; height:18px; accent-color:var(--color-primary-600);}
+  .switch{position:relative; width:40px; height:22px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0; position:absolute;}
+  .switch .track{position:absolute; inset:0; background:var(--color-border-strong); border-radius:var(--radius-pill); transition:background .15s;}
+  .switch .thumb{position:absolute; top:2px; left:2px; width:18px; height:18px; background:#fff; border-radius:50%; transition:transform .15s; box-shadow:var(--shadow-sm);}
+  .switch input:checked + .track{background:var(--color-primary-600);}
+  .switch input:checked + .track .thumb{transform:translateX(18px);}
+  .switch input:focus-visible + .track{box-shadow:var(--focus-ring);}
+
+  /* ===================== BADGE ===================== */
+  .badge{display:inline-flex; align-items:center; gap:5px; font-size:.75rem; font-weight:600; padding:3px 10px; border-radius:var(--radius-pill); white-space:nowrap;}
+  .badge-dot{width:6px; height:6px; border-radius:50%; background:currentColor;}
+  .badge-info{background:var(--color-info-bg); color:var(--color-info);}
+  .badge-warning{background:var(--color-warning-bg); color:var(--color-warning);}
+  .badge-secondary{background:var(--color-secondary-50); color:var(--color-secondary-700);}
+  .badge-primary{background:var(--color-primary-50); color:var(--color-primary-700);}
+  .badge-success{background:var(--color-success-bg); color:var(--color-success);}
+  .badge-error{background:var(--color-error-bg); color:var(--color-error);}
+  .badge-neutral{background:var(--color-surface-sunken); color:var(--color-text-muted);}
+
+  /* ===================== ALERT / TOAST ===================== */
+  .alert{display:flex; gap:12px; padding:var(--space-4); border-radius:var(--radius-md); border:1px solid; font-size:.9rem;}
+  .alert-icon{flex-shrink:0; width:20px; height:20px; border-radius:50%; display:grid; place-items:center; font-size:.75rem; font-weight:700; color:#fff;}
+  .alert-success{background:var(--color-success-bg); border-color:var(--color-success); color:var(--color-success);}
+  .alert-warning{background:var(--color-warning-bg); border-color:var(--color-warning); color:var(--color-warning);}
+  .alert-error{background:var(--color-error-bg); border-color:var(--color-error); color:var(--color-error);}
+  .alert-info{background:var(--color-info-bg); border-color:var(--color-info); color:var(--color-info);}
+  .alert-body strong{display:block; color:var(--color-text); font-size:.9rem;}
+  .alert-body span{color:var(--color-text-muted); font-size:.85rem;}
+
+  .toast-stack{display:flex; flex-direction:column; gap:8px; max-width:340px;}
+  .toast{display:flex; align-items:center; gap:10px; background:var(--color-surface); border:1px solid var(--color-border); border-left:3px solid var(--color-success); border-radius:var(--radius-md); padding:10px 14px; box-shadow:var(--shadow-md); font-size:.85rem;}
+
+  /* ===================== SKELETON / LOADING ===================== */
+  .skel{background:linear-gradient(90deg,var(--color-surface-sunken) 25%,var(--color-border) 50%,var(--color-surface-sunken) 75%); background-size:200% 100%; animation:shimmer 1.6s infinite; border-radius:var(--radius-sm);}
+  @keyframes shimmer{to{background-position:-200% 0;}}
+
+  /* ===================== EMPTY STATE ===================== */
+  .empty{text-align:center; padding:var(--space-12) var(--space-6); border:1px dashed var(--color-border-strong); border-radius:var(--radius-lg);}
+  .empty-icon{width:44px; height:44px; margin:0 auto var(--space-3); border-radius:50%; background:var(--color-primary-50); display:grid; place-items:center; color:var(--color-primary-600);}
+  .empty h4{margin-bottom:4px;}
+  .empty p{color:var(--color-text-muted); font-size:.9rem; margin-bottom:var(--space-4);}
+
+  /* ===================== AVATAR ===================== */
+  .avatar{border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--color-primary-100); color:var(--color-primary-800); font-family:var(--font-body); font-weight:600; flex-shrink:0; position:relative;}
+  .avatar-photo{background-size:cover; background-position:center;}
+  .status-dot{position:absolute; bottom:0; right:0; width:10px; height:10px; border-radius:50%; background:var(--color-success); border:2px solid var(--color-surface);}
+
+  /* ===================== CARD (therapist) ===================== */
+  .therapist-card{background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); overflow:hidden; max-width:300px;}
+  .therapist-photo{height:150px; background:linear-gradient(135deg,var(--color-primary-200),var(--color-primary-400));}
+  .therapist-body{padding:var(--space-4);}
+  .therapist-body h4{font-family:var(--font-display); font-size:1.15rem; font-weight:500;}
+  .therapist-tags{display:flex; flex-wrap:wrap; gap:6px; margin:var(--space-3) 0;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-4);}
+  @media (max-width:700px){ .stat-grid{grid-template-columns:repeat(2,1fr);} }
+  .stat-tile{background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:var(--space-4);}
+  .stat-tile .num{font-family:var(--font-display); font-size:2.1rem; font-variant-numeric:tabular-nums;}
+  .stat-tile .lbl{color:var(--color-text-muted); font-size:.82rem; margin-top:2px;}
+
+  /* ===================== TABLE ===================== */
+  .table-wrap{overflow-x:auto; border:1px solid var(--color-border); border-radius:var(--radius-md);}
+  table{width:100%; border-collapse:collapse; font-size:.88rem; min-width:560px;}
+  th{text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted); padding:10px 14px; background:var(--color-surface-sunken); border-bottom:1px solid var(--color-border); font-weight:600;}
+  td{padding:12px 14px; border-bottom:1px solid var(--color-border);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--color-surface-sunken);}
+
+  .pagination{display:flex; align-items:center; gap:4px; margin-top:var(--space-3);}
+  .page-btn{width:32px; height:32px; border-radius:var(--radius-sm); border:1px solid var(--color-border); background:var(--color-surface); font-size:.85rem; cursor:pointer;}
+  .page-btn:hover{background:var(--color-surface-sunken);}
+  .page-btn.active{background:var(--color-primary-600); color:var(--color-text-inverse); border-color:var(--color-primary-600);}
+
+  /* ===================== NAV MOCKS ===================== */
+  .frame{border:1px solid var(--color-border); border-radius:var(--radius-lg); overflow:hidden; background:var(--color-surface);}
+  .navbar-mock{display:flex; align-items:center; justify-content:space-between; padding:0 var(--space-4); height:56px; border-bottom:1px solid var(--color-border);}
+  .navbar-mock .brand{font-family:var(--font-display); font-style:italic; font-weight:500;}
+  .navbar-mock .links{display:flex; gap:var(--space-6); font-size:.85rem; color:var(--color-text-muted);}
+  .sidebar-mock{display:flex; height:280px;}
+  .sidebar-mock nav{width:190px; border-right:1px solid var(--color-border); padding:var(--space-3);}
+  .sidebar-mock .item{display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:var(--radius-sm); font-size:.85rem; color:var(--color-text-muted); margin-bottom:2px;}
+  .sidebar-mock .item.active{background:var(--color-primary-50); color:var(--color-primary-700); font-weight:600;}
+  .sidebar-mock .content{flex:1; padding:var(--space-4); color:var(--color-text-muted); font-size:.85rem;}
+  .icon-dot{width:16px; height:16px; border-radius:4px; background:currentColor; opacity:.25; flex-shrink:0;}
+
+  .breadcrumb{display:flex; align-items:center; gap:6px; font-size:.85rem; color:var(--color-text-muted);}
+  .breadcrumb a{color:var(--color-text-muted); text-decoration:none;}
+  .breadcrumb a:hover{color:var(--color-primary-600);}
+  .breadcrumb .current{color:var(--color-text); font-weight:600;}
+
+  .tabs{display:flex; gap:var(--space-6); border-bottom:1px solid var(--color-border);}
+  .tab{background:none; border:none; padding:10px 2px; font-family:var(--font-body); font-size:.9rem; color:var(--color-text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;}
+  .tab.active{color:var(--color-primary-700); border-color:var(--color-primary-600); font-weight:600;}
+  .tabpanel{padding-top:var(--space-4); font-size:.9rem; color:var(--color-text-muted);}
+
+  /* ===================== OVERLAY ===================== */
+  .overlay-demo{position:relative; background:var(--color-surface-sunken); border-radius:var(--radius-lg); padding:var(--space-8); display:grid; place-items:center; min-height:220px;}
+  .modal-card{background:var(--color-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:320px; padding:var(--space-6); border:1px solid var(--color-border);}
+  .modal-card h4{font-family:var(--font-display); font-weight:500; font-size:1.2rem; margin-bottom:8px;}
+  .modal-card p{color:var(--color-text-muted); font-size:.88rem; margin-bottom:var(--space-6);}
+  .modal-actions{display:flex; justify-content:flex-end; gap:8px;}
+
+  .scrim{position:fixed; inset:0; background:rgba(15,20,18,.45); display:none; align-items:center; justify-content:center; z-index:50;}
+  .scrim.open{display:flex;}
+  .modal-real{background:var(--color-surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:360px; max-width:90vw; padding:var(--space-6);}
+
+  .dropdown{position:relative; display:inline-block;}
+  .dropdown-menu{position:absolute; top:calc(100% + 6px); left:0; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-md); min-width:200px; padding:6px; display:none; z-index:10;}
+  .dropdown-menu.open{display:block;}
+  .dropdown-menu button{display:flex; width:100%; text-align:left; background:none; border:none; font-family:var(--font-body); font-size:.87rem; padding:8px 10px; border-radius:var(--radius-sm); cursor:pointer; color:var(--color-text);}
+  .dropdown-menu button:hover{background:var(--color-surface-sunken);}
+  .dropdown-menu .danger{color:var(--color-error);}
+
+  .tooltip-wrap{position:relative; display:inline-block;}
+  .tooltip-bubble{position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%) translateY(4px); background:var(--color-text); color:var(--color-background); font-size:.75rem; padding:5px 10px; border-radius:var(--radius-sm); white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .15s, transform .15s;}
+  .tooltip-wrap:hover .tooltip-bubble, .tooltip-wrap:focus-within .tooltip-bubble{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .cal{width:280px;}
+  .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-3); font-weight:600; font-size:.9rem;}
+  .cal-nav{background:none; border:1px solid var(--color-border); border-radius:var(--radius-sm); width:26px; height:26px; cursor:pointer;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center;}
+  .cal-grid .dow{font-size:.68rem; color:var(--color-text-muted); padding-bottom:4px;}
+  .cal-day{aspect-ratio:1; display:grid; place-items:center; border-radius:50%; font-size:.82rem; cursor:pointer; border:1px solid transparent; background:none; font-family:var(--font-body);}
+  .cal-day.avail{color:var(--color-primary-700);}
+  .cal-day.avail:hover{background:var(--color-primary-50);}
+  .cal-day.muted{color:var(--color-text-muted); opacity:.4; cursor:default;}
+  .cal-day.selected{background:var(--color-primary-600); color:var(--color-text-inverse);}
+  .cal-day.today{border-color:var(--color-primary-600);}
+  .slots{display:flex; flex-wrap:wrap; gap:6px; margin-top:var(--space-4);}
+  .slot{font-size:.8rem; padding:5px 10px; border:1px solid var(--color-border-strong); border-radius:var(--radius-pill); background:var(--color-surface); cursor:pointer;}
+  .slot:hover{border-color:var(--color-primary-600); color:var(--color-primary-700);}
+  .slot.selected{background:var(--color-primary-600); border-color:var(--color-primary-600); color:var(--color-text-inverse);}
+
+  footer{border-top:1px solid var(--color-border); margin-top:var(--space-16); padding-top:var(--space-6); color:var(--color-text-muted); font-size:.82rem;}
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-brand">
+      <div class="rail-mark">C</div>
+      <div class="rail-name">Cadência</div>
+    </div>
+    <nav>
+      <a href="#principios">Princípios</a>
+      <a href="#cor">Cor</a>
+      <a href="#tipografia">Tipografia</a>
+      <a href="#espacamento">Espaçamento &amp; grade</a>
+      <a href="#elevacao">Raio &amp; elevação</a>
+      <a href="#formulario">Formulário</a>
+      <a href="#feedback">Feedback</a>
+      <a href="#dados">Exibição de dados</a>
+      <a href="#navegacao">Navegação</a>
+      <a href="#overlay">Overlay</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <section class="masthead" id="principios">
+      <div>
+        <span class="label">Sistema de design · VivaMente Terapias</span>
+        <h1>Cadência</h1>
+        <p class="lede">Uma sessão tem começo, ritmo e fim. Cadência organiza a linguagem visual da VivaMente — do primeiro contato na página do terapeuta até o acompanhamento de leads na plataforma — em torno dessa ideia: calma que não é vaga, estrutura que não é fria.</p>
+        <div class="chip-row">
+          <span class="chip">Profissional</span>
+          <span class="chip">Humano</span>
+          <span class="chip">Calmo</span>
+          <span class="chip">Confiável</span>
+          <span class="chip">Moderno</span>
+          <span class="chip">Acessível</span>
+        </div>
+        <button class="theme-toggle" id="themeToggle" type="button">
+          <span id="themeIcon">◐</span> <span id="themeLabel">Tema: sistema</span>
+        </button>
+      </div>
+      <div class="hero-card">
+        <span class="label">Próximo atendimento</span>
+        <div class="hc-row">
+          <div class="avatar" style="width:44px;height:44px;">AS<span class="status-dot"></span></div>
+          <div>
+            <div class="hc-name">Ana Silva</div>
+            <div class="hc-meta">Terapia Cognitivo-Comportamental</div>
+          </div>
+          <span class="badge badge-primary" style="margin-left:auto;">Agendamento</span>
+        </div>
+        <div class="hc-divider"></div>
+        <div class="hc-row" style="justify-content:space-between;">
+          <span class="caption">Qui, 03 set · 14:00</span>
+          <span class="caption">Modalidade: Online</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="cor">
+      <div class="section-head">
+        <span class="label">Tokens</span>
+        <h2>Cor</h2>
+        <p>Petróleo profundo como primária — confiança e calma sem cair no roxo genérico de wellness. Âmbar-mel como único acento, usado com parcimônia. Fundo em névoa fria, nunca creme.</p>
+      </div>
+
+      <div class="group-title">Primária — pinho-petróleo</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch-fill" style="background:#EAF0EE"></div><div class="swatch-meta"><div class="name">primary-50</div><div class="hex">#EAF0EE</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:#A3C4BB"></div><div class="swatch-meta"><div class="name">primary-200</div><div class="hex">#A3C4BB</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:#2E6B5C"></div><div class="swatch-meta"><div class="name">primary-500</div><div class="hex">#2E6B5C</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:#1F5548"></div><div class="swatch-meta"><div class="name">primary-600 · base</div><div class="hex">#1F5548</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:#17423A"></div><div class="swatch-meta"><div class="name">primary-700 · hover</div><div class="hex">#17423A</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:#0D251E"></div><div class="swatch-meta"><div class="name">primary-900</div><div class="hex">#0D251E</div></div></div>
+      </div>
+
+      <div class="group-title">Secundária — âmbar-mel (acento, uso pontual)</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch-fill" style="background:#F7EDDC"></div><div class="swatch-meta"><div class="name">secondary-50</div><div class="hex">#F7EDDC</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:#D3A24F"></div><div class="swatch-meta"><div class="name">secondary-400</div><div class="hex">#D3A24F</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:#C08A3E"></div><div class="swatch-meta"><div class="name">secondary-500 · base</div><div class="hex">#C08A3E</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:#A16F2A"></div><div class="swatch-meta"><div class="name">secondary-600 · hover</div><div class="hex">#A16F2A</div></div></div>
+      </div>
+
+      <div class="group-title">Neutros</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-background); border-bottom:1px solid var(--color-border)"></div><div class="swatch-meta"><div class="name">background</div><div class="hex">névoa fria</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-surface); border-bottom:1px solid var(--color-border)"></div><div class="swatch-meta"><div class="name">surface</div><div class="hex">cartões, inputs</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-border)"></div><div class="swatch-meta"><div class="name">border</div><div class="hex">divisores</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-text)"></div><div class="swatch-meta"><div class="name">text</div><div class="hex">texto principal</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-text-muted)"></div><div class="swatch-meta"><div class="name">text-muted</div><div class="hex">apoio</div></div></div>
+      </div>
+
+      <div class="group-title">Semânticas</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-success)"></div><div class="swatch-meta"><div class="name">success</div><div class="hex">Cliente · confirmado</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-warning)"></div><div class="swatch-meta"><div class="name">warning</div><div class="hex">Em contato</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-error)"></div><div class="swatch-meta"><div class="name">error</div><div class="hex">falha, exclusão</div></div></div>
+        <div class="swatch"><div class="swatch-fill" style="background:var(--color-info)"></div><div class="swatch-meta"><div class="name">info</div><div class="hex">Novo lead</div></div></div>
+      </div>
+    </section>
+
+    <section id="tipografia">
+      <div class="section-head">
+        <span class="label">Tokens</span>
+        <h2>Tipografia</h2>
+        <p>Newsreader (serifada editorial) para títulos — autoridade calma, não corporativa. Public Sans para corpo e UI — desenhada para acessibilidade, ótima em telas pequenas de formulário e tabela.</p>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta"><span class="tag">H1</span><span class="spec">Newsreader 500 · 48.8px / 1.15</span></div>
+        <div class="type-sample" style="font-size:3.052rem; font-style:italic;">Cuidar de quem cuida</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="tag">H2</span><span class="spec">Newsreader 500 · 39px</span></div>
+        <div class="type-sample" style="font-size:2.441rem;">Encontre seu terapeuta</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="tag">H3</span><span class="spec">Newsreader 500 · 31px</span></div>
+        <div class="type-sample" style="font-size:1.953rem;">Especialidades atendidas</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="tag">H4–H6</span><span class="spec">Public Sans 600 · 25 / 20 / 17px</span></div>
+        <div style="font-family:var(--font-body); font-weight:600; font-size:1.563rem;">Sessões realizadas no mês</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="tag">Body</span><span class="spec">Public Sans 400 · 16px / 1.6</span></div>
+        <div style="max-width:52ch;">Cada terapeuta possui uma página pública exclusiva para divulgar seus serviços e receber solicitações de atendimento diretamente pelo site.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="tag">Caption</span><span class="spec">Public Sans 400 · 13px</span></div>
+        <div class="caption">Atualizado há 4 minutos</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="tag">Label</span><span class="spec">Public Sans 600 · 12px · +0.06em</span></div>
+        <div class="label">Motivo do contato</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="tag">Button</span><span class="spec">Public Sans 600 · 15px</span></div>
+        <button class="btn btn-md btn-primary">Solicitar atendimento</button>
+      </div>
+    </section>
+
+    <section id="espacamento">
+      <div class="section-head">
+        <span class="label">Tokens</span>
+        <h2>Espaçamento &amp; grade</h2>
+        <p>Escala 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 — cada salto quase dobra o anterior, então densidade de formulário e respiro de página final usam a mesma régua.</p>
+      </div>
+      <div class="ruler">
+        <div class="ruler-item"><div class="ruler-bar" style="height:4px;"></div><div class="lbl">4</div></div>
+        <div class="ruler-item"><div class="ruler-bar" style="height:8px;"></div><div class="lbl">8</div></div>
+        <div class="ruler-item"><div class="ruler-bar" style="height:12px;"></div><div class="lbl">12</div></div>
+        <div class="ruler-item"><div class="ruler-bar" style="height:16px;"></div><div class="lbl">16</div></div>
+        <div class="ruler-item"><div class="ruler-bar" style="height:24px;"></div><div class="lbl">24</div></div>
+        <div class="ruler-item"><div class="ruler-bar" style="height:32px;"></div><div class="lbl">32</div></div>
+        <div class="ruler-item"><div class="ruler-bar" style="height:48px;"></div><div class="lbl">48</div></div>
+        <div class="ruler-item"><div class="ruler-bar" style="height:64px;"></div><div class="lbl">64</div></div>
+      </div>
+      <div class="group-title">Breakpoints — padrão Tailwind, sem reinvenção</div>
+      <div class="caption mono">sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536</div>
+    </section>
+
+    <section id="elevacao">
+      <div class="section-head">
+        <span class="label">Tokens</span>
+        <h2>Raio &amp; elevação</h2>
+        <p>Raio varia por papel — não é um único <code>rounded-lg</code> em tudo. Sombra só aparece quando há elevação real (modal, dropdown, toast); cards em grade usam borda.</p>
+      </div>
+      <div class="demo-grid">
+        <div><div class="demo-box" style="border-radius:4px;">sm · 4px</div><div class="caption demo-cap">Input, célula de tabela</div></div>
+        <div><div class="demo-box" style="border-radius:8px;">md · 8px</div><div class="caption demo-cap">Botão, dropdown</div></div>
+        <div><div class="demo-box" style="border-radius:12px;">lg · 12px</div><div class="caption demo-cap">Card, modal</div></div>
+        <div><div class="demo-box" style="border-radius:999px;">pill</div><div class="caption demo-cap">Badge, avatar, switch</div></div>
+        <div><div class="demo-box" style="box-shadow:var(--shadow-sm);">sombra sm</div><div class="caption demo-cap">Toast</div></div>
+        <div><div class="demo-box" style="box-shadow:var(--shadow-md);">sombra md</div><div class="caption demo-cap">Dropdown</div></div>
+        <div><div class="demo-box" style="box-shadow:var(--shadow-lg);">sombra lg</div><div class="caption demo-cap">Modal</div></div>
+      </div>
+    </section>
+
+    <section id="formulario">
+      <div class="section-head">
+        <span class="label">Componentes</span>
+        <h2>Formulário</h2>
+        <p>Demonstrado com o formulário público de solicitação de atendimento — o ponto de conversão mais importante da página do terapeuta.</p>
+      </div>
+
+      <div class="demo">
+        <div class="group-title" style="margin-top:0;">Button — variantes × tamanhos</div>
+        <div class="demo-row">
+          <button class="btn btn-sm btn-primary">Primary sm</button>
+          <button class="btn btn-md btn-primary">Primary md</button>
+          <button class="btn btn-lg btn-primary">Primary lg</button>
+          <button class="btn btn-md btn-secondary">Secondary</button>
+          <button class="btn btn-md btn-ghost">Ghost</button>
+          <button class="btn btn-md btn-destructive">Excluir</button>
+          <button class="btn btn-link">Ver todos os serviços</button>
+        </div>
+        <div class="demo-row">
+          <button class="btn btn-md btn-primary" disabled>Desabilitado</button>
+          <button class="btn btn-md btn-primary" disabled><span class="spinner"></span> Enviando…</button>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="group-title" style="margin-top:0;">Solicitar atendimento</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4); max-width:560px;">
+          <div class="field"><label>Nome</label><input class="input" placeholder="Seu nome completo"></div>
+          <div class="field"><label>E-mail</label><input class="input has-error" value="ana@email"><span class="error-text">Informe um e-mail válido.</span></div>
+          <div class="field"><label>Telefone</label><input class="input" placeholder="(11) 90000-0000"></div>
+          <div class="field"><label>Serviço de interesse</label>
+            <select class="input">
+              <option>Terapia individual</option>
+              <option>Terapia de casal</option>
+              <option>Terapia infantil</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:1/-1;"><label>Motivo do contato</label><textarea class="input" rows="3" placeholder="Conte brevemente o que te trouxe até aqui"></textarea><span class="hint">Essas informações vão direto para a agenda de Ana Silva.</span></div>
+        </div>
+        <div class="demo-row" style="margin-top:var(--space-6);">
+          <label class="check-row"><input type="checkbox" checked> Aceito a Política de Privacidade</label>
+        </div>
+        <div class="demo-row">
+          <label class="check-row"><input type="radio" name="mod" checked> Online</label>
+          <label class="check-row"><input type="radio" name="mod"> Presencial</label>
+          <label class="switch"><input type="checkbox" checked><span class="track"><span class="thumb"></span></span></label>
+          <span class="caption">Receber lembrete por e-mail</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="feedback">
+      <div class="section-head">
+        <span class="label">Componentes</span>
+        <h2>Feedback</h2>
+        <p>Badge de status de lead usa paleta fixa por valor — a cor nunca é a única portadora de significado.</p>
+      </div>
+
+      <div class="demo">
+        <div class="group-title" style="margin-top:0;">Badge — pipeline de leads</div>
+        <div class="demo-row">
+          <span class="badge badge-info"><span class="badge-dot"></span>Novo</span>
+          <span class="badge badge-warning"><span class="badge-dot"></span>Em contato</span>
+          <span class="badge badge-secondary"><span class="badge-dot"></span>Aguardando resposta</span>
+          <span class="badge badge-primary"><span class="badge-dot"></span>Agendamento</span>
+          <span class="badge badge-success"><span class="badge-dot"></span>Cliente</span>
+          <span class="badge badge-neutral">Arquivado</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="group-title" style="margin-top:0;">Alert</div>
+        <div style="display:grid; gap:var(--space-3);">
+          <div class="alert alert-success"><div class="alert-icon" style="background:var(--color-success);">✓</div><div class="alert-body"><strong>Lead movido para Cliente</strong><span>Ana Silva confirmou o pagamento da primeira sessão.</span></div></div>
+          <div class="alert alert-warning"><div class="alert-icon" style="background:var(--color-warning);">!</div><div class="alert-body"><strong>3 leads aguardando resposta há mais de 48h</strong><span>Revise a fila antes que esfriem.</span></div></div>
+          <div class="alert alert-error"><div class="alert-icon" style="background:var(--color-error);">×</div><div class="alert-body"><strong>Não foi possível salvar o agendamento</strong><span>Verifique sua conexão e tente novamente.</span></div></div>
+          <div class="alert alert-info"><div class="alert-icon" style="background:var(--color-info);">i</div><div class="alert-body"><strong>Nova versão da agenda disponível</strong><span>Bloqueio de horários recorrentes já pode ser usado.</span></div></div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="group-title" style="margin-top:0;">Toast · Loading · Skeleton</div>
+        <div class="demo-row" style="align-items:flex-start;">
+          <div class="toast-stack">
+            <div class="toast">✓ Solicitação enviada com sucesso</div>
+            <div class="toast" style="border-left-color:var(--color-info);">◐ Sincronizando agenda…</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;"><span class="spinner" style="color:var(--color-primary-600); width:20px; height:20px;"></span><span class="caption">Carregando leads…</span></div>
+        </div>
+        <div class="demo-row">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="skel" style="width:36px; height:36px; border-radius:50%;"></div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div class="skel" style="width:140px; height:12px;"></div>
+              <div class="skel" style="width:90px; height:10px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="group-title" style="margin-top:0;">EmptyState</div>
+        <div class="empty">
+          <div class="empty-icon">＋</div>
+          <h4>Nenhum lead por aqui ainda</h4>
+          <p>Assim que um visitante solicitar atendimento pela sua página pública, ele aparece nesta lista.</p>
+          <button class="btn btn-md btn-primary">Configurar minha página</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="dados">
+      <div class="section-head">
+        <span class="label">Componentes</span>
+        <h2>Exibição de dados</h2>
+        <p>Dashboard, cartão de terapeuta e tabela de leads — os três pontos onde o sistema precisa comunicar volume e status rapidamente.</p>
+      </div>
+
+      <div class="group-title" style="margin-top:0;">Dashboard do terapeuta</div>
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="num">12</div><div class="lbl">Novos leads</div></div>
+        <div class="stat-tile"><div class="num">28</div><div class="lbl">Clientes ativos</div></div>
+        <div class="stat-tile"><div class="num">34</div><div class="lbl">Sessões no mês</div></div>
+        <div class="stat-tile"><div class="num">5</div><div class="lbl">Próximos atendimentos</div></div>
+      </div>
+
+      <div class="group-title">Card &amp; Avatar</div>
+      <div class="demo-row" style="align-items:flex-start;">
+        <div class="therapist-card">
+          <div class="therapist-photo"></div>
+          <div class="therapist-body">
+            <h4>Ana Silva</h4>
+            <span class="caption">Psicóloga clínica · CRP 06/123456</span>
+            <div class="therapist-tags">
+              <span class="badge badge-neutral">Ansiedade</span>
+              <span class="badge badge-neutral">TCC</span>
+              <span class="badge badge-neutral">Casais</span>
+            </div>
+            <button class="btn btn-sm btn-primary" style="width:100%;">Ver página</button>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:var(--space-4);">
+          <div class="avatar" style="width:24px;height:24px; font-size:.65rem;">RS</div>
+          <div class="avatar" style="width:32px;height:32px; font-size:.75rem;">AS<span class="status-dot"></span></div>
+          <div class="avatar" style="width:40px;height:40px;">MO</div>
+          <div class="avatar" style="width:56px;height:56px; font-size:1.1rem;">JP<span class="status-dot" style="background:var(--color-warning);"></span></div>
+        </div>
+      </div>
+
+      <div class="group-title">Table &amp; Pagination</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Serviço</th><th>Status</th><th>Última atualização</th></tr></thead>
+          <tbody>
+            <tr><td>Rafael Souza</td><td>Terapia individual</td><td><span class="badge badge-info"><span class="badge-dot"></span>Novo</span></td><td>há 2h</td></tr>
+            <tr><td>Marina Oliveira</td><td>Terapia de casal</td><td><span class="badge badge-warning"><span class="badge-dot"></span>Em contato</span></td><td>há 1 dia</td></tr>
+            <tr><td>João Pedro</td><td>Terapia individual</td><td><span class="badge badge-primary"><span class="badge-dot"></span>Agendamento</span></td><td>há 3 dias</td></tr>
+            <tr><td>Beatriz Lima</td><td>Terapia infantil</td><td><span class="badge badge-success"><span class="badge-dot"></span>Cliente</span></td><td>há 1 semana</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button class="page-btn">‹</button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+        <button class="page-btn">›</button>
+      </div>
+    </section>
+
+    <section id="navegacao">
+      <div class="section-head">
+        <span class="label">Componentes</span>
+        <h2>Navegação</h2>
+      </div>
+
+      <div class="group-title" style="margin-top:0;">Navbar (site público)</div>
+      <div class="frame">
+        <div class="navbar-mock">
+          <span class="brand">VivaMente</span>
+          <span class="links"><span>Terapeutas</span><span>Especialidades</span><span>Sobre</span></span>
+          <button class="btn btn-sm btn-primary">Encontrar terapeuta</button>
+        </div>
+      </div>
+
+      <div class="group-title">Sidebar (plataforma)</div>
+      <div class="frame sidebar-mock">
+        <nav>
+          <div class="item active"><span class="icon-dot"></span> Dashboard</div>
+          <div class="item"><span class="icon-dot"></span> Leads</div>
+          <div class="item"><span class="icon-dot"></span> Clientes</div>
+          <div class="item"><span class="icon-dot"></span> Agenda</div>
+          <div class="item"><span class="icon-dot"></span> Serviços</div>
+          <div class="item"><span class="icon-dot"></span> Minha página</div>
+        </nav>
+        <div class="content">Conteúdo da rota ativa (Dashboard) aparece aqui.</div>
+      </div>
+
+      <div class="group-title">Breadcrumb &amp; Tabs</div>
+      <div class="demo">
+        <nav class="breadcrumb"><a href="#">Plataforma</a><span>/</span><a href="#">Clientes</a><span>/</span><span class="current">Ana Silva</span></nav>
+        <div class="tabs" style="margin-top:var(--space-6);" id="tabs">
+          <button class="tab active" data-tab="0">Perfil</button>
+          <button class="tab" data-tab="1">Sessões</button>
+          <button class="tab" data-tab="2">Agendamentos</button>
+        </div>
+        <div class="tabpanel" id="tabpanel">Dados de contato, histórico e serviço de interesse do cliente selecionado.</div>
+      </div>
+    </section>
+
+    <section id="overlay">
+      <div class="section-head">
+        <span class="label">Componentes</span>
+        <h2>Overlay</h2>
+        <p>Modal e dropdown abaixo são reais — clique para testar foco e fechamento por <kbd>Esc</kbd>/clique fora.</p>
+      </div>
+
+      <div class="group-title" style="margin-top:0;">Modal, Dialog &amp; Dropdown</div>
+      <div class="demo-row">
+        <button class="btn btn-md btn-primary" id="openModal">Abrir confirmação</button>
+        <div class="dropdown">
+          <button class="btn btn-md btn-secondary" id="openDropdown">Ações ▾</button>
+          <div class="dropdown-menu" id="dropdownMenu">
+            <button>Editar cliente</button>
+            <button>Reagendar sessão</button>
+            <button class="danger">Remover cliente</button>
+          </div>
+        </div>
+        <div class="tooltip-wrap">
+          <button class="btn btn-md btn-ghost">Modalidade ⓘ</button>
+          <span class="tooltip-bubble">Online ou presencial, definido pelo cliente</span>
+        </div>
+      </div>
+
+      <div class="scrim" id="scrim">
+        <div class="modal-real">
+          <h4 style="font-family:var(--font-display); font-weight:500; font-size:1.2rem; margin-bottom:8px;">Remover cliente?</h4>
+          <p style="color:var(--color-text-muted); font-size:.88rem; margin-bottom:var(--space-6);">Beatriz Lima será removida da sua lista de clientes ativos. Esta ação não apaga o histórico de sessões.</p>
+          <div class="modal-actions">
+            <button class="btn btn-md btn-secondary" id="closeModal">Cancelar</button>
+            <button class="btn btn-md btn-destructive" id="confirmModal">Remover</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="group-title">Calendar &amp; DatePicker — horários disponíveis</div>
+      <div class="demo">
+        <div class="cal">
+          <div class="cal-head"><button class="cal-nav">‹</button><span>Setembro 2026</span><button class="cal-nav">›</button></div>
+          <div class="cal-grid">
+            <span class="dow">D</span><span class="dow">S</span><span class="dow">T</span><span class="dow">Q</span><span class="dow">Q</span><span class="dow">S</span><span class="dow">S</span>
+            <span></span><span></span><span class="cal-day muted">1</span><span class="cal-day avail">2</span><span class="cal-day avail today selected">3</span><span class="cal-day avail">4</span><span class="cal-day muted">5</span>
+            <span class="cal-day muted">6</span><span class="cal-day avail">7</span><span class="cal-day avail">8</span><span class="cal-day avail">9</span><span class="cal-day avail">10</span><span class="cal-day avail">11</span><span class="cal-day muted">12</span>
+          </div>
+          <div class="slots">
+            <span class="slot selected">09:00</span><span class="slot">10:30</span><span class="slot">14:00</span><span class="slot">15:30</span><span class="slot">17:00</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Cadência — sistema de design da VivaMente Terapias. Tokens em <code>doc/front/design-system/tokens.css</code>, mapeamento Tailwind e especificação completa de componentes no mesmo diretório.
+    </footer>
+  </main>
+</div>
+
+<script>
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById('themeToggle');
+  var icon = document.getElementById('themeIcon');
+  var label = document.getElementById('themeLabel');
+  var STATES = ['system','light','dark'];
+  var LABELS = {system:'Tema: sistema', light:'Tema: claro', dark:'Tema: escuro'};
+  var ICONS = {system:'◐', light:'☀', dark:'☾'};
+  function apply(state){
+    if(state==='system'){ root.removeAttribute('data-theme'); } else { root.setAttribute('data-theme', state); }
+    icon.textContent = ICONS[state]; label.textContent = LABELS[state];
+  }
+  var current = 'system';
+  try{ current = localStorage.getItem('cadencia-theme') || 'system'; }catch(e){}
+  apply(current);
+  btn.addEventListener('click', function(){
+    current = STATES[(STATES.indexOf(current)+1) % STATES.length];
+    apply(current);
+    try{ localStorage.setItem('cadencia-theme', current); }catch(e){}
+  });
+
+  var openModal = document.getElementById('openModal');
+  var closeModal = document.getElementById('closeModal');
+  var confirmModal = document.getElementById('confirmModal');
+  var scrim = document.getElementById('scrim');
+  function openScrim(){ scrim.classList.add('open'); closeModal.focus(); }
+  function closeScrim(){ scrim.classList.remove('open'); openModal.focus(); }
+  openModal.addEventListener('click', openScrim);
+  closeModal.addEventListener('click', closeScrim);
+  confirmModal.addEventListener('click', closeScrim);
+  scrim.addEventListener('click', function(e){ if(e.target===scrim) closeScrim(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && scrim.classList.contains('open')) closeScrim(); });
+
+  var openDropdown = document.getElementById('openDropdown');
+  var dropdownMenu = document.getElementById('dropdownMenu');
+  openDropdown.addEventListener('click', function(e){ e.stopPropagation(); dropdownMenu.classList.toggle('open'); });
+  document.addEventListener('click', function(){ dropdownMenu.classList.remove('open'); });
+
+  var tabs = document.querySelectorAll('#tabs .tab');
+  var panels = {
+    0: 'Dados de contato, histórico e serviço de interesse do cliente selecionado.',
+    1: '8 sessões registradas desde março de 2026. Última em 28/08.',
+    2: 'Próxima sessão: quinta-feira, 03/09 às 14:00 — Terapia Cognitivo-Comportamental.'
+  };
+  var panel = document.getElementById('tabpanel');
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){
+      tabs.forEach(function(o){ o.classList.remove('active'); });
+      t.classList.add('active');
+      panel.textContent = panels[t.dataset.tab];
+    });
+  });
+
+  var slots = document.querySelectorAll('.slot');
+  slots.forEach(function(s){ s.addEventListener('click', function(){ slots.forEach(function(o){o.classList.remove('selected');}); s.classList.add('selected'); }); });
+  var days = document.querySelectorAll('.cal-day.avail');
+  days.forEach(function(d){ d.addEventListener('click', function(){ days.forEach(function(o){o.classList.remove('selected');}); d.classList.add('selected'); }); });
+})();
+</script>

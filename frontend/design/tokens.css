@@ -1,0 +1,167 @@
+/*
+  VivaMente Terapias — Design Tokens
+  Fonte única de verdade para cor, tipografia, espaçamento, raio, sombra e breakpoints.
+  Consumido por frontend-loja (Next.js) e frontend-plataforma (Vue) via Tailwind
+  (ver tailwind-preset.js neste mesmo diretório) ou diretamente como CSS vars.
+
+  Tema: "Clínica calma, editorial" — pinho-petróleo como primária (confiança, calma,
+  sem cair no roxo/lavanda genérico de wellness), âmbar-mel como único acento,
+  fundo névoa fria (não creme). Ver components.md para uso por componente.
+*/
+
+:root {
+  /* ---------- Cor: marca ---------- */
+  --color-primary-50:  #EAF0EE;
+  --color-primary-100: #CFE0DB;
+  --color-primary-200: #A3C4BB;
+  --color-primary-300: #74A599;
+  --color-primary-400: #4C8677;
+  --color-primary-500: #2E6B5C;
+  --color-primary-600: #1F5548; /* primária — botões, links, foco */
+  --color-primary-700: #17423A; /* hover/active */
+  --color-primary-800: #123329;
+  --color-primary-900: #0D251E;
+
+  --color-secondary-50:  #F7EDDC;
+  --color-secondary-100: #F0DBB4;
+  --color-secondary-400: #D3A24F;
+  --color-secondary-500: #C08A3E; /* secundária/acento — usar com parcimônia */
+  --color-secondary-600: #A16F2A; /* hover/active */
+  --color-secondary-700: #7D5720;
+
+  /* ---------- Cor: neutros (névoa fria, leve viés verde) ---------- */
+  --color-background: #F1F3F1;
+  --color-surface:     #FFFFFF;
+  --color-surface-sunken: #E9ECE9;
+  --color-border:      #DCE1DD;
+  --color-border-strong: #C3CBC5;
+  --color-text:         #16211D;
+  --color-text-muted:   #5B6B63;
+  --color-text-inverse: #F3F6F4;
+
+  /* ---------- Cor: semânticas ---------- */
+  --color-success:      #2E7D5B;
+  --color-success-bg:   #E6F3EC;
+  --color-warning:      #B8791F;
+  --color-warning-bg:   #FBF0DC;
+  --color-error:        #B23A3A;
+  --color-error-bg:     #FBEAEA;
+  --color-info:         #3B6FA0;
+  --color-info-bg:      #E9F1F8;
+
+  /* ---------- Tipografia ---------- */
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+
+  --text-h1: 3.052rem;
+  --text-h2: 2.441rem;
+  --text-h3: 1.953rem;
+  --text-h4: 1.563rem;
+  --text-h5: 1.25rem;
+  --text-h6: 1.063rem;
+  --text-body: 1rem;
+  --text-body-sm: 0.875rem;
+  --text-caption: 0.813rem;
+  --text-label: 0.75rem;
+  --text-button: 0.938rem;
+
+  --leading-display: 1.15;
+  --leading-heading: 1.25;
+  --leading-body: 1.6;
+  --leading-caption: 1.4;
+
+  --tracking-display: -0.01em;
+  --tracking-body: 0;
+  --tracking-label: 0.06em;
+
+  /* ---------- Espaçamento (escala 4/8/12/16/24/32/48/64) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --space-32: 128px;
+
+  /* ---------- Raio (varia por papel, não é uniforme) ---------- */
+  --radius-sm: 4px;   /* inputs, células de tabela, checkbox */
+  --radius-md: 8px;   /* botões, cards secundários, dropdown */
+  --radius-lg: 12px;  /* cards, modais, painéis */
+  --radius-pill: 999px; /* badges, avatar, switch, tags */
+
+  /* ---------- Sombra (baixo contraste, sem "glow" de IA) ---------- */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 20, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 20, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 20, 0.14);
+
+  /* ---------- Breakpoints (referência — usar os padrões do Tailwind) ---------- */
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+  --bp-2xl: 1536px;
+
+  /* ---------- Foco / acessibilidade ---------- */
+  --focus-ring: 0 0 0 3px rgba(31, 85, 72, 0.35);
+  --focus-ring-offset: 2px;
+}
+
+/* Tema escuro — paleta redesenhada (não é inversão automática) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-primary-600: #6FB3A0;
+    --color-primary-700: #8CC7B5;
+    --color-secondary-500: #D9A24F;
+    --color-secondary-600: #E6B466;
+
+    --color-background: #0F1614;
+    --color-surface:     #17211D;
+    --color-surface-sunken: #101815;
+    --color-border:      #2A3733;
+    --color-border-strong: #3B4B45;
+    --color-text:         #EDF2EF;
+    --color-text-muted:   #93A199;
+    --color-text-inverse: #16211D;
+
+    --color-success:      #5BAE86;
+    --color-success-bg:   #17332A;
+    --color-warning:      #D2A050;
+    --color-warning-bg:   #332A16;
+    --color-error:        #E08585;
+    --color-error-bg:     #331A1A;
+    --color-info:         #7FADD6;
+    --color-info-bg:      #16232F;
+
+    --focus-ring: 0 0 0 3px rgba(111, 179, 160, 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-primary-600: #6FB3A0;
+  --color-primary-700: #8CC7B5;
+  --color-secondary-500: #D9A24F;
+  --color-secondary-600: #E6B466;
+
+  --color-background: #0F1614;
+  --color-surface:     #17211D;
+  --color-surface-sunken: #101815;
+  --color-border:      #2A3733;
+  --color-border-strong: #3B4B45;
+  --color-text:         #EDF2EF;
+  --color-text-muted:   #93A199;
+  --color-text-inverse: #16211D;
+
+  --color-success:      #5BAE86;
+  --color-success-bg:   #17332A;
+  --color-warning:      #D2A050;
+  --color-warning-bg:   #332A16;
+  --color-error:        #E08585;
+  --color-error-bg:     #331A1A;
+  --color-info:         #7FADD6;
+  --color-info-bg:      #16232F;
+
+  --focus-ring: 0 0 0 3px rgba(111, 179, 160, 0.4);
+}

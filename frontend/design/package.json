@@ -1,0 +1,21 @@
+{
+  "name": "@vivamente/design",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cadência — sistema de design compartilhado da VivaMente Terapias: tokens, preset Tailwind e especificação de componentes, consumidos por frontend-loja (Next.js) e frontend-plataforma (Vue).",
+  "main": "tokens.css",
+  "style": "tokens.css",
+  "exports": {
+    "./tokens.css": "./tokens.css",
+    "./tailwind-preset": "./tailwind-preset.js",
+    "./components.md": "./components.md",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "tokens.css",
+    "tailwind-preset.js",
+    "components.md",
+    "preview.html",
+    "README.md"
+  ]
+}

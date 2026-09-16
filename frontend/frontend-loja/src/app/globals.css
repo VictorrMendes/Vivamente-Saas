@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@import "@vivamente/design/tokens.css";
+@config "../../tailwind.config.js";
+
+/*
+ * O preset compartilhado (@vivamente/design/tailwind-preset) define
+ * fontFamily.display/body com o nome literal da fonte (ex: "Newsreader"),
+ * pensado para um <link> de Google Fonts. No Next.js usamos next/font para
+ * self-hospedar (sem requests ao Google), que expõe a fonte só via variável
+ * CSS com nome interno. Por isso remapeamos aqui — sem tocar no pacote
+ * compartilhado — para as utilities font-display/font-body apontarem pro
+ * font-face self-hospedado.
+ */
+@theme inline {
+  --font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-public-sans), "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+}

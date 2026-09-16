@@ -1,0 +1,21 @@
+docs
+.remember
+.gitignore
+.agents
+.context
+CLAUDE.MD
+.mcp.json
+skills-lock.json
+.codex
+AGENTS.md
+
+# Python / Django
+.venv/
+__pycache__/
+*.pyc
+*.sqlite3
+db.sqlite3
+.env
+.secrets/
+staticfiles/
+*.egg-info/

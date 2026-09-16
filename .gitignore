@@ -1,0 +1,26 @@
+# Arquivos locais, credenciais e dependencias
+.env
+.env.*
+!.env.example
+.secrets/
+*.pem
+*.key
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.sqlite3
+node_modules/
+.next/
+dist/
+out/
+*.tsbuildinfo
+.vercel/
+.agents/
+.codex/
+.context/
+.remember/
+.mcp.json
+AGENTS.md
+skills-lock.json
+backup-git-*/
