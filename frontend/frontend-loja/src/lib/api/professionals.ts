@@ -1,5 +1,6 @@
 import { cache } from "react";
-import { backFetch } from "./back-client";
+import { notFound } from "next/navigation";
+import { backFetch, BackApiError } from "./back-client";
 import type { PublicProfessional } from "./types";
 
 /**
@@ -14,3 +15,29 @@ export const getPublicProfessional = cache((slug: string) =>
     next: { revalidate: 60 },
   }),
 );
+
+export type LoadProfessionalResult =
+  | { ok: true; professional: PublicProfessional }
+  | { ok: false; reason: "rate-limit" | "unavailable" };
+
+/** Slug inexistente e perfil não-público retornam o mesmo 404 no Back (de propósito, não vaza existência). */
+export async function loadPublicProfessional(slug: string): Promise<LoadProfessionalResult> {
+  try {
+    const professional = await getPublicProfessional(slug);
+    return { ok: true, professional };
+  } catch (error) {
+    if (error instanceof BackApiError && error.status === 404) {
+      notFound();
+    }
+    if (error instanceof BackApiError && error.status === 429) {
+      return { ok: false, reason: "rate-limit" };
+    }
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
+export function backendErrorMessage(reason: "rate-limit" | "unavailable"): string {
+  return reason === "rate-limit"
+    ? "Estamos com muitos acessos agora. Tente novamente em instantes."
+    : "Não conseguimos carregar essa página agora. Tente novamente em instantes.";
+}

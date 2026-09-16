@@ -1,38 +1,17 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getPublicProfessional } from "@/lib/api/professionals";
-import { BackApiError } from "@/lib/api/back-client";
-import type { PublicProfessional, PublicService } from "@/lib/api/types";
+import { loadPublicProfessional, backendErrorMessage } from "@/lib/api/professionals";
+import type { PublicService } from "@/lib/api/types";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
-
-type LoadResult =
-  | { ok: true; professional: PublicProfessional }
-  | { ok: false; reason: "rate-limit" | "unavailable" };
 
 const MODALITY_LABEL: Record<PublicService["modality"], string> = {
   ONLINE: "Online",
   IN_PERSON: "Presencial",
   BOTH: "Online ou presencial",
 };
-
-async function loadProfessional(slug: string): Promise<LoadResult> {
-  try {
-    const professional = await getPublicProfessional(slug);
-    return { ok: true, professional };
-  } catch (error) {
-    if (error instanceof BackApiError && error.status === 404) {
-      notFound();
-    }
-    if (error instanceof BackApiError && error.status === 429) {
-      return { ok: false, reason: "rate-limit" };
-    }
-    return { ok: false, reason: "unavailable" };
-  }
-}
 
 function getInitials(fullName: string): string {
   return fullName
@@ -52,7 +31,7 @@ function formatPrice(price: string | null): string {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const result = await loadProfessional(slug);
+  const result = await loadPublicProfessional(slug);
   if (!result.ok) {
     return { title: "Terapeuta" };
   }
@@ -82,7 +61,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProfessionalPage({ params }: Props) {
   const { slug } = await params;
-  const result = await loadProfessional(slug);
+  const result = await loadPublicProfessional(slug);
 
   if (!result.ok) {
     return (
@@ -91,9 +70,7 @@ export default async function ProfessionalPage({ params }: Props) {
           role="alert"
           className="rounded-lg border border-error bg-error-bg px-4 py-3 text-body text-error"
         >
-          {result.reason === "rate-limit"
-            ? "Estamos com muitos acessos agora. Tente novamente em instantes."
-            : "Não conseguimos carregar esse perfil agora. Tente novamente em instantes."}
+          {backendErrorMessage(result.reason)}
         </div>
       </div>
     );
