@@ -30,6 +30,9 @@ INSTALLED_APPS = [
     "apps.public_profiles",
     "apps.notifications",
     "apps.audit",
+    "apps.clinical_records",
+    "apps.packages",
+    "apps.payments",
 ]
 
 MIDDLEWARE = [
@@ -99,7 +102,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "config.pagination.DefaultPagination",
     "PAGE_SIZE": 20,
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "config.schema.EnvelopeSchema",
     "EXCEPTION_HANDLER": "config.exceptions.rfc9457_exception_handler",
     "DEFAULT_THROTTLE_RATES": {
         "public-appointment-requests": "10/min",
@@ -113,6 +116,21 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API de negocio da VivaMente (terapeutas, clientes, leads, agendamentos).",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        "config.schema.add_health_paths",
+    ],
+    "ENUM_NAME_OVERRIDES": {
+        "UserRoleEnum": "apps.accounts.models.User.ROLE_CHOICES",
+        "IdentityRoleEnum": ["ADMIN", "THERAPIST"],
+        "AppointmentStatusEnum": "apps.appointments.models.Appointment.STATUS_CHOICES",
+        "LeadStatusEnum": "apps.leads.models.Lead.STATUS_CHOICES",
+        "ServiceModalityEnum": "apps.services.models.Service.MODALITY_CHOICES",
+        "AppointmentModalityEnum": "apps.appointments.models.Appointment.MODALITY_CHOICES",
+        "PackageStatusEnum": "apps.packages.models.Package.STATUS_CHOICES",
+        "PaymentStatusEnum": "apps.payments.models.Payment.STATUS_CHOICES",
+    },
 }
 
 CORS_ALLOWED_ORIGINS = env.list("ALLOWED_ORIGINS", default=[])
@@ -135,3 +153,11 @@ LOGGING = {
 }
 
 FIREBASE_CREDENTIALS_PATH = env("FIREBASE_CREDENTIALS_PATH", default=None)
+
+# Chave publica (PEM) usada para validar o JWT de servico (RS256) da API
+# interna de sync de identidade (apps.accounts.internal_auth). O Oauth
+# assina com a chave privada correspondente - o Back nunca ve a privada,
+# entao mesmo comprometido nao consegue forjar um token do Oauth.
+INTERNAL_SERVICE_JWT_PUBLIC_KEY = env("INTERNAL_SERVICE_JWT_PUBLIC_KEY").replace(
+    "\\n", "\n"
+)

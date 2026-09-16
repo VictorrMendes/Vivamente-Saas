@@ -4,6 +4,8 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import User
+from apps.notifications.models import Notification
+from apps.packages.models import Package
 from config.mixins import resolve_own_professional_or_403
 
 from .models import Appointment, AvailabilitySlot
@@ -32,6 +34,31 @@ def _validate_ownership(professional, client, service):
         raise ValidationError({"service": "Serviço não pertence a este profissional."})
 
 
+def _validate_package(professional, client, package):
+    if package is None:
+        return
+    if package.professional_id != professional.id:
+        raise ValidationError({"package": "Pacote não pertence a este profissional."})
+    if package.client_id != client.id:
+        raise ValidationError({"package": "Pacote não pertence a este cliente."})
+    if package.status != Package.ACTIVE:
+        raise ValidationError({"package": "Pacote não está ativo."})
+    if package.is_expired():
+        raise ValidationError({"package": "Pacote expirado."})
+    if package.remaining_sessions <= 0:
+        raise ValidationError({"package": "Pacote sem sessões restantes."})
+
+
+def _notify_if_package_low(package):
+    package.refresh_from_db()
+    if package.status == Package.ACTIVE and package.remaining_sessions <= 1:
+        Notification.objects.create(
+            user=package.professional.user,
+            title="Pacote quase no fim",
+            body=f'O pacote "{package.name}" tem {package.remaining_sessions} sessão(ões) restante(s).',
+        )
+
+
 def _validate_no_overlap(professional, starts_at, ends_at, exclude_id=None):
     conflicts = Appointment.objects.filter(
         professional=professional, starts_at__lt=ends_at, ends_at__gt=starts_at
@@ -45,6 +72,7 @@ def _validate_no_overlap(professional, starts_at, ends_at, exclude_id=None):
 def create_appointment(user, serializer):
     client = serializer.validated_data.get("client")
     service = serializer.validated_data.get("service")
+    package = serializer.validated_data.get("package")
     starts_at = serializer.validated_data["starts_at"]
     ends_at = serializer.validated_data["ends_at"]
 
@@ -54,6 +82,7 @@ def create_appointment(user, serializer):
         professional = resolve_own_professional_or_403(user)
 
     _validate_ownership(professional, client, service)
+    _validate_package(professional, client, package)
     _validate_no_overlap(professional, starts_at, ends_at)
     try:
         # savepoint proprio: se a constraint do banco rejeitar (corrida que
@@ -63,6 +92,9 @@ def create_appointment(user, serializer):
             serializer.save(professional=professional)
     except IntegrityError:
         raise ValidationError(OVERLAP_ERROR)
+
+    if package is not None:
+        _notify_if_package_low(package)
 
 
 def update_appointment(serializer):
@@ -74,6 +106,11 @@ def update_appointment(serializer):
     ends_at = serializer.validated_data.get("ends_at", instance.ends_at)
 
     _validate_ownership(professional, client, service)
+    # So revalida o pacote quando ele esta sendo trocado nesta escrita - nao
+    # queremos que uma edicao sem relacao (ex.: so as `notes`) passe a falhar
+    # porque o pacote ja vinculado mudou de status depois.
+    if "package" in serializer.validated_data:
+        _validate_package(professional, client, serializer.validated_data["package"])
     _validate_no_overlap(professional, starts_at, ends_at, exclude_id=instance.id)
     try:
         with transaction.atomic():

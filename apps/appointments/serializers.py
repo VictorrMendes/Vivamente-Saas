@@ -41,9 +41,14 @@ APPOINTMENT_FIELDS = [
     "professional",
     "client",
     "service",
+    "package",
     "starts_at",
     "ends_at",
     "status",
+    "modality",
+    "call_link",
+    "price",
+    "notes",
     "created_at",
 ]
 
