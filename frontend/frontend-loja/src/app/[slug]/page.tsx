@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight, ArrowUpRight, Clock3, Leaf, MapPin, MessageCircle, Video } from "lucide-react";
 import { loadPublicProfessional, backendErrorMessage } from "@/lib/api/professionals";
-import { formatPrice, getInitials } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
+import { ProfessionalPortrait } from "@/components/professional-portrait";
 import type { PublicService } from "@/lib/api/types";
 
 type Props = {
@@ -73,7 +75,7 @@ export default async function ProfessionalPage({ params }: Props) {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+    <div className="professional-landing">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -81,93 +83,32 @@ export default async function ProfessionalPage({ params }: Props) {
         }}
       />
 
-      <header className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-        {professional.photo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element -- foto vem de URL externa arbitrária do Back, sem domínio fixo para configurar em next/image
-          <img
-            src={professional.photo_url}
-            alt={professional.full_name}
-            className="h-24 w-24 rounded-pill object-cover"
-          />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="flex h-24 w-24 items-center justify-center rounded-pill bg-primary-100 font-display text-h4 text-primary-700"
-          >
-            {getInitials(professional.full_name)}
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2">
-          <h1 className="font-display text-h3 text-text sm:text-h2">{professional.full_name}</h1>
-          {professional.registration && (
-            <p className="text-body-sm text-text-muted">{professional.registration}</p>
-          )}
-          {professional.specialties.length > 0 && (
-            <ul className="flex flex-wrap justify-center gap-2 sm:justify-start">
-              {professional.specialties.map((specialty) => (
-                <li
-                  key={specialty.id}
-                  className="rounded-pill bg-primary-50 px-3 py-1 text-label uppercase tracking-label text-primary-700"
-                >
-                  {specialty.name}
-                </li>
-              ))}
-            </ul>
-          )}
+      <section className="landing-container professional-hero" aria-labelledby="professional-name">
+        <div className="professional-hero-copy">
+          <p className="eyebrow"><span className="eyebrow-dot" /> UM ENCONTRO COM O CUIDADO</p>
+          <h1 id="professional-name" className="professional-title">{professional.full_name}</h1>
+          {professional.registration && <p className="professional-registration">{professional.registration}</p>}
+          {professional.specialties.length > 0 && <ul className="specialty-list">{professional.specialties.map((specialty) => <li key={specialty.id}>{specialty.name}</li>)}</ul>}
+          <p className="hero-description">Conheça meu trabalho e as possibilidades de atendimento. Quando fizer sentido para você, podemos começar uma conversa.</p>
+          <div className="landing-actions"><Link className="landing-button" href={`/${slug}/agendar`}>Solicitar atendimento <ArrowUpRight size={18} aria-hidden /></Link><a className="landing-text-link" href="#sobre">Conheça meu trabalho <ArrowRight size={17} aria-hidden /></a></div>
+          <p className="professional-network"><Leaf size={17} strokeWidth={1.5} aria-hidden /> Profissional na VivaMente Terapias</p>
         </div>
-      </header>
-
-      {professional.bio && (
-        <p className="mt-8 text-body text-text-muted whitespace-pre-line">{professional.bio}</p>
-      )}
-
-      <section className="mt-12" aria-labelledby="servicos-heading">
-        <h2 id="servicos-heading" className="font-display text-h4 text-text">
-          Serviços
-        </h2>
-
-        {professional.services.length === 0 ? (
-          <p className="mt-4 text-body text-text-muted">
-            Nenhum serviço cadastrado no momento.
-          </p>
-        ) : (
-          <ul className="mt-4 flex flex-col gap-4">
-            {professional.services.map((service) => (
-              <li
-                key={service.id}
-                className="rounded-lg border border-border bg-surface p-4 sm:p-6"
-              >
-                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                  <div>
-                    <h3 className="font-body text-h6 text-text">{service.name}</h3>
-                    {service.description && (
-                      <p className="mt-1 text-body-sm text-text-muted">{service.description}</p>
-                    )}
-                  </div>
-                  <p className="whitespace-nowrap font-body text-body-sm text-text">
-                    {formatPrice(service.price)}
-                  </p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-caption text-text-muted">
-                  <span>{service.duration_minutes} min</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{MODALITY_LABEL[service.modality]}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="portrait-composition"><span className="portrait-outline" aria-hidden /><ProfessionalPortrait name={professional.full_name} photoUrl={professional.photo_url} /><span className="portrait-note"><MessageCircle size={19} strokeWidth={1.4} aria-hidden /> O primeiro passo é uma conversa.</span></div>
       </section>
 
-      <div className="mt-12">
-        <Link
-          href={`/${slug}/agendar`}
-          className="inline-flex h-12 items-center justify-center rounded-md bg-primary-600 px-6 font-button text-button text-text-inverse hover:bg-primary-700 focus-visible:outline-none focus-visible:shadow-focus"
-        >
-          Contato
-        </Link>
-      </div>
+      <section id="sobre" className="professional-about section-anchor" aria-labelledby="about-title">
+        <div className="landing-container professional-about-layout"><div><p className="eyebrow">PRAZER EM CONHECER VOCÊ</p><h2 id="about-title" className="section-title">Por trás de cada<br />atendimento,<br /><em>uma pessoa.</em></h2></div><div className="professional-bio">{professional.bio ? <p>{professional.bio}</p> : <p>Quer conhecer mais sobre meu trabalho? Entre em contato para conversar sobre os atendimentos e tirar suas dúvidas.</p>}<a href="#servicos" className="landing-text-link">Veja os atendimentos <ArrowRight size={17} aria-hidden /></a></div></div>
+      </section>
+
+      <section id="servicos" className="landing-container services-section section-anchor" aria-labelledby="services-title">
+        <div className="section-heading"><div><p className="eyebrow">POSSIBILIDADES DE CUIDADO</p><h2 id="services-title" className="section-title">Como posso te acompanhar</h2></div><p>Conheça os serviços e encontre o ponto de partida para a nossa conversa.</p></div>
+        {professional.services.length === 0 ? <div className="services-empty"><MessageCircle size={27} strokeWidth={1.3} aria-hidden /><h3>Vamos conversar sobre o que você procura?</h3><p>Os serviços ainda não foram apresentados nesta página. Você pode enviar uma mensagem para saber mais.</p><Link href={`/${slug}/agendar`} className="landing-text-link">Entrar em contato <ArrowRight size={17} aria-hidden /></Link></div> :
+          <ul className="service-list">{professional.services.map((service, index) => <li key={service.id}><span className="service-number">{String(index + 1).padStart(2, "0")}</span><div className="service-description"><h3>{service.name}</h3>{service.description && <p>{service.description}</p>}<div className="service-facts"><span><Clock3 size={15} aria-hidden /> {service.duration_minutes} min</span><span>{service.modality === "IN_PERSON" ? <MapPin size={15} aria-hidden /> : <Video size={15} aria-hidden />} {MODALITY_LABEL[service.modality]}</span></div></div><div className="service-next"><p>{formatPrice(service.price)}</p><Link href={`/${slug}/agendar`} aria-label={`Consultar sobre ${service.name}`}>Conversar sobre este serviço <ArrowUpRight size={17} aria-hidden /></Link></div></li>)}</ul>}
+      </section>
+
+      <section className="professional-process" aria-labelledby="process-title"><div className="landing-container"><p className="eyebrow">NO SEU TEMPO</p><h2 id="process-title" className="section-title">Uma conversa de cada vez.</h2><ol className="professional-steps"><li><span>01</span><h3>Envie sua solicitação</h3><p>Conte brevemente o que procura. Se quiser, informe um serviço e um horário de preferência.</p></li><li><span>02</span><h3>Alinhe os detalhes</h3><p>O contato permite conversar sobre o atendimento, a modalidade e a disponibilidade.</p></li><li><span>03</span><h3>Confirme o encontro</h3><p>A consulta só fica confirmada depois que você e o profissional combinam os detalhes.</p></li></ol></div></section>
+
+      <section className="landing-container professional-invitation" aria-labelledby="contact-title"><Leaf size={32} strokeWidth={1.2} aria-hidden /><p className="eyebrow">QUANDO FIZER SENTIDO PARA VOCÊ</p><h2 id="contact-title" className="section-title">Seu próximo passo pode ser<br /><em>uma conversa.</em></h2><p>Você não precisa ter tudo definido para entrar em contato.</p><Link href={`/${slug}/agendar`} className="landing-button">Falar com {professional.full_name} <ArrowUpRight size={18} aria-hidden /></Link><span className="text-caption text-text-muted">Enviar uma solicitação não confirma uma consulta.</span></section>
     </div>
   );
 }

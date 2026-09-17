@@ -1,39 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
-
-const NAV_ITEMS = [
-  { href: "/", label: "Início" },
-  { href: "/sobre", label: "Sobre" },
-];
+import { usePathname } from "next/navigation";
+import { useRef, useState } from "react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
+import { Brand } from "./brand";
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const segment = usePathname().split("/")[1];
+  const isProfessional = Boolean(segment) && !["sobre", "contato", "privacidade", "termos"].includes(segment);
+  const navItems = isProfessional
+    ? [{ href: `/${segment}#sobre`, label: "Sobre o profissional" }, { href: `/${segment}#servicos`, label: "Atendimentos" }, { href: "/#a-vivamente", label: "A VivaMente" }]
+    : [{ href: "/#a-vivamente", label: "A VivaMente" }, { href: "/#para-voce", label: "Para você" }, { href: "/#para-terapeutas", label: "Para terapeutas" }];
+  const cta = isProfessional
+    ? { href: `/${segment}/agendar`, label: "Entrar em contato" }
+    : { href: "/contato?interesse=atendimento", label: "Encontre seu caminho" };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="font-display text-h5 text-primary-700">
-          VivaMente Terapias
-        </Link>
-
-        <nav aria-label="Principal" className="hidden md:flex md:items-center md:gap-6">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-sm font-body text-body-sm text-text hover:text-primary-700 focus-visible:outline-none focus-visible:shadow-focus"
-            >
-              {item.label}
-            </Link>
-          ))}
+    <header className="site-header" onKeyDown={(event) => { if (event.key === "Escape" && open) { setOpen(false); menuButton.current?.focus(); } }}>
+      <div className="landing-container header-inner">
+        <Link href="/" className="brand-link" onClick={() => setOpen(false)}><Brand /></Link>
+        <nav aria-label="Principal" className="desktop-navigation">
+          {navItems.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
         </nav>
+        <Link href={cta.href} className="header-cta">{cta.label} <ArrowUpRight size={16} aria-hidden /></Link>
 
         <button
+          ref={menuButton}
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md text-text focus-visible:outline-none focus-visible:shadow-focus md:hidden"
+          className="mobile-menu-button"
           aria-expanded={open}
           aria-controls="menu-mobile"
           aria-label={open ? "Fechar menu" : "Abrir menu"}
@@ -44,21 +41,9 @@ export function Header() {
       </div>
 
       {open && (
-        <nav
-          id="menu-mobile"
-          aria-label="Principal"
-          className="flex flex-col gap-1 border-t border-border bg-surface px-4 py-3 md:hidden"
-        >
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-2 py-2 font-body text-body text-text hover:bg-surface-sunken focus-visible:outline-none focus-visible:shadow-focus"
-              onClick={() => setOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav id="menu-mobile" aria-label="Principal móvel" className="mobile-navigation">
+          {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setOpen(false)}>{item.label}</Link>)}
+          <Link href={cta.href} onClick={() => setOpen(false)}>{cta.label} <ArrowUpRight size={16} aria-hidden /></Link>
         </nav>
       )}
     </header>

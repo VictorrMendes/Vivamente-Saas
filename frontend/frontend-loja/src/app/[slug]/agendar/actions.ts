@@ -10,8 +10,6 @@ export type ActionState = {
   formError: string | null;
 };
 
-export const initialActionState: ActionState = { fieldErrors: {}, formError: null };
-
 const GENERIC_UNAVAILABLE =
   "Não foi possível enviar sua solicitação agora. Tente novamente mais tarde.";
 

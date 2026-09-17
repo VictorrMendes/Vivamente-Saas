@@ -35,8 +35,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${newsreader.variable} ${publicSans.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-body">
+        <a href="#conteudo" className="skip-link">Pular para o conteúdo</a>
         <Header />
-        <main className="flex-1">{children}</main>
+        <main id="conteudo" className="flex-1">{children}</main>
         <Footer />
       </body>
     </html>

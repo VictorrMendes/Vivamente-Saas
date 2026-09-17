@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { backFetch, BackApiError } from "./back-client";
+import { isMockEnabled, mockProfessional } from "./mocks";
 import type { PublicProfessional } from "./types";
 
 /**
@@ -10,11 +11,12 @@ import type { PublicProfessional } from "./types";
  * de revalidação, visitantes simultâneos no mesmo perfil dividiriam essa cota
  * única entre si.
  */
-export const getPublicProfessional = cache((slug: string) =>
-  backFetch<PublicProfessional>(`/api/v1/public/professionals/${encodeURIComponent(slug)}`, {
+export const getPublicProfessional = cache(async (slug: string): Promise<PublicProfessional> => {
+  if (isMockEnabled()) return mockProfessional(slug);
+  return backFetch<PublicProfessional>(`/api/v1/public/professionals/${encodeURIComponent(slug)}`, {
     next: { revalidate: 60 },
-  }),
-);
+  });
+});
 
 export type LoadProfessionalResult =
   | { ok: true; professional: PublicProfessional }

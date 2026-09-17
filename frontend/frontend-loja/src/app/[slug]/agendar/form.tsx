@@ -3,7 +3,9 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import type { AvailabilitySlot, PublicService } from "@/lib/api/types";
-import { submitAppointmentRequest, initialActionState } from "./actions";
+import { submitAppointmentRequest, type ActionState } from "./actions";
+
+const initialActionState: ActionState = { fieldErrors: {}, formError: null };
 
 type Props = {
   slug: string;
