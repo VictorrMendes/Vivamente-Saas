@@ -19,6 +19,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    def validate_email(self, value):
+        raise serializers.ValidationError(
+            "O e-mail de acesso é gerenciado pelo serviço de identidade e não pode ser alterado aqui."
+        )
+
     class Meta:
         model = User
         fields = ["email"]

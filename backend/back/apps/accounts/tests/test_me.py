@@ -76,13 +76,15 @@ class MeEndpointTests(APITestCase):
         self.assertTrue(user.active)
 
     @override_settings(DEBUG=True)
-    def test_me_patch_updates_email(self):
-        self._auth()
+    def test_me_patch_rejects_email_change(self):
+        # E-mail e identidade (gerenciada pelo Oauth/Firebase), nao um campo de
+        # contato editavel aqui - ver apps/accounts/serializers.py::UserUpdateSerializer.
+        self._auth(email="original@teste.com")
         response = self.client.patch(
             "/api/v1/me", {"email": "novo@teste.com"}, format="json"
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["data"]["email"], "novo@teste.com")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(User.objects.get().email, "original@teste.com")
 
     @override_settings(DEBUG=True)
     def test_me_patch_cannot_change_role(self):

@@ -46,6 +46,12 @@ class PublicProfessionalProfileTests(AuthenticatedAPITestCase):
         response = self.client.get("/api/v1/public/professionals/nao-existe")
         self.assertEqual(response.status_code, 404)
 
+    def test_inactive_professional_profile_returns_404(self):
+        self.therapist.active = False
+        self.therapist.save(update_fields=["active"])
+        response = self.client.get("/api/v1/public/professionals/terapeuta-publica")
+        self.assertEqual(response.status_code, 404)
+
     def test_therapist_updates_own_public_profile(self):
         self.login(self.therapist)
         response = self.client.patch(

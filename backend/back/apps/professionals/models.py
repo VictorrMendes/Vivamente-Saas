@@ -1,6 +1,7 @@
 from django.db import models
 
 from apps.accounts.models import User
+from .validators import validate_public_slug
 
 
 class Specialty(models.Model):
@@ -17,7 +18,7 @@ class Specialty(models.Model):
 
 class Professional(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="professional")
-    slug = models.SlugField(max_length=140, unique=True)
+    slug = models.SlugField(max_length=140, unique=True, validators=[validate_public_slug])
     full_name = models.CharField(max_length=200)
     bio = models.TextField(blank=True)
     photo_url = models.URLField(blank=True)

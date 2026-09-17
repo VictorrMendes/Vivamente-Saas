@@ -105,6 +105,6 @@ class PublicAvailableSlotsView(APIView):
 
     @extend_schema(responses=AvailabilitySlotSerializer(many=True))
     def get(self, request, slug):
-        professional = get_object_or_404(Professional, slug=slug, is_public=True)
+        professional = get_object_or_404(Professional, slug=slug, is_public=True, user__active=True)
         slots = services.list_free_slots(professional)
         return Response(envelope(AvailabilitySlotSerializer(slots, many=True).data, request))

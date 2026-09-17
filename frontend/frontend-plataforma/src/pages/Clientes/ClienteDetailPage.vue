@@ -13,6 +13,7 @@ import Badge from '@/components/ui/Badge.vue';
 import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import Pagination from '@/components/ui/Pagination.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
@@ -48,6 +49,7 @@ function appointmentDetail(appt: Appointment) {
 
 const {
   records,
+  pagination: recordsPagination,
   loading: recordsLoading,
   error: recordsError,
   saving: recordSaving,
@@ -411,6 +413,12 @@ onMounted(() => {
                 </template>
               </li>
             </ul>
+            <Pagination
+              v-if="recordsPagination && !recordsLoading"
+              :page="recordsPagination.page"
+              :total-pages="recordsPagination.total_pages"
+              @change="(page) => { editingRecordId = null; loadRecords(clientId, page); }"
+            />
           </div>
         </div>
       </div>

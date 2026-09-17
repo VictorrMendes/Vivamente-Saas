@@ -223,3 +223,9 @@ class PublicAvailableSlotsTests(APITestCase):
     def test_404_for_unknown_slug(self):
         response = self.client.get("/api/v1/public/professionals/nao-existe/available-slots")
         self.assertEqual(response.status_code, 404)
+
+    def test_404_for_inactive_professional(self):
+        self.therapist.active = False
+        self.therapist.save(update_fields=["active"])
+        response = self.client.get("/api/v1/public/professionals/terapeuta-publica/available-slots")
+        self.assertEqual(response.status_code, 404)

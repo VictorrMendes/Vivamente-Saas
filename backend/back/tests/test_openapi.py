@@ -29,7 +29,7 @@ class OpenAPIContractTests(SimpleTestCase):
     def test_appointment_parameters_match_runtime(self):
         operation = self.schema["paths"]["/api/v1/appointments"]["get"]
         parameters = {p["name"] for p in operation["parameters"] if p["in"] == "query"}
-        self.assertEqual(parameters, {"professional", "client", "status", "ordering", "page", "per_page"})
+        self.assertEqual(parameters, {"professional", "client", "status", "search", "ordering", "page", "per_page"})
 
     def test_paginated_resources_document_custom_envelope(self):
         for resource in ("appointments", "availability", "clients", "professionals", "services",

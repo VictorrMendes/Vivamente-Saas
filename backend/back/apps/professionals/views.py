@@ -23,6 +23,7 @@ class ProfessionalViewSet(ProfessionalScopedQuerysetMixin, EnvelopeModelViewSet)
     professional_lookup = "user"
     queryset = Professional.objects.all()
     filterset_fields = ["is_public"]
+    search_fields = ["full_name", "slug"]
     ordering_fields = ["full_name", "created_at"]
 
     def get_serializer_class(self):

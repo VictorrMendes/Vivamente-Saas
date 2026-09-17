@@ -11,6 +11,7 @@ from .serializers import ClientSelfWriteSerializer, ClientSerializer, ClientWrit
 class ClientViewSet(ProfessionalScopedQuerysetMixin, EnvelopeModelViewSet):
     queryset = Client.objects.select_related("professional", "lead")
     filterset_fields = ["professional"]
+    search_fields = ["name"]
     ordering_fields = ["name", "created_at"]
 
     def get_serializer_class(self):

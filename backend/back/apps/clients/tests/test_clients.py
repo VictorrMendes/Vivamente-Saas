@@ -26,6 +26,18 @@ class ClientIsolationTests(AuthenticatedAPITestCase):
         response = self.client.get(f"/api/v1/clients/{self.client_b.id}")
         self.assertEqual(response.status_code, 404)
 
+    def test_therapist_searches_own_clients_by_name(self):
+        self.login(self.therapist_a)
+        response = self.client.get("/api/v1/clients?search=Cliente A")
+        data = response.json()["data"]
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["name"], "Cliente A")
+
+    def test_search_does_not_leak_other_therapists_clients(self):
+        self.login(self.therapist_a)
+        response = self.client.get("/api/v1/clients?search=Cliente B")
+        self.assertEqual(response.json()["data"], [])
+
     def test_therapist_creates_client_for_self_automatically(self):
         self.login(self.therapist_a)
         response = self.client.post(

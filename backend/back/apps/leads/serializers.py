@@ -57,7 +57,9 @@ class PublicAppointmentRequestSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         try:
-            professional = Professional.objects.get(slug=attrs["professionalSlug"], is_public=True)
+            professional = Professional.objects.get(
+                slug=attrs["professionalSlug"], is_public=True, user__active=True
+            )
         except Professional.DoesNotExist:
             raise serializers.ValidationError({"professionalSlug": "Profissional não encontrado."})
 

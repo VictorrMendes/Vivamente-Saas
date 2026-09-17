@@ -21,7 +21,7 @@ class PublicProfessionalProfileView(APIView):
 
     @extend_schema(responses=PublicProfessionalSerializer)
     def get(self, request, slug):
-        professional = get_object_or_404(Professional, slug=slug, is_public=True)
+        professional = get_object_or_404(Professional, slug=slug, is_public=True, user__active=True)
         return Response(envelope(PublicProfessionalSerializer(professional).data, request))
 
 

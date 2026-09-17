@@ -12,18 +12,16 @@ describe('useMe — perfil e encerramento de sessões', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('atualiza só o e-mail via PATCH /me (único campo aceito pelo UserUpdateSerializer real)', async () => {
+  it('carrega o usuário via GET /me (e-mail é identidade só leitura, gerenciada pelo Oauth)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      json({ data: { id: 1, firebaseUid: 'uid-1', email: 'novo@x.com', role: 'THERAPIST', active: true } }),
+      json({ data: { id: 1, firebaseUid: 'uid-1', email: 'terapeuta@x.com', role: 'THERAPIST', active: true } }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    const { me, updateEmail } = useMe();
-    const ok = await updateEmail('novo@x.com');
+    const { me, load } = useMe();
+    await load();
 
-    expect(ok).toBe(true);
-    expect(JSON.parse(fetchMock.mock.calls[0]![1].body as string)).toEqual({ email: 'novo@x.com' });
-    expect(me.value?.email).toBe('novo@x.com');
+    expect(me.value?.email).toBe('terapeuta@x.com');
   });
 
   it('encerra todas as sessões via POST /oauth/v1/tokens/revoke', async () => {

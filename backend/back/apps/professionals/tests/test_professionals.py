@@ -76,6 +76,43 @@ class ProfessionalIsolationTests(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Professional.objects.filter(id=self.prof_a.id).exists())
 
+    def test_admin_searches_by_name(self):
+        # Nome distinto de "Terapeuta A"/"Terapeuta B": o SearchFilter do DRF
+        # quebra a query em termos e faz icontains por termo, entao um nome
+        # parecido com os outros dois geraria falso positivo aqui.
+        new_user = User.objects.create(firebase_uid="ther-c", email="c@teste.com", role=User.THERAPIST)
+        Professional.objects.create(user=new_user, slug="roberta-fernandes", full_name="Roberta Fernandes")
+        self.login(self.admin)
+        response = self.client.get("/api/v1/professionals?search=Roberta")
+        data = response.json()["data"]
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["slug"], "roberta-fernandes")
+
+    def test_admin_search_with_no_match_returns_empty(self):
+        self.login(self.admin)
+        response = self.client.get("/api/v1/professionals?search=nao-existe")
+        self.assertEqual(response.json()["data"], [])
+
+    def test_rejects_reserved_slug(self):
+        new_user = User.objects.create(firebase_uid="ther-c", email="c@teste.com", role=User.THERAPIST)
+        self.login(self.admin)
+        response = self.client.post(
+            "/api/v1/professionals",
+            {"user": new_user.id, "slug": "contato", "full_name": "Terapeuta C"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_rejects_reserved_slug_case_insensitive(self):
+        new_user = User.objects.create(firebase_uid="ther-c", email="c@teste.com", role=User.THERAPIST)
+        self.login(self.admin)
+        response = self.client.post(
+            "/api/v1/professionals",
+            {"user": new_user.id, "slug": "Sobre", "full_name": "Terapeuta C"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
 
 class SpecialtyRBACTests(AuthenticatedAPITestCase):
     def setUp(self):

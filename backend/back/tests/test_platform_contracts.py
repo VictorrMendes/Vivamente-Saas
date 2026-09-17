@@ -103,21 +103,30 @@ class PlatformContractTests(AuthenticatedAPITestCase):
                 self.assertEqual(response.json()["meta"]["request_id"], response["X-Request-ID"])
 
     def test_me_patch_cannot_change_identity_ownership_or_public_profile(self):
+        # email fica fora deste payload de proposito: e identidade, gerenciada
+        # pelo Oauth/Firebase, e agora sempre rejeitada (ver test abaixo).
         response = self.client.patch("/api/v1/me", {
-            "email": "updated@example.test", "role": "ADMIN", "active": False,
+            "role": "ADMIN", "active": False,
             "firebase_uid": "other", "full_name": "Changed", "bio": "Changed",
             "is_public": True, "professional": self.other_professional.id,
         }, format="json")
         self.assertEqual(response.status_code, 200)
         self.therapist.refresh_from_db()
         self.professional.refresh_from_db()
-        self.assertEqual(self.therapist.email, "updated@example.test")
         self.assertEqual(self.therapist.role, User.THERAPIST)
         self.assertTrue(self.therapist.active)
         self.assertEqual(self.therapist.firebase_uid, "owner")
         self.assertEqual(self.professional.full_name, "Owner")
         self.assertEqual(self.professional.bio, "")
         self.assertFalse(self.professional.is_public)
+
+    def test_me_patch_rejects_email_change(self):
+        # E-mail e identidade (gerenciada pelo Oauth/Firebase), nao um campo
+        # de contato editavel aqui - ver apps/accounts/serializers.py.
+        response = self.client.patch("/api/v1/me", {"email": "updated@example.test"}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.therapist.refresh_from_db()
+        self.assertEqual(self.therapist.email, "owner@example.test")
 
     def test_me_patch_validates_email(self):
         response = self.client.patch("/api/v1/me", {"email": "invalid"}, format="json")
@@ -131,7 +140,7 @@ class PlatformContractTests(AuthenticatedAPITestCase):
                 "email": "body-secret@example.test",
             }, format="json")
         logs = " ".join(captured.output)
-        self.assertIn("PATCH /api/v1/me -> 200", logs)
+        self.assertIn("PATCH /api/v1/me -> 400", logs)
         for sensitive in ("query-secret", "token-secret", "body-secret"):
             self.assertNotIn(sensitive, logs)
 

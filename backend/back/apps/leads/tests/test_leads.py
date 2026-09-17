@@ -38,6 +38,22 @@ class LeadIsolationTests(AuthenticatedAPITestCase):
         response = self.client.get(f"/api/v1/leads/{self.lead_b.id}")
         self.assertEqual(response.status_code, 404)
 
+    def test_search_filters_by_name(self):
+        # Nome distinto do fixture "Lead A"/"Lead B": o SearchFilter do DRF
+        # quebra a query em termos e faz icontains por termo, entao um nome
+        # parecido com os outros dois geraria falso positivo aqui.
+        Lead.objects.create(professional=self.prof_a, name="Roberta Fernandes", email="roberta@teste.com")
+        self.login(self.admin)
+        response = self.client.get("/api/v1/leads?search=Roberta")
+        data = response.json()["data"]
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["name"], "Roberta Fernandes")
+
+    def test_search_with_no_match_returns_empty(self):
+        self.login(self.admin)
+        response = self.client.get("/api/v1/leads?search=nao-existe")
+        self.assertEqual(response.json()["data"], [])
+
     def test_therapist_creates_lead_for_self_automatically(self):
         self.login(self.therapist_a)
         response = self.client.post(
@@ -155,6 +171,16 @@ class PublicAppointmentRequestTests(APITestCase):
         response = self.client.post(
             "/api/v1/public/appointment-requests",
             {"professionalSlug": "terapeuta-privada", "name": "X", "email": "x@teste.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_rejects_inactive_professional(self):
+        self.therapist.active = False
+        self.therapist.save(update_fields=["active"])
+        response = self.client.post(
+            "/api/v1/public/appointment-requests",
+            {"professionalSlug": "terapeuta-publica", "name": "X", "email": "x@teste.com"},
             format="json",
         )
         self.assertEqual(response.status_code, 400)

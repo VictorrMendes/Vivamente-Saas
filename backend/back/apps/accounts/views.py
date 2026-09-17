@@ -24,7 +24,7 @@ class MeView(APIView):
         return Response(envelope(UserSerializer(request.user).data, request))
 
     @extend_schema(request=UserUpdateSerializer, responses=UserSerializer,
-                   description="Atualiza apenas o email local. Demais campos sao ignorados.")
+                   description="Compatibilidade: campos de identidade não são editáveis. Enviar email retorna 400.")
     def patch(self, request):
         serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)

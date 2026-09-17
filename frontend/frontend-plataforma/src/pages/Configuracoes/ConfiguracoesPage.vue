@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Settings } from '@lucide/vue';
 import { useMe } from '@/composables/useMe';
@@ -14,31 +14,10 @@ import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
-const { me, loading, error, saving, saveError, saved, revoking, revokeError, load, updateEmail, revokeAllSessions } = useMe();
+const { me, loading, error, revoking, revokeError, load, revokeAllSessions } = useMe();
 const { theme, setTheme } = useTheme();
 
 const THEME_LABEL: Record<ThemePreference, string> = { system: 'Automático (sistema)', light: 'Claro', dark: 'Escuro' };
-
-const editingEmail = ref(false);
-const emailForm = reactive({ email: '' });
-const emailFormError = ref<string | null>(null);
-
-function startEditEmail() {
-  if (!me.value) return;
-  emailForm.email = me.value.email;
-  emailFormError.value = null;
-  editingEmail.value = true;
-}
-
-async function handleSaveEmail() {
-  emailFormError.value = null;
-  if (!emailForm.email.trim() || !emailForm.email.includes('@')) {
-    emailFormError.value = 'Informe um e-mail válido.';
-    return;
-  }
-  const ok = await updateEmail(emailForm.email.trim());
-  if (ok) editingEmail.value = false;
-}
 
 const revokeConfirmOpen = ref(false);
 async function handleRevokeConfirmed() {
@@ -69,31 +48,11 @@ onMounted(load);
         <div class="rounded-lg border border-border bg-surface p-4">
           <div class="mb-3 flex items-center justify-between">
             <h2 class="font-display text-h6 text-text">Perfil</h2>
-            <button v-if="!editingEmail" type="button" class="text-body-sm text-primary-700 hover:underline" @click="startEditEmail">
-              Editar e-mail
-            </button>
           </div>
 
-          <form v-if="editingEmail" class="space-y-3" novalidate @submit.prevent="handleSaveEmail">
-            <div>
-              <label for="settings-email" class="mb-1 block text-label uppercase tracking-label text-text-muted">E-mail</label>
-              <input
-                id="settings-email"
-                v-model="emailForm.email"
-                type="email"
-                required
-                class="h-10 w-full rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
-              />
-            </div>
-            <p v-if="emailFormError || saveError" role="alert" class="text-body-sm text-error">{{ emailFormError || saveError }}</p>
-            <div class="flex gap-2">
-              <Button type="submit" size="sm" :loading="saving">Salvar</Button>
-              <Button type="button" size="sm" variant="ghost" @click="editingEmail = false">Cancelar</Button>
-            </div>
-          </form>
-          <dl v-else class="space-y-2 text-body-sm">
+          <dl class="space-y-2 text-body-sm">
             <div class="flex justify-between gap-4">
-              <dt class="text-text-muted">E-mail</dt>
+              <dt class="text-text-muted">E-mail de acesso</dt>
               <dd class="text-text">{{ me.email }}</dd>
             </div>
             <div class="flex justify-between gap-4">
@@ -105,7 +64,7 @@ onMounted(load);
               <dd><Badge :variant="me.active ? 'success' : 'neutral'" size="sm">{{ me.active ? 'Ativa' : 'Inativa' }}</Badge></dd>
             </div>
           </dl>
-          <p v-if="saved && !editingEmail" role="status" class="mt-2 text-body-sm text-success">E-mail atualizado.</p>
+          <p class="mt-3 text-caption text-text-muted">A alteração do e-mail de acesso ainda não está disponível nesta tela.</p>
         </div>
 
         <div class="rounded-lg border border-border bg-surface p-4">

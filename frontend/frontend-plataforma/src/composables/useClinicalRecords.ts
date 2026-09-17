@@ -5,22 +5,33 @@ import type { ClinicalRecord } from '@/types/clinicalRecord';
 
 export function useClinicalRecords() {
   const records = ref<ClinicalRecord[]>([]);
+  const pagination = ref<PaginatedEnvelope<ClinicalRecord>['pagination'] | null>(null);
+  let activeClientId: number | null = null;
+  let loadVersion = 0;
   const loading = ref(false);
   const error = ref<string | null>(null);
   const saving = ref(false);
   const saveError = ref<string | null>(null);
   const removingId = ref<number | null>(null);
 
-  async function load(clientId: number) {
+  async function load(clientId: number, page = 1) {
+    const version = ++loadVersion;
+    if (activeClientId !== clientId) {
+      records.value = [];
+      pagination.value = null;
+    }
+    activeClientId = clientId;
     loading.value = true;
     error.value = null;
     try {
-      const res = await backApi<PaginatedEnvelope<ClinicalRecord>>(`/api/v1/clinical-records?client=${clientId}&per_page=100`);
+      const res = await backApi<PaginatedEnvelope<ClinicalRecord>>(`/api/v1/clinical-records?client=${clientId}&per_page=20&page=${page}`);
+      if (version !== loadVersion) return;
       records.value = res.data;
+      pagination.value = res.pagination;
     } catch {
-      error.value = 'Não foi possível carregar o prontuário. Tente novamente em instantes.';
+      if (version === loadVersion) error.value = 'Não foi possível carregar o prontuário. Tente novamente em instantes.';
     } finally {
-      loading.value = false;
+      if (version === loadVersion) loading.value = false;
     }
   }
 
@@ -32,7 +43,8 @@ export function useClinicalRecords() {
         method: 'POST',
         body: JSON.stringify({ client: clientId, content, appointment: appointmentId }),
       });
-      records.value.unshift(res.data);
+      if (activeClientId === clientId) await load(clientId);
+      else if (activeClientId === null) records.value.unshift(res.data);
       return true;
     } catch {
       saveError.value = 'Não foi possível salvar o registro. Tente novamente.';
@@ -67,6 +79,10 @@ export function useClinicalRecords() {
     try {
       await backApi<void>(`/api/v1/clinical-records/${id}`, { method: 'DELETE' });
       records.value = records.value.filter((r) => r.id !== id);
+      if (activeClientId !== null) {
+        const page = pagination.value?.page ?? 1;
+        await load(activeClientId, records.value.length === 0 ? Math.max(1, page - 1) : page);
+      }
     } catch {
       saveError.value = 'Não foi possível excluir o registro. Tente novamente.';
     } finally {
@@ -74,5 +90,5 @@ export function useClinicalRecords() {
     }
   }
 
-  return { records, loading, error, saving, saveError, removingId, load, create, update, remove };
+  return { records, pagination, loading, error, saving, saveError, removingId, load, create, update, remove };
 }

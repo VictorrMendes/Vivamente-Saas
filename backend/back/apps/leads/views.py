@@ -27,6 +27,7 @@ from .serializers import (
 class LeadViewSet(ProfessionalScopedQuerysetMixin, EnvelopeModelViewSet):
     queryset = Lead.objects.select_related("professional", "service")
     filterset_fields = ["status", "professional"]
+    search_fields = ["name"]
     ordering_fields = ["created_at", "status"]
 
     def get_serializer_class(self):

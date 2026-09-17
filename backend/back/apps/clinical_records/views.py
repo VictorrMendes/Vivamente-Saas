@@ -3,6 +3,7 @@ from rest_framework.response import Response
 
 from apps.accounts.models import User
 from apps.audit.services import log_action
+from apps.audit.models import AuditLog
 from config.responses import envelope
 from config.viewsets import EnvelopeModelViewSet
 
@@ -25,6 +26,25 @@ class ClinicalRecordViewSet(EnvelopeModelViewSet):
     queryset = ClinicalRecord.objects.select_related("client", "professional", "appointment", "author")
     filterset_fields = ["client"]
     ordering_fields = ["recorded_at", "created_at"]
+    ordering = ["-recorded_at", "-id"]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        records = list(page if page is not None else queryset)
+        data = self.get_serializer(records, many=True).data
+        # Uma entrada por registro efetivamente devolvido, sem conteúdo clínico.
+        # bulk_create evita uma consulta de escrita por item da página.
+        AuditLog.objects.bulk_create([
+            AuditLog(
+                user=request.user, action="view", resource="clinical_record",
+                resource_id=str(record.id), metadata={"client_id": record.client_id},
+            )
+            for record in records
+        ])
+        if page is not None:
+            return self.get_paginated_response(data)
+        return Response(envelope(data, request))
 
     def get_queryset(self):
         queryset = super().get_queryset()

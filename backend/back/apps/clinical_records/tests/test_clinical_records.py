@@ -146,3 +146,22 @@ class ClinicalRecordAuditTests(AuthenticatedAPITestCase):
             self.assertNotIn("secreto", str(log.metadata))
             self.assertNotIn("Editado", str(log.metadata))
             self.assertEqual(set(log.metadata.keys()), {"client_id"})
+
+    def test_list_audits_each_record_returned_without_content(self):
+        record_1 = ClinicalRecord.objects.create(
+            client=self.client_obj, professional=self.prof, author=self.therapist, content="Conteudo secreto 1"
+        )
+        record_2 = ClinicalRecord.objects.create(
+            client=self.client_obj, professional=self.prof, author=self.therapist, content="Conteudo secreto 2"
+        )
+
+        response = self.client.get("/api/v1/clinical-records")
+
+        self.assertEqual(response.status_code, 200)
+        returned_ids = {str(r["id"]) for r in response.json()["data"]}
+        self.assertEqual(returned_ids, {str(record_1.id), str(record_2.id)})
+        logs = AuditLog.objects.filter(resource="clinical_record", action="view", resource_id__in=returned_ids)
+        self.assertEqual(logs.count(), 2)
+        for log in logs:
+            self.assertNotIn("secreto", str(log.metadata))
+            self.assertEqual(set(log.metadata.keys()), {"client_id"})
