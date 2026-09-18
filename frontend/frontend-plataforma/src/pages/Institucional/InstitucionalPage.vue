@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
+import { RouterLink } from 'vue-router';
 import { Inbox, RotateCw } from '@lucide/vue';
 import { useInstitutionalRequests } from '@/composables/useInstitutionalRequests';
 import { useForwardTargets } from '@/composables/useForwardTargets';
@@ -24,10 +25,14 @@ const {
   forwardError,
   statusChangingIds,
   statusError,
+  accountCreatingIds,
+  accountCreatedIds,
+  accountError,
   isRowBusy,
   load,
   forward,
   setStatus,
+  createAccessAccount,
 } = useInstitutionalRequests();
 const { professionals, loading: targetsLoading, error: targetsError, load: loadTargets } = useForwardTargets();
 
@@ -69,6 +74,15 @@ async function handleForward(id: number) {
 function handleSetStatus(id: number, status: 'IN_PROGRESS' | 'CLOSED') {
   if (isRowBusy(id)) return;
   setStatus(id, status);
+}
+
+function handleCreateAccount(id: number, email: string) {
+  if (isRowBusy(id)) return;
+  createAccessAccount(id, email);
+}
+
+function newProfessionalLink(item: { name: string; email: string }) {
+  return `/profissionais?${new URLSearchParams({ email: item.email, fullName: item.name })}`;
 }
 
 onMounted(() => {
@@ -120,6 +134,7 @@ onMounted(() => {
 
     <p v-if="forwardError" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">{{ forwardError }}</p>
     <p v-if="statusError" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">{{ statusError }}</p>
+    <p v-if="accountError" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">{{ accountError }}</p>
 
     <!-- Erro e lista vazia são estados distintos: erro nunca mostra "nenhuma solicitação encontrada". -->
     <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
@@ -191,8 +206,21 @@ onMounted(() => {
             Encerrado — sem encaminhamento.
           </p>
 
-          <!-- Interesse de terapeuta: só acompanhamento, nunca cria conta/perfil. Encerrado é terminal — sem botões, só o indicador. -->
-          <div v-else-if="item.status !== 'CLOSED'" class="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+          <!-- Interesse de terapeuta: acompanhamento + onboarding (criar conta -> criar perfil). Encerrado é terminal — sem botões, só o indicador. -->
+          <div v-else-if="item.status !== 'CLOSED'" class="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+            <template v-if="accountCreatedIds.has(item.id)">
+              <span class="text-body-sm text-success">Conta de acesso criada — e-mail de definição de senha enviado.</span>
+              <RouterLink :to="newProfessionalLink(item)" class="text-body-sm text-primary-600 underline">Criar perfil profissional →</RouterLink>
+            </template>
+            <Button
+              v-else
+              size="sm"
+              :disabled="isRowBusy(item.id)"
+              :loading="accountCreatingIds.has(item.id)"
+              @click="handleCreateAccount(item.id, item.email)"
+            >
+              Criar conta de acesso
+            </Button>
             <Button
               v-if="item.status === 'NEW'"
               size="sm"

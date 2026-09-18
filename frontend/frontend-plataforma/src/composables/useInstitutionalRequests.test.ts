@@ -165,4 +165,70 @@ describe('useInstitutionalRequests', () => {
     expect(requests.value).toHaveLength(1);
     expect(requests.value[0].name).toBe('Recente');
   });
+
+  describe('createAccessAccount', () => {
+    function stubOnboardingFetch(opts: { createStatus?: number } = {}) {
+      const { createStatus = 201 } = opts;
+      return vi.fn((url: string) => {
+        if (url.includes('/oauth/v1/users')) {
+          return Promise.resolve(
+            createStatus === 201
+              ? json({ data: { id: 'uid-1', email: 'ana@x.com', role: 'THERAPIST', active: true } }, 201)
+              : json({ detail: 'Ja existe uma conta com esse e-mail.' }, 502),
+          );
+        }
+        if (url.includes('/oauth/v1/password/forgot')) {
+          return Promise.resolve(json({ data: { sent: true } }));
+        }
+        if (url.includes('/status')) {
+          return Promise.resolve(
+            json({ data: { id: 1, kind: 'THERAPIST_INTEREST', name: 'Ana', email: 'ana@x.com', phone: '', message: '', status: 'IN_PROGRESS', forwardedTo: null, forwardedLead: null, forwardedAt: null, createdAt: '2026-01-01' } }),
+          );
+        }
+        return Promise.resolve(json({ data: {} }));
+      });
+    }
+
+    it('cria a conta, dispara e-mail de senha e marca a solicitação em acompanhamento', async () => {
+      const fetchMock = stubOnboardingFetch();
+      vi.stubGlobal('fetch', fetchMock);
+      const queue = useInstitutionalRequests();
+      queue.requests.value = [{ id: 1, kind: 'THERAPIST_INTEREST', name: 'Ana', email: 'ana@x.com', phone: '', message: '', status: 'NEW', forwardedTo: null, forwardedLead: null, forwardedAt: null, createdAt: '2026-01-01' }];
+
+      const ok = await queue.createAccessAccount(1, 'ana@x.com');
+
+      expect(ok).toBe(true);
+      expect(queue.accountCreatedIds.value.has(1)).toBe(true);
+      expect(queue.requests.value[0].status).toBe('IN_PROGRESS');
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/oauth/v1/users'))).toBe(true);
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/oauth/v1/password/forgot'))).toBe(true);
+    });
+
+    it('e-mail já cadastrado expõe a mensagem real do Oauth, sem marcar sucesso', async () => {
+      const fetchMock = stubOnboardingFetch({ createStatus: 502 });
+      vi.stubGlobal('fetch', fetchMock);
+      const queue = useInstitutionalRequests();
+
+      const ok = await queue.createAccessAccount(1, 'ana@x.com');
+
+      expect(ok).toBe(false);
+      expect(queue.accountCreatedIds.value.has(1)).toBe(false);
+      expect(queue.accountError.value).toBe('Ja existe uma conta com esse e-mail.');
+      expect(queue.isRowBusy(1)).toBe(false);
+    });
+
+    it('não deixa criar conta duas vezes na mesma linha enquanto a primeira está em voo', async () => {
+      const pending = pendingResponse();
+      const fetchMock = vi.fn().mockReturnValue(pending.promise);
+      vi.stubGlobal('fetch', fetchMock);
+      const queue = useInstitutionalRequests();
+
+      const first = queue.createAccessAccount(1, 'ana@x.com');
+      expect(queue.isRowBusy(1)).toBe(true);
+      expect(await queue.createAccessAccount(1, 'ana@x.com')).toBe(false);
+
+      pending.resolve(json({ data: { id: 'uid-1' } }, 201));
+      await first;
+    });
+  });
 });

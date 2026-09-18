@@ -4,7 +4,7 @@ import requests
 from django.conf import settings
 from django.db import transaction
 from firebase_admin import auth as firebase_auth
-from firebase_admin.auth import CertificateFetchError
+from firebase_admin.auth import CertificateFetchError, EmailAlreadyExistsError
 
 from apps.auth import back_sync
 from apps.auth.models import IdentitySyncOutbox, OauthUser
@@ -54,6 +54,11 @@ def create_user(email, password, role):
     try:
         firebase_user = firebase_auth.create_user(email=email, password=password)
         firebase_auth.set_custom_user_claims(firebase_user.uid, {"role": role})
+    except EmailAlreadyExistsError as exc:
+        # Sinal especifico (nao a mensagem generica abaixo) - quem chama
+        # (ex.: criar acesso a partir da fila institucional) precisa
+        # distinguir "ja existe conta" de uma falha real do Firebase.
+        raise ExternalServiceError("Ja existe uma conta com esse e-mail.") from exc
     except Exception as exc:
         raise ExternalServiceError(
             "Falha de comunicacao com o Firebase."

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import requests
 from django.db import IntegrityError
 from django.test import TestCase
-from firebase_admin.auth import CertificateFetchError
+from firebase_admin.auth import CertificateFetchError, EmailAlreadyExistsError
 
 from apps.auth import services
 from apps.auth.models import OauthUser
@@ -26,6 +26,21 @@ class CreateUserTests(TestCase):
         )
         self.assertEqual(user.firebase_uid, "uid_123")
         self.assertEqual(OauthUser.objects.count(), 1)
+
+    @patch("apps.auth.services.get_firebase_app")
+    @patch("apps.auth.services.firebase_auth")
+    def test_duplicate_email_raises_specific_message(
+        self, mock_firebase_auth, mock_get_app
+    ):
+        mock_firebase_auth.create_user.side_effect = EmailAlreadyExistsError(
+            "email ja existe", None, None
+        )
+
+        with self.assertRaises(ExternalServiceError) as ctx:
+            services.create_user("ana@x.com", "senha123", "THERAPIST")
+
+        self.assertIn("Ja existe uma conta", str(ctx.exception))
+        self.assertEqual(OauthUser.objects.count(), 0)
 
 
 class CreateUserCompensationTests(TestCase):

@@ -8,7 +8,10 @@ import { useAuthStore } from '@/stores/auth';
 function buildRouter() {
   return createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/institucional', name: 'institucional', component: InstitucionalPage }],
+    routes: [
+      { path: '/institucional', name: 'institucional', component: InstitucionalPage },
+      { path: '/profissionais', name: 'profissionais', component: { template: '<div>profissionais</div>' } },
+    ],
   });
 }
 
@@ -75,5 +78,69 @@ describe('InstitucionalPage — estado encerrado (terminal) na fila', () => {
     expect(wrapper.text()).toContain('Encerrado.');
     expect(wrapper.findAll('button').some((b) => b.text() === 'Encerrar')).toBe(false);
     expect(wrapper.findAll('button').some((b) => b.text() === 'Marcar em acompanhamento')).toBe(false);
+  });
+});
+
+describe('InstitucionalPage — criar conta de acesso a partir de um interesse de terapeuta', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function stubOnboardingFetch(calls: { users: number; forgot: number; status: number }) {
+    return vi.fn((url: string) => {
+      if (url.includes('/institutional-requests') && !url.includes('/status')) {
+        return Promise.resolve(
+          json({
+            data: [{
+              id: 7, kind: 'THERAPIST_INTEREST', name: 'Ana Terapeuta', email: 'ana@x.com', phone: '', message: '',
+              status: 'NEW', forwardedTo: null, forwardedLead: null, forwardedAt: null, createdAt: '2026-09-10T10:00:00Z',
+            }],
+            pagination: { page: 1, per_page: 10, total: 1, total_pages: 1 },
+          }),
+        );
+      }
+      if (url.includes('/professionals')) {
+        return Promise.resolve(json({ data: [], pagination: { page: 1, per_page: 100, total: 0, total_pages: 1 } }));
+      }
+      if (url.includes('/oauth/v1/users')) {
+        calls.users += 1;
+        return Promise.resolve(json({ data: { id: 'uid-1', email: 'ana@x.com', role: 'THERAPIST', active: true } }));
+      }
+      if (url.includes('/oauth/v1/password/forgot')) {
+        calls.forgot += 1;
+        return Promise.resolve(json({ data: { sent: true } }));
+      }
+      if (url.includes('/status')) {
+        calls.status += 1;
+        return Promise.resolve(json({
+          data: { id: 7, kind: 'THERAPIST_INTEREST', name: 'Ana Terapeuta', email: 'ana@x.com', phone: '', message: '', status: 'IN_PROGRESS', forwardedTo: null, forwardedLead: null, forwardedAt: null, createdAt: '2026-09-10T10:00:00Z' },
+        }));
+      }
+      return Promise.resolve(json({ data: {} }));
+    });
+  }
+
+  it('cria a conta, envia e-mail de senha e mostra o link pra criar o perfil profissional', async () => {
+    setActivePinia(createPinia());
+    useAuthStore().mockLogin('ADMIN');
+    const calls = { users: 0, forgot: 0, status: 0 };
+    vi.stubGlobal('fetch', stubOnboardingFetch(calls));
+    const router = buildRouter();
+    router.push('/institucional');
+    await router.isReady();
+    const wrapper = mount(InstitucionalPage, { global: { plugins: [router] } });
+    await flushPromises();
+
+    const button = wrapper.findAll('button').find((b) => b.text() === 'Criar conta de acesso');
+    expect(button).toBeTruthy();
+    await button!.trigger('click');
+    await flushPromises();
+
+    expect(calls.users).toBe(1);
+    expect(calls.forgot).toBe(1);
+    expect(calls.status).toBe(1);
+    expect(wrapper.text()).toContain('Conta de acesso criada');
+    const link = wrapper.find('a[href*="/profissionais"]');
+    expect(link.exists()).toBe(true);
+    expect(link.attributes('href')).toContain('email=ana%40x.com');
+    expect(link.attributes('href')).toContain('fullName=Ana');
   });
 });

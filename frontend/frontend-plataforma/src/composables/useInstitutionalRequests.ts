@@ -1,6 +1,7 @@
 import { ref } from 'vue';
-import { backApi } from '@/services/api/client';
+import { backApi, oauthApi } from '@/services/api/client';
 import { ApiError } from '@/services/api/errors';
+import { requestPasswordForgot } from '@/services/api/oauth';
 import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
 import type {
   InstitutionalRequest,
@@ -24,9 +25,12 @@ export function useInstitutionalRequests() {
   const forwardError = ref<string | null>(null);
   const statusChangingIds = ref(new Set<number>());
   const statusError = ref<string | null>(null);
+  const accountCreatingIds = ref(new Set<number>());
+  const accountCreatedIds = ref(new Set<number>());
+  const accountError = ref<string | null>(null);
 
   function isRowBusy(id: number): boolean {
-    return forwardingIds.value.has(id) || statusChangingIds.value.has(id);
+    return forwardingIds.value.has(id) || statusChangingIds.value.has(id) || accountCreatingIds.value.has(id);
   }
 
   // Uma busca/filtro/paginação nova invalida qualquer resposta de uma
@@ -84,8 +88,10 @@ export function useInstitutionalRequests() {
     }
   }
 
-  async function setStatus(id: number, status: InstitutionalRequestStatus) {
-    if (isRowBusy(id)) return false;
+  // Sem guarda de isRowBusy - usada tanto pelo setStatus público (que guarda)
+  // quanto por createAccessAccount, que já segura a linha via
+  // accountCreatingIds e precisaria se auto-bloquear se chamasse setStatus.
+  async function performStatusChange(id: number, status: InstitutionalRequestStatus) {
     statusError.value = null;
     statusChangingIds.value.add(id);
     try {
@@ -104,6 +110,47 @@ export function useInstitutionalRequests() {
     }
   }
 
+  async function setStatus(id: number, status: InstitutionalRequestStatus) {
+    if (isRowBusy(id)) return false;
+    return performStatusChange(id, status);
+  }
+
+  /**
+   * Cria a conta de acesso (Oauth) para um interesse de terapeuta na fila -
+   * primeiro passo do onboarding, que hoje era inteiramente manual. A senha
+   * gerada aqui nunca é usada: logo em seguida disparamos o fluxo de
+   * "esqueci minha senha" (já existente, mesmo endpoint da tela de
+   * recuperação) pra a própria pessoa definir a senha dela.
+   */
+  async function createAccessAccount(id: number, email: string) {
+    if (isRowBusy(id)) return false;
+    accountError.value = null;
+    accountCreatingIds.value.add(id);
+    try {
+      await oauthApi('/oauth/v1/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password: crypto.randomUUID(),
+          role: 'THERAPIST',
+        }),
+      });
+      // Melhor esforço: se o e-mail de definição de senha falhar, a conta já
+      // foi criada mesmo assim - não desfazemos nem bloqueamos o fluxo por
+      // isso, só deixamos de marcar sucesso silenciosamente.
+      await requestPasswordForgot({ email }).catch(() => undefined);
+      accountCreatedIds.value.add(id);
+      const current = requests.value.find((r) => r.id === id);
+      if (current?.status === 'NEW') await performStatusChange(id, 'IN_PROGRESS');
+      return true;
+    } catch (err) {
+      accountError.value = err instanceof ApiError ? err.message : 'Não foi possível criar a conta de acesso. Tente novamente.';
+      return false;
+    } finally {
+      accountCreatingIds.value.delete(id);
+    }
+  }
+
   return {
     requests,
     pagination,
@@ -114,9 +161,13 @@ export function useInstitutionalRequests() {
     forwardError,
     statusChangingIds,
     statusError,
+    accountCreatingIds,
+    accountCreatedIds,
+    accountError,
     isRowBusy,
     load,
     forward,
     setStatus,
+    createAccessAccount,
   };
 }

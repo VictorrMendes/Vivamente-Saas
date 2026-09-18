@@ -2,9 +2,9 @@ import uuid
 
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import serializers
+from rest_framework import generics, serializers
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,6 +12,7 @@ from config.responses import envelope
 
 from .dev_tokens import create_dev_token
 from .models import User
+from .permissions import IsAdmin
 from .serializers import UserSerializer, UserUpdateSerializer
 
 
@@ -30,6 +31,18 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(envelope(UserSerializer(request.user).data, request))
+
+
+class UserListView(generics.ListAPIView):
+    """Busca de usuario por e-mail, ADMIN-only - usada para achar o `user` id
+    numerico na hora de criar um Professional (ver ProfissionaisPage.vue),
+    sem precisar que o ADMIN descubra esse id "por fora"."""
+
+    queryset = User.objects.all().order_by("id")
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+    search_fields = ["email"]
+    filterset_fields = ["role", "active"]
 
 
 class FakeTokenView(APIView):
