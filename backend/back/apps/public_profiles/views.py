@@ -8,7 +8,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
-from apps.professionals.models import Professional
+from apps.professionals.models import Professional, Specialty
+from apps.professionals.serializers import SpecialtySerializer
 from config.responses import envelope
 
 from .serializers import (
@@ -45,6 +46,23 @@ class PublicProfessionalListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Professional.objects.filter(is_public=True, user__active=True).distinct()
+
+
+class PublicSpecialtyListView(generics.ListAPIView):
+    """Especialidades para o filtro do catálogo /terapeutas - só as que têm
+    pelo menos um profissional público, pra nunca oferecer uma opção que
+    sempre retorna vazio."""
+
+    serializer_class = SpecialtySerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "public-professional-catalog"
+
+    def get_queryset(self):
+        return Specialty.objects.filter(
+            professionals__is_public=True, professionals__user__active=True
+        ).distinct().order_by("name")
 
 
 class PublicProfileUpdateView(APIView):

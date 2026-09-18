@@ -11,6 +11,16 @@ const router = createRouter({
       component: () => import('@/pages/Login/LoginPage.vue'),
     },
     {
+      path: '/esqueci-senha',
+      name: 'esqueci-senha',
+      component: () => import('@/pages/RecuperarSenha/EsqueciSenhaPage.vue'),
+    },
+    {
+      path: '/redefinir-senha',
+      name: 'redefinir-senha',
+      component: () => import('@/pages/RecuperarSenha/RedefinirSenhaPage.vue'),
+    },
+    {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
       meta: { requiresAuth: true },

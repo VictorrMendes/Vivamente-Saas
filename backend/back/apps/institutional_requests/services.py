@@ -53,7 +53,7 @@ def forward_to_professional(admin_user, inquiry, professional):
         if locked.forwarded_lead_id is not None:
             raise ValidationError({"status": "Esta solicitação já foi encaminhada."})
         if locked.status not in (InstitutionalRequest.NEW, InstitutionalRequest.IN_PROGRESS):
-            raise ValidationError({"status": "Esta solicitação já foi encaminhada."})
+            raise ValidationError({"status": "Esta solicitação está encerrada e não pode mais ser encaminhada."})
 
         lead = Lead.objects.create(
             professional=professional,

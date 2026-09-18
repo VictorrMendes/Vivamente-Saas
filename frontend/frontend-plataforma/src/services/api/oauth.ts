@@ -79,3 +79,38 @@ export async function requestOAuthRefresh(input: { refreshToken: string }): Prom
   if (!res.ok) throw new ApiError(res.status, authErrorMessage(res.status, 'refresh'));
   return mapOAuthRefresh(await res.json().catch(() => undefined));
 }
+
+// Sempre "sucede" pro chamador (200) mesmo se o e-mail não existir — é o
+// próprio backend (PasswordForgotView) que decide isso, contra enumeração de
+// contas. Só um erro de rede/infra chega como ApiError aqui.
+export async function requestPasswordForgot(input: { email: string }): Promise<{ sent: boolean }> {
+  const res = await fetch(`${import.meta.env.VITE_OAUTH_API_URL}/oauth/v1/password/forgot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new ApiError(res.status, 'Não foi possível processar o pedido agora. Tente novamente em instantes.');
+  const body = (await res.json().catch(() => undefined)) as { data?: { sent?: boolean } } | undefined;
+  return { sent: body?.data?.sent === true };
+}
+
+export async function confirmPasswordReset(input: { token: string; newPassword: string }): Promise<{ reset: boolean }> {
+  const res = await fetch(`${import.meta.env.VITE_OAUTH_API_URL}/oauth/v1/password/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    if (res.status === 400) {
+      throw new ApiError(res.status, 'Este link de redefinição é inválido ou expirou. Peça um novo.');
+    }
+    if (res.status === 429) {
+      throw new ApiError(res.status, 'Muitas tentativas. Aguarde alguns instantes antes de tentar novamente.');
+    }
+    throw new ApiError(res.status, 'Não foi possível redefinir a senha agora. Tente novamente em instantes.');
+  }
+  const body = (await res.json().catch(() => undefined)) as { data?: { reset?: boolean } } | undefined;
+  return { reset: body?.data?.reset === true };
+}

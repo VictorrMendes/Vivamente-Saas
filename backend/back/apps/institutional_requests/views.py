@@ -53,11 +53,14 @@ class InstitutionalRequestViewSet(
     @action(detail=True, methods=["patch"], url_path="status")
     def set_status(self, request, pk=None):
         inquiry = self.get_object()
-        # Sem instance: aqui so validamos formato/choice do campo enviado.
-        # A transicao de verdade (o que é permitido a partir do status atual)
-        # é decidida sob lock em services.change_status, nao aqui - o status
-        # atual pode ter mudado entre o get_object() acima e a chamada abaixo.
-        serializer = InstitutionalRequestStatusSerializer(data=request.data, partial=True)
+        # Sem instance, e sem partial: `status` e o unico campo deste
+        # serializer e e sempre obrigatorio aqui - partial=True faria o DRF
+        # aceitar corpo vazio como "nada mudou" (gerava 500 adiante, ver
+        # validated_data["status"] em KeyError). A transicao de verdade (o
+        # que é permitido a partir do status atual) é decidida sob lock em
+        # services.change_status, nao aqui - o status atual pode ter mudado
+        # entre o get_object() acima e a chamada abaixo.
+        serializer = InstitutionalRequestStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         updated = services.change_status(request.user, inquiry, serializer.validated_data["status"])
         return Response(envelope(InstitutionalRequestSerializer(updated).data, request))

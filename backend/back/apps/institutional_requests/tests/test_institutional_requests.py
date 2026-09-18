@@ -219,6 +219,19 @@ class InstitutionalRequestStatusTests(AuthenticatedAPITestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_missing_status_field_returns_400_not_500(self):
+        # Regressao: partial=True + model com default=NEW fazia o DRF tratar
+        # `status` como opcional; corpo vazio validava "nada mudou" e
+        # serializer.validated_data["status"] estourava KeyError (500).
+        response = self.client.patch(f"/api/v1/institutional-requests/{self.inquiry.id}/status", {}, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_empty_string_status_returns_400(self):
+        response = self.client.patch(
+            f"/api/v1/institutional-requests/{self.inquiry.id}/status", {"status": ""}, format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+
 
 class InstitutionalRequestConcurrencyTests(TransactionTestCase):
     """Prova que o select_for_update em forward_to_professional/change_status

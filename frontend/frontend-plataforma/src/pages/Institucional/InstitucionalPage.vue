@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
-import { Inbox } from '@lucide/vue';
+import { Inbox, RotateCw } from '@lucide/vue';
 import { useInstitutionalRequests } from '@/composables/useInstitutionalRequests';
 import { useForwardTargets } from '@/composables/useForwardTargets';
 import {
@@ -15,9 +15,21 @@ import Skeleton from '@/components/ui/Skeleton.vue';
 import Pagination from '@/components/ui/Pagination.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
-const { requests, pagination, showLoading, error, forwardingId, forwardError, load, forward, setStatus } =
-  useInstitutionalRequests();
-const { professionals, load: loadTargets } = useForwardTargets();
+const {
+  requests,
+  pagination,
+  showLoading,
+  error,
+  forwardingIds,
+  forwardError,
+  statusChangingIds,
+  statusError,
+  isRowBusy,
+  load,
+  forward,
+  setStatus,
+} = useInstitutionalRequests();
+const { professionals, loading: targetsLoading, error: targetsError, load: loadTargets } = useForwardTargets();
 
 const activeKind = ref<InstitutionalRequestKind | null>(null);
 const search = ref('');
@@ -50,8 +62,13 @@ function changePage(next: number) {
 
 async function handleForward(id: number) {
   const professionalId = Number(forwardSelection[id]);
-  if (!professionalId) return;
+  if (!professionalId || isRowBusy(id)) return;
   await forward(id, professionalId);
+}
+
+function handleSetStatus(id: number, status: 'IN_PROGRESS' | 'CLOSED') {
+  if (isRowBusy(id)) return;
+  setStatus(id, status);
 }
 
 onMounted(() => {
@@ -101,10 +118,16 @@ onMounted(() => {
       />
     </div>
 
-    <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">{{ error }}</p>
     <p v-if="forwardError" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">{{ forwardError }}</p>
+    <p v-if="statusError" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">{{ statusError }}</p>
 
-    <div v-if="showLoading" class="mt-4 space-y-3" aria-busy="true">
+    <!-- Erro e lista vazia são estados distintos: erro nunca mostra "nenhuma solicitação encontrada". -->
+    <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">
+      {{ error }}
+      <button type="button" class="ml-2 underline" @click="fetchRequests">Tentar novamente</button>
+    </p>
+
+    <div v-else-if="showLoading" class="mt-4 space-y-3" aria-busy="true">
       <Skeleton v-for="n in 5" :key="n" variant="card" />
     </div>
 
@@ -117,6 +140,7 @@ onMounted(() => {
             <div class="min-w-0">
               <p class="font-medium text-text">{{ item.name }}</p>
               <p class="text-body-sm text-text-muted">{{ item.email }}</p>
+              <p v-if="item.phone" class="text-body-sm text-text-muted">{{ item.phone }}</p>
               <p v-if="item.message" class="mt-2 max-w-xl text-body-sm text-text-muted">{{ item.message }}</p>
             </div>
             <div class="flex flex-col items-end gap-2">
@@ -125,51 +149,71 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Paciente sem terapeuta ainda: encaminhar. -->
-          <div v-if="item.kind === 'PATIENT' && item.status !== 'FORWARDED'" class="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-4">
+          <!-- Paciente sem terapeuta ainda: encaminhar. Encerrado ou já encaminhado são estados terminais — nunca oferecer o form de encaminhar. -->
+          <div
+            v-if="item.kind === 'PATIENT' && item.status !== 'FORWARDED' && item.status !== 'CLOSED'"
+            class="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-4"
+          >
             <div>
               <label :for="`forward-${item.id}`" class="mb-1 block text-label uppercase tracking-label text-text-muted">Encaminhar para</label>
               <select
+                v-if="!targetsError"
                 :id="`forward-${item.id}`"
                 v-model="forwardSelection[item.id]"
-                class="h-9 min-w-[220px] rounded-md border border-border bg-surface px-3 text-body-sm text-text focus-visible:border-primary-600"
+                :disabled="targetsLoading || professionals.length === 0"
+                class="h-9 min-w-[220px] rounded-md border border-border bg-surface px-3 text-body-sm text-text focus-visible:border-primary-600 disabled:opacity-60"
               >
-                <option value="">Selecione um terapeuta</option>
+                <option value="">
+                  {{ targetsLoading ? 'Carregando terapeutas…' : professionals.length === 0 ? 'Nenhum terapeuta elegível' : 'Selecione um terapeuta' }}
+                </option>
                 <option v-for="p in professionals" :key="p.id" :value="p.id">{{ p.fullName }}</option>
               </select>
+              <p v-else class="flex items-center gap-2 text-body-sm text-error">
+                {{ targetsError }}
+                <button type="button" class="inline-flex items-center gap-1 underline" @click="loadTargets">
+                  <RotateCw :size="14" aria-hidden="true" /> Tentar novamente
+                </button>
+              </p>
             </div>
             <Button
               size="sm"
-              :disabled="!forwardSelection[item.id]"
-              :loading="forwardingId === item.id"
+              :disabled="!forwardSelection[item.id] || isRowBusy(item.id)"
+              :loading="forwardingIds.has(item.id)"
               @click="handleForward(item.id)"
             >
               Encaminhar
             </Button>
           </div>
-          <p v-else-if="item.kind === 'PATIENT'" class="mt-4 border-t border-border pt-4 text-body-sm text-text-muted">
+          <p v-else-if="item.kind === 'PATIENT' && item.status === 'FORWARDED'" class="mt-4 border-t border-border pt-4 text-body-sm text-text-muted">
             Encaminhado — lead #{{ item.forwardedLead }} criado.
           </p>
+          <p v-else-if="item.kind === 'PATIENT'" class="mt-4 border-t border-border pt-4 text-body-sm text-text-muted">
+            Encerrado — sem encaminhamento.
+          </p>
 
-          <!-- Interesse de terapeuta: só acompanhamento, nunca cria conta/perfil. -->
-          <div v-else class="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+          <!-- Interesse de terapeuta: só acompanhamento, nunca cria conta/perfil. Encerrado é terminal — sem botões, só o indicador. -->
+          <div v-else-if="item.status !== 'CLOSED'" class="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
             <Button
               v-if="item.status === 'NEW'"
               size="sm"
               variant="secondary"
-              @click="setStatus(item.id, 'IN_PROGRESS')"
+              :disabled="isRowBusy(item.id)"
+              :loading="statusChangingIds.has(item.id)"
+              @click="handleSetStatus(item.id, 'IN_PROGRESS')"
             >
               Marcar em acompanhamento
             </Button>
             <Button
-              v-if="item.status !== 'CLOSED'"
               size="sm"
               variant="ghost"
-              @click="setStatus(item.id, 'CLOSED')"
+              :disabled="isRowBusy(item.id)"
+              :loading="statusChangingIds.has(item.id)"
+              @click="handleSetStatus(item.id, 'CLOSED')"
             >
               Encerrar
             </Button>
           </div>
+          <p v-else class="mt-4 border-t border-border pt-4 text-body-sm text-text-muted">Encerrado.</p>
         </li>
       </ul>
 

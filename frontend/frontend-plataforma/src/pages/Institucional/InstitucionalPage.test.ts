@@ -1,0 +1,79 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { flushPromises, mount } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
+import { createMemoryHistory, createRouter } from 'vue-router';
+import InstitucionalPage from './InstitucionalPage.vue';
+import { useAuthStore } from '@/stores/auth';
+
+function buildRouter() {
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/institucional', name: 'institucional', component: InstitucionalPage }],
+  });
+}
+
+const json = (body: unknown) => new Response(JSON.stringify(body));
+
+// Regressão: uma solicitação CLOSED é estado terminal (services.py:
+// VALID_STATUS_TRANSITIONS) — a fila não pode oferecer "encaminhar" para um
+// paciente encerrado nem botões de ação para um interesse de terapeuta
+// encerrado, só um indicador de que não há mais nada a fazer ali.
+function stubFetch() {
+  return vi.fn((url: string) => {
+    if (url.includes('/institutional-requests')) {
+      return Promise.resolve(
+        json({
+          data: [
+            {
+              id: 1, kind: 'PATIENT', name: 'Paciente Encerrado', email: 'p@x.com', phone: '', message: '',
+              status: 'CLOSED', forwardedTo: null, forwardedLead: null, forwardedAt: null, createdAt: '2026-09-10T10:00:00Z',
+            },
+            {
+              id: 2, kind: 'THERAPIST_INTEREST', name: 'Terapeuta Encerrado', email: 't@x.com', phone: '', message: '',
+              status: 'CLOSED', forwardedTo: null, forwardedLead: null, forwardedAt: null, createdAt: '2026-09-10T10:00:00Z',
+            },
+          ],
+          pagination: { page: 1, per_page: 10, total: 2, total_pages: 1 },
+        }),
+      );
+    }
+    if (url.includes('/professionals')) {
+      return Promise.resolve(json({ data: [], pagination: { page: 1, per_page: 100, total: 0, total_pages: 1 } }));
+    }
+    return Promise.resolve(json({ data: {} }));
+  });
+}
+
+describe('InstitucionalPage — estado encerrado (terminal) na fila', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('não oferece encaminhar para paciente encerrado, e mostra indicador em vez de botões', async () => {
+    setActivePinia(createPinia());
+    useAuthStore().mockLogin('ADMIN');
+    vi.stubGlobal('fetch', stubFetch());
+    const router = buildRouter();
+    router.push('/institucional');
+    await router.isReady();
+    const wrapper = mount(InstitucionalPage, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Encerrado — sem encaminhamento.');
+    expect(wrapper.find('select[id^="forward-"]').exists()).toBe(false);
+    expect(wrapper.findAll('button').some((b) => b.text() === 'Encaminhar')).toBe(false);
+  });
+
+  it('não oferece botões de ação para interesse de terapeuta encerrado', async () => {
+    setActivePinia(createPinia());
+    useAuthStore().mockLogin('ADMIN');
+    vi.stubGlobal('fetch', stubFetch());
+    const router = buildRouter();
+    router.push('/institucional');
+    await router.isReady();
+    const wrapper = mount(InstitucionalPage, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Encerrado.');
+    expect(wrapper.findAll('button').some((b) => b.text() === 'Encerrar')).toBe(false);
+    expect(wrapper.findAll('button').some((b) => b.text() === 'Marcar em acompanhamento')).toBe(false);
+  });
+});

@@ -138,3 +138,33 @@ class PublicProfessionalCatalogTests(AuthenticatedAPITestCase):
         self.assertEqual(len(response.json()["data"]), 1)
         response = self.client.get("/api/v1/public/professionals?search=nao-existe")
         self.assertEqual(response.json()["data"], [])
+
+
+class PublicSpecialtyListTests(AuthenticatedAPITestCase):
+    def setUp(self):
+        cache.clear()
+        self.used_specialty = Specialty.objects.create(name="Ansiedade")
+        self.unused_specialty = Specialty.objects.create(name="Nunca usada por ninguém público")
+        active_public = Professional.objects.create(
+            user=User.objects.create(firebase_uid="ther-a", email="a@teste.com", role=User.THERAPIST),
+            slug="terapeuta-publica", full_name="Terapeuta Publica", is_public=True,
+        )
+        active_public.specialties.add(self.used_specialty)
+        private_professional = Professional.objects.create(
+            user=User.objects.create(firebase_uid="ther-b", email="b@teste.com", role=User.THERAPIST),
+            slug="terapeuta-privada", full_name="Terapeuta Privada", is_public=False,
+        )
+        private_professional.specialties.add(self.unused_specialty)
+
+    def test_lists_without_auth(self):
+        response = self.client.get("/api/v1/public/specialties")
+        self.assertEqual(response.status_code, 200)
+
+    def test_only_specialties_from_public_active_professionals(self):
+        response = self.client.get("/api/v1/public/specialties")
+        names = [item["name"] for item in response.json()["data"]]
+        self.assertEqual(names, ["Ansiedade"])
+
+    def test_filtering_catalog_by_listed_specialty_returns_results(self):
+        response = self.client.get(f"/api/v1/public/professionals?specialties={self.used_specialty.id}")
+        self.assertEqual(len(response.json()["data"]), 1)

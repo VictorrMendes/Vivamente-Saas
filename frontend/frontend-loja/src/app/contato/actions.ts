@@ -55,6 +55,13 @@ export async function submitCompanyContact(
         success: false,
       };
     }
+    if (error instanceof BackApiError && error.status === 400) {
+      // Não é "indisponível" - é um erro de validação de verdade (ex: telefone
+      // além do limite do Back). Campo/campo não é necessário aqui (todo
+      // input já é limitado no HTML com os mesmos limites do Back), mas a
+      // mensagem não pode dizer "tente mais tarde" pra um erro que não some sozinho.
+      return { fieldErrors: {}, formError: error.body?.detail ?? GENERIC_UNAVAILABLE, success: false };
+    }
     if (error instanceof BackUnavailableError || error instanceof BackApiError) {
       return { fieldErrors: {}, formError: GENERIC_UNAVAILABLE, success: false };
     }

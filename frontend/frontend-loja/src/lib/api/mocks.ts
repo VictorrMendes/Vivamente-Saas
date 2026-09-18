@@ -6,6 +6,7 @@ import type {
   PaginatedEnvelope,
   PublicProfessional,
   PublicProfessionalCatalogItem,
+  Specialty,
 } from "./types";
 
 /**
@@ -80,4 +81,11 @@ export function mockProfessionalCatalog(): PaginatedEnvelope<PublicProfessionalC
     specialties: [{ id: 1, name: "Ansiedade" }],
   }));
   return { data: items, pagination: { page: 1, per_page: 20, total: items.length, total_pages: 1 } };
+}
+
+export function mockSpecialties(): Specialty[] {
+  return [
+    { id: 1, name: "Ansiedade" },
+    { id: 2, name: "Terapia de casal" },
+  ];
 }

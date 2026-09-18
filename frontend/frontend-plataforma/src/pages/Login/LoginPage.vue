@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { ApiError } from '@/services/api/errors';
 import { safeLoginRedirect } from '@/router/redirect';
@@ -119,6 +119,8 @@ async function handleSubmit() {
           {{ loading ? 'Entrando…' : 'Entrar' }}
         </Button>
       </form>
+
+      <RouterLink to="/esqueci-senha" class="mt-4 inline-block text-body-sm text-text-muted underline">Esqueci minha senha</RouterLink>
 
       <div v-if="devHint" class="mt-6 rounded-md bg-surface-sunken p-3 text-caption text-text-muted">
         <p class="mb-1 font-medium text-text">Contas de teste (dev, sem backend):</p>

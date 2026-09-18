@@ -1,11 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useFormStatus } from "react-dom";
 import type { AvailabilitySlot, PublicService } from "@/lib/api/types";
 import { submitAppointmentRequest, type ActionState } from "./actions";
 
 const initialActionState: ActionState = { fieldErrors: {}, formError: null };
+
+// Valores vivem aqui, fora do estado da action — um <form> de Server Action
+// é resetado pelo React sempre que a action retorna sem lançar (inclusive em
+// erro de validação), então um input sem controle perderia tudo que a
+// pessoa digitou. Mesmo padrão do /contato (form.tsx).
+type Values = { name: string; email: string; phone: string; service: string; preferredSlot: string; message: string };
+const EMPTY_VALUES: Values = { name: "", email: "", phone: "", service: "", preferredSlot: "", message: "" };
 
 type Props = {
   slug: string;
@@ -44,9 +51,31 @@ function SubmitButton() {
 export function AppointmentForm({ slug, services, slots }: Props) {
   const action = submitAppointmentRequest.bind(null, slug);
   const [state, formAction] = useActionState(action, initialActionState);
+  const [values, setValues] = useState<Values>(EMPTY_VALUES);
+
+  function handleChange(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    const { name, value } = event.target;
+    setValues((prev) => ({ ...prev, [name]: value }));
+  }
+
+  // Depois que a action de Server Action retorna (mesmo sem lançar), o React
+  // chama form.reset() nativo do browser. Para <input>/<textarea> controlados
+  // o próprio React resincroniza o valor, mas para <select> não — o evento
+  // 'reset' precisa ser interceptado via listener nativo (o `onReset`
+  // sintético do React não chega a tempo, é despachado depois desse reset já
+  // ter zerado o <select>). Bloqueando o reset inteiro: todos os campos aqui
+  // já são controlados por `values`, então o form.reset() não faz falta.
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const preventReset = (event: Event) => event.preventDefault();
+    form.addEventListener("reset", preventReset);
+    return () => form.removeEventListener("reset", preventReset);
+  }, []);
 
   return (
-    <form action={formAction} noValidate className="mt-8 flex flex-col gap-6">
+    <form ref={formRef} action={formAction} noValidate className="mt-8 flex flex-col gap-6">
       {state.formError && (
         <div
           role="alert"
@@ -65,6 +94,8 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           name="name"
           type="text"
           required
+          value={values.name}
+          onChange={handleChange}
           aria-invalid={Boolean(state.fieldErrors.name)}
           aria-describedby={state.fieldErrors.name ? "name-error" : undefined}
           className={FIELD_CLASS}
@@ -85,6 +116,8 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           name="email"
           type="email"
           required
+          value={values.email}
+          onChange={handleChange}
           aria-invalid={Boolean(state.fieldErrors.email)}
           aria-describedby={state.fieldErrors.email ? "email-error" : undefined}
           className={FIELD_CLASS}
@@ -100,7 +133,14 @@ export function AppointmentForm({ slug, services, slots }: Props) {
         <label htmlFor="phone" className={LABEL_CLASS}>
           Telefone (opcional)
         </label>
-        <input id="phone" name="phone" type="tel" className={FIELD_CLASS} />
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          value={values.phone}
+          onChange={handleChange}
+          className={FIELD_CLASS}
+        />
       </div>
 
       {services.length > 0 && (
@@ -111,7 +151,8 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           <select
             id="service"
             name="service"
-            defaultValue=""
+            value={values.service}
+            onChange={handleChange}
             aria-invalid={Boolean(state.fieldErrors.service)}
             aria-describedby={state.fieldErrors.service ? "service-error" : undefined}
             className={FIELD_CLASS}
@@ -136,7 +177,13 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           Horário preferido (opcional)
         </label>
         {slots.length > 0 ? (
-          <select id="preferredSlot" name="preferredSlot" defaultValue="" className={FIELD_CLASS}>
+          <select
+            id="preferredSlot"
+            name="preferredSlot"
+            value={values.preferredSlot}
+            onChange={handleChange}
+            className={FIELD_CLASS}
+          >
             <option value="">Sem preferência de horário</option>
             {slots.map((slot) => (
               <option key={slot.id} value={slot.starts_at}>
@@ -161,6 +208,8 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           name="message"
           rows={4}
           required
+          value={values.message}
+          onChange={handleChange}
           aria-invalid={Boolean(state.fieldErrors.message)}
           aria-describedby={state.fieldErrors.message ? "message-error" : undefined}
           className="rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:outline-none focus-visible:shadow-focus"

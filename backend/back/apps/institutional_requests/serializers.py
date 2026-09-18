@@ -27,6 +27,12 @@ class InstitutionalRequestSerializer(serializers.ModelSerializer):
 
 
 class InstitutionalRequestStatusSerializer(serializers.ModelSerializer):
+    # ModelSerializer deixaria isso required=False sozinho: o model tem
+    # default=NEW, e o DRF trata "tem default" como "opcional" na
+    # auto-geracao do campo. Aqui e o unico campo do serializer - omitir
+    # `status` do corpo tem que dar 400, nao passar como "nada mudou".
+    status = serializers.ChoiceField(choices=InstitutionalRequest.STATUS_CHOICES, required=True)
+
     class Meta:
         model = InstitutionalRequest
         fields = ["status"]
