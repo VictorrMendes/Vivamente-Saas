@@ -1,0 +1,179 @@
+<script setup lang="ts">
+import { onMounted, reactive, ref, watch } from 'vue';
+import { Inbox } from '@lucide/vue';
+import { useInstitutionalRequests } from '@/composables/useInstitutionalRequests';
+import { useForwardTargets } from '@/composables/useForwardTargets';
+import {
+  INSTITUTIONAL_KIND_LABEL,
+  INSTITUTIONAL_STATUS_LABEL,
+  INSTITUTIONAL_STATUS_VARIANT,
+} from '@/constants/institutionalRequest';
+import type { InstitutionalRequestKind } from '@/types/institutionalRequest';
+import Badge from '@/components/ui/Badge.vue';
+import Button from '@/components/ui/Button.vue';
+import Skeleton from '@/components/ui/Skeleton.vue';
+import Pagination from '@/components/ui/Pagination.vue';
+import ModuleBanner from '@/components/layout/ModuleBanner.vue';
+
+const { requests, pagination, showLoading, error, forwardingId, forwardError, load, forward, setStatus } =
+  useInstitutionalRequests();
+const { professionals, load: loadTargets } = useForwardTargets();
+
+const activeKind = ref<InstitutionalRequestKind | null>(null);
+const search = ref('');
+const page = ref(1);
+const forwardSelection = reactive<Record<number, string>>({});
+
+function fetchRequests() {
+  load({ page: page.value, kind: activeKind.value ?? undefined, search: search.value || undefined });
+}
+
+let searchTimer: ReturnType<typeof setTimeout>;
+watch(search, () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    page.value = 1;
+    fetchRequests();
+  }, 400);
+});
+
+function setKind(kind: InstitutionalRequestKind | null) {
+  activeKind.value = kind;
+  page.value = 1;
+  fetchRequests();
+}
+
+function changePage(next: number) {
+  page.value = next;
+  fetchRequests();
+}
+
+async function handleForward(id: number) {
+  const professionalId = Number(forwardSelection[id]);
+  if (!professionalId) return;
+  await forward(id, professionalId);
+}
+
+onMounted(() => {
+  fetchRequests();
+  loadTargets();
+});
+</script>
+
+<template>
+  <div>
+    <ModuleBanner
+      :icon="Inbox"
+      title="Institucional"
+      subtitle="Pedidos de indicação de pacientes e manifestações de interesse de terapeutas, recebidos pela home e por /contato."
+    />
+
+    <div class="mt-4 flex flex-wrap items-center gap-4">
+      <div class="flex flex-wrap gap-2" role="group" aria-label="Filtrar por tipo">
+        <button
+          type="button"
+          class="rounded-pill px-3 py-1.5 text-body-sm transition-colors"
+          :class="activeKind === null ? 'bg-primary-600 text-text-inverse' : 'bg-surface-sunken text-text-muted hover:text-text'"
+          :aria-pressed="activeKind === null"
+          @click="setKind(null)"
+        >
+          Todos
+        </button>
+        <button
+          v-for="(label, kind) in INSTITUTIONAL_KIND_LABEL"
+          :key="kind"
+          type="button"
+          class="rounded-pill px-3 py-1.5 text-body-sm transition-colors"
+          :class="activeKind === kind ? 'bg-primary-600 text-text-inverse' : 'bg-surface-sunken text-text-muted hover:text-text'"
+          :aria-pressed="activeKind === kind"
+          @click="setKind(kind as InstitutionalRequestKind)"
+        >
+          {{ label }}
+        </button>
+      </div>
+
+      <input
+        v-model="search"
+        type="search"
+        placeholder="Buscar por nome…"
+        aria-label="Buscar solicitações por nome"
+        class="ml-auto h-10 w-full max-w-xs rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+      />
+    </div>
+
+    <p v-if="error" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">{{ error }}</p>
+    <p v-if="forwardError" role="alert" class="mt-4 rounded-md bg-error-bg px-4 py-3 text-body-sm text-error">{{ forwardError }}</p>
+
+    <div v-if="showLoading" class="mt-4 space-y-3" aria-busy="true">
+      <Skeleton v-for="n in 5" :key="n" variant="card" />
+    </div>
+
+    <template v-else>
+      <p v-if="requests.length === 0" class="mt-6 text-body-sm text-text-muted">Nenhuma solicitação institucional encontrada.</p>
+
+      <ul v-else class="mt-4 space-y-3">
+        <li v-for="item in requests" :key="item.id" class="rounded-lg border border-border bg-surface p-4">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-medium text-text">{{ item.name }}</p>
+              <p class="text-body-sm text-text-muted">{{ item.email }}</p>
+              <p v-if="item.message" class="mt-2 max-w-xl text-body-sm text-text-muted">{{ item.message }}</p>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <Badge :variant="INSTITUTIONAL_STATUS_VARIANT[item.status]" size="sm">{{ INSTITUTIONAL_STATUS_LABEL[item.status] }}</Badge>
+              <Badge variant="secondary" size="sm">{{ INSTITUTIONAL_KIND_LABEL[item.kind] }}</Badge>
+            </div>
+          </div>
+
+          <!-- Paciente sem terapeuta ainda: encaminhar. -->
+          <div v-if="item.kind === 'PATIENT' && item.status !== 'FORWARDED'" class="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-4">
+            <div>
+              <label :for="`forward-${item.id}`" class="mb-1 block text-label uppercase tracking-label text-text-muted">Encaminhar para</label>
+              <select
+                :id="`forward-${item.id}`"
+                v-model="forwardSelection[item.id]"
+                class="h-9 min-w-[220px] rounded-md border border-border bg-surface px-3 text-body-sm text-text focus-visible:border-primary-600"
+              >
+                <option value="">Selecione um terapeuta</option>
+                <option v-for="p in professionals" :key="p.id" :value="p.id">{{ p.fullName }}</option>
+              </select>
+            </div>
+            <Button
+              size="sm"
+              :disabled="!forwardSelection[item.id]"
+              :loading="forwardingId === item.id"
+              @click="handleForward(item.id)"
+            >
+              Encaminhar
+            </Button>
+          </div>
+          <p v-else-if="item.kind === 'PATIENT'" class="mt-4 border-t border-border pt-4 text-body-sm text-text-muted">
+            Encaminhado — lead #{{ item.forwardedLead }} criado.
+          </p>
+
+          <!-- Interesse de terapeuta: só acompanhamento, nunca cria conta/perfil. -->
+          <div v-else class="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+            <Button
+              v-if="item.status === 'NEW'"
+              size="sm"
+              variant="secondary"
+              @click="setStatus(item.id, 'IN_PROGRESS')"
+            >
+              Marcar em acompanhamento
+            </Button>
+            <Button
+              v-if="item.status !== 'CLOSED'"
+              size="sm"
+              variant="ghost"
+              @click="setStatus(item.id, 'CLOSED')"
+            >
+              Encerrar
+            </Button>
+          </div>
+        </li>
+      </ul>
+
+      <Pagination v-if="pagination" :page="pagination.page" :total-pages="pagination.total_pages" @change="changePage" />
+    </template>
+  </div>
+</template>

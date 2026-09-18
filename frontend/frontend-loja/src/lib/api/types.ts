@@ -12,6 +12,11 @@ export interface Envelope<T> {
   meta: { request_id: string; timestamp: string };
 }
 
+export interface PaginatedEnvelope<T> {
+  data: T[];
+  pagination: { page: number; per_page: number; total: number; total_pages: number };
+}
+
 export interface Specialty {
   id: number;
   name: string;
@@ -39,6 +44,16 @@ export interface PublicProfessional {
   services: PublicService[];
 }
 
+/** Card do catálogo /terapeutas — mesmos campos do perfil público, sem `services`. */
+export interface PublicProfessionalCatalogItem {
+  slug: string;
+  full_name: string;
+  bio: string;
+  photo_url: string;
+  registration: string;
+  specialties: Specialty[];
+}
+
 export interface AvailabilitySlot {
   id: number;
   professional: number;
@@ -58,6 +73,21 @@ export interface AppointmentRequestInput {
 }
 
 export interface AppointmentRequestResult {
+  id: number;
+  status: string;
+}
+
+export type InstitutionalRequestKind = "PATIENT" | "THERAPIST_INTEREST";
+
+export interface InstitutionalRequestInput {
+  kind: InstitutionalRequestKind;
+  name: string;
+  email: string;
+  phone?: string;
+  message?: string;
+}
+
+export interface InstitutionalRequestResult {
   id: number;
   status: string;
 }

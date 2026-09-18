@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.clinical_records",
     "apps.packages",
     "apps.payments",
+    "apps.institutional_requests",
 ]
 
 MIDDLEWARE = [
@@ -109,6 +110,8 @@ REST_FRAMEWORK = {
         "public-appointment-requests": "10/min",
         "public-available-slots": "20/min",
         "public-professional-profile": "30/min",
+        "public-professional-catalog": "30/min",
+        "public-institutional-requests": "10/min",
     },
 }
 
@@ -131,6 +134,10 @@ SPECTACULAR_SETTINGS = {
         "AppointmentModalityEnum": "apps.appointments.models.Appointment.MODALITY_CHOICES",
         "PackageStatusEnum": "apps.packages.models.Package.STATUS_CHOICES",
         "PaymentStatusEnum": "apps.payments.models.Payment.STATUS_CHOICES",
+        "InstitutionalRequestStatusEnum":
+            "apps.institutional_requests.models.InstitutionalRequest.STATUS_CHOICES",
+        "InstitutionalRequestKindEnum":
+            "apps.institutional_requests.models.InstitutionalRequest.KIND_CHOICES",
     },
 }
 

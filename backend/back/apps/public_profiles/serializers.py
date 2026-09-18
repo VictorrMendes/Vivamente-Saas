@@ -33,6 +33,18 @@ class PublicProfessionalSerializer(serializers.ModelSerializer):
         return PublicServiceSerializer(obj.services.all()[:50], many=True).data
 
 
+class PublicProfessionalListSerializer(serializers.ModelSerializer):
+    """Card do catálogo /terapeutas — sem services (lista pode ter dezenas
+    de profissionais; detalhe completo fica em /public/professionals/{slug})."""
+
+    specialties = SpecialtySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Professional
+        fields = ["slug", "full_name", "bio", "photo_url", "registration", "specialties"]
+        read_only_fields = fields
+
+
 class PublicProfileUpdateSerializer(serializers.ModelSerializer):
     specialty_ids = serializers.PrimaryKeyRelatedField(
         source="specialties", queryset=Specialty.objects.all(), many=True, required=False

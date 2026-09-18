@@ -8,9 +8,6 @@ venv/
 .agents
 .codex
 .remember
-docs
-CLAUDE.MD
 .context
 .gitignore
 .mcp.json
-AGENTS.md

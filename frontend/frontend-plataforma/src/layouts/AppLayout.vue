@@ -14,6 +14,7 @@ import {
   Bell,
   Settings,
   Menu,
+  Inbox,
   type LucideIcon,
 } from '@lucide/vue';
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, VisuallyHidden } from 'reka-ui';
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { to: '/leads', label: 'Leads', icon: UserPlus },
   { to: '/clientes', label: 'Clientes', icon: Users },
   { to: '/servicos', label: 'Serviços', icon: Briefcase },
+  { to: '/institucional', label: 'Institucional', icon: Inbox, roles: ['ADMIN'] },
   { to: '/profissionais', label: 'Profissionais', icon: UserCog, roles: ['ADMIN'] },
   { to: '/pacotes', label: 'Pacotes', icon: Package },
   { to: '/financeiro', label: 'Financeiro', icon: Wallet },

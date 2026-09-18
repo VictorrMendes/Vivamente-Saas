@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
+from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -10,7 +11,11 @@ from apps.accounts.models import User
 from apps.professionals.models import Professional
 from config.responses import envelope
 
-from .serializers import PublicProfessionalSerializer, PublicProfileUpdateSerializer
+from .serializers import (
+    PublicProfessionalListSerializer,
+    PublicProfessionalSerializer,
+    PublicProfileUpdateSerializer,
+)
 
 
 class PublicProfessionalProfileView(APIView):
@@ -23,6 +28,23 @@ class PublicProfessionalProfileView(APIView):
     def get(self, request, slug):
         professional = get_object_or_404(Professional, slug=slug, is_public=True, user__active=True)
         return Response(envelope(PublicProfessionalSerializer(professional).data, request))
+
+
+class PublicProfessionalListView(generics.ListAPIView):
+    """Catálogo público /terapeutas — só o que já é seguro expor em /[slug]
+    (docs/back.md seção 7), nunca reaproveita o serializer/queryset admin."""
+
+    serializer_class = PublicProfessionalListSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "public-professional-catalog"
+    filterset_fields = ["specialties"]
+    search_fields = ["full_name"]
+    ordering_fields = ["full_name"]
+
+    def get_queryset(self):
+        return Professional.objects.filter(is_public=True, user__active=True).distinct()
 
 
 class PublicProfileUpdateView(APIView):

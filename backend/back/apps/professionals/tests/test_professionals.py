@@ -93,6 +93,35 @@ class ProfessionalIsolationTests(AuthenticatedAPITestCase):
         response = self.client.get("/api/v1/professionals?search=nao-existe")
         self.assertEqual(response.json()["data"], [])
 
+    def test_user_active_filter_excludes_inactive(self):
+        inactive_user = User.objects.create(
+            firebase_uid="ther-inactive", email="inactive@teste.com", role=User.THERAPIST, active=False
+        )
+        Professional.objects.create(user=inactive_user, slug="terapeuta-inativo", full_name="Inativo", is_public=True)
+        self.login(self.admin)
+
+        response = self.client.get("/api/v1/professionals?is_public=true&user__active=true")
+
+        ids = {p["id"] for p in response.json()["data"]}
+        self.assertNotIn(
+            Professional.objects.get(slug="terapeuta-inativo").id, ids,
+            "?user__active=true deve excluir profissional com usuário inativo (usado pelo seletor de encaminhamento)",
+        )
+
+    def test_without_active_filter_admin_still_sees_inactive(self):
+        # Telas administrativas que precisam gerenciar profissionais
+        # inativos não podem perder acesso a eles por causa do filtro novo.
+        inactive_user = User.objects.create(
+            firebase_uid="ther-inactive-2", email="inactive2@teste.com", role=User.THERAPIST, active=False
+        )
+        Professional.objects.create(user=inactive_user, slug="terapeuta-inativo-2", full_name="Inativo 2")
+        self.login(self.admin)
+
+        response = self.client.get("/api/v1/professionals")
+
+        ids = {p["id"] for p in response.json()["data"]}
+        self.assertIn(Professional.objects.get(slug="terapeuta-inativo-2").id, ids)
+
     def test_rejects_reserved_slug(self):
         new_user = User.objects.create(firebase_uid="ther-c", email="c@teste.com", role=User.THERAPIST)
         self.login(self.admin)

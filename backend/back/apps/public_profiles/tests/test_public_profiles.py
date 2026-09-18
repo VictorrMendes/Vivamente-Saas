@@ -92,3 +92,49 @@ class PublicProfessionalProfileTests(AuthenticatedAPITestCase):
             self.assertEqual(response.status_code, 200)
         response = self.client.get("/api/v1/public/professionals/terapeuta-publica")
         self.assertEqual(response.status_code, 429)
+
+
+class PublicProfessionalCatalogTests(AuthenticatedAPITestCase):
+    def setUp(self):
+        cache.clear()
+        self.specialty = Specialty.objects.create(name="Ansiedade")
+        self.active_public = Professional.objects.create(
+            user=User.objects.create(firebase_uid="ther-a", email="a@teste.com", role=User.THERAPIST),
+            slug="terapeuta-publica", full_name="Terapeuta Publica", is_public=True,
+        )
+        self.active_public.specialties.add(self.specialty)
+        Professional.objects.create(
+            user=User.objects.create(firebase_uid="ther-b", email="b@teste.com", role=User.THERAPIST),
+            slug="terapeuta-privada", full_name="Terapeuta Privada", is_public=False,
+        )
+        Professional.objects.create(
+            user=User.objects.create(
+                firebase_uid="ther-c", email="c@teste.com", role=User.THERAPIST, active=False
+            ),
+            slug="terapeuta-inativa", full_name="Terapeuta Inativa", is_public=True,
+        )
+
+    def test_lists_only_public_and_active(self):
+        response = self.client.get("/api/v1/public/professionals")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()["data"]
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["slug"], "terapeuta-publica")
+
+    def test_does_not_expose_services_in_list(self):
+        response = self.client.get("/api/v1/public/professionals")
+        self.assertNotIn("services", response.json()["data"][0])
+
+    def test_paginated_envelope(self):
+        response = self.client.get("/api/v1/public/professionals")
+        self.assertIn("pagination", response.json())
+
+    def test_filters_by_specialty(self):
+        response = self.client.get(f"/api/v1/public/professionals?specialties={self.specialty.id}")
+        self.assertEqual(len(response.json()["data"]), 1)
+
+    def test_search_by_name(self):
+        response = self.client.get("/api/v1/public/professionals?search=Publica")
+        self.assertEqual(len(response.json()["data"]), 1)
+        response = self.client.get("/api/v1/public/professionals?search=nao-existe")
+        self.assertEqual(response.json()["data"], [])

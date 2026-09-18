@@ -1,5 +1,12 @@
 import "server-only";
-import type { AppointmentRequestResult, AvailabilitySlot, PublicProfessional } from "./types";
+import type {
+  AppointmentRequestResult,
+  AvailabilitySlot,
+  InstitutionalRequestResult,
+  PaginatedEnvelope,
+  PublicProfessional,
+  PublicProfessionalCatalogItem,
+} from "./types";
 
 /**
  * Dados fictícios só pra visualizar a Loja sem precisar subir o Back.
@@ -57,4 +64,20 @@ export function mockAvailableSlots(): AvailabilitySlot[] {
 
 export function mockAppointmentRequestResult(): AppointmentRequestResult {
   return { id: 1, status: "NEW" };
+}
+
+export function mockInstitutionalRequestResult(): InstitutionalRequestResult {
+  return { id: 1, status: "NEW" };
+}
+
+export function mockProfessionalCatalog(): PaginatedEnvelope<PublicProfessionalCatalogItem> {
+  const items: PublicProfessionalCatalogItem[] = [1, 2, 3].map((n) => ({
+    slug: `ana-exemplo-${n}`,
+    full_name: `Ana Exemplo ${n} (dado fictício)`,
+    bio: "Texto de exemplo para visualizar o catálogo em desenvolvimento — não é conteúdo real de nenhuma profissional.",
+    photo_url: "",
+    registration: "Registro de exemplo — dado fictício",
+    specialties: [{ id: 1, name: "Ansiedade" }],
+  }));
+  return { data: items, pagination: { page: 1, per_page: 20, total: items.length, total_pages: 1 } };
 }

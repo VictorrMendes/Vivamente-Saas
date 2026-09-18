@@ -1,34 +1,104 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { ArrowRight, Check, FlaskConical } from "lucide-react";
+import { submitCompanyContact, type ContactActionState } from "./actions";
 
-export function CompanyContactForm({ audience }: { audience: "atendimento" | "terapeuta" }) {
-  const [submitted, setSubmitted] = useState(false);
+const initialActionState: ContactActionState = { fieldErrors: {}, formError: null, success: false };
+
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className="landing-button" disabled={pending} aria-busy={pending}>
+      {pending ? "Enviando..." : label} <ArrowRight size={18} aria-hidden />
+    </button>
+  );
+}
+
+export function CompanyContactForm({ audience, isMock }: { audience: "atendimento" | "terapeuta"; isMock: boolean }) {
   const isTherapist = audience === "terapeuta";
-
-  function simulateSubmission(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    // Mock visual: nao le, transmite ou persiste os dados preenchidos.
-    setSubmitted(true);
-  }
+  const action = submitCompanyContact.bind(null, audience);
+  const [state, formAction] = useActionState(action, initialActionState);
 
   return (
     <div className="company-contact-panel">
-      <div className="demo-notice"><FlaskConical size={18} aria-hidden /><p><strong>Formulário de demonstração</strong><span>Use dados fictícios. Nada será enviado ou salvo.</span></p></div>
-      {submitted ? (
-        <div className="contact-success" role="status"><span className="section-symbol"><Check size={27} aria-hidden /></span><h2 className="section-title">Primeiro passo<br /><em>simulado.</em></h2><p>{isTherapist ? "A demonstração do interesse em fazer parte da VivaMente foi concluída." : "A demonstração do pedido de indicação foi concluída."} Nenhuma mensagem foi enviada à equipe.</p><button type="button" className="landing-button" onClick={() => setSubmitted(false)}>Testar novamente <ArrowRight size={17} aria-hidden /></button><Link href="/" className="landing-text-link">Voltar para a página inicial</Link></div>
+      {isMock && (
+        <div className="demo-notice">
+          <FlaskConical size={18} aria-hidden />
+          <p><strong>Ambiente de demonstração</strong><span>O Back real não está configurado nesta instância — nada é enviado de verdade.</span></p>
+        </div>
+      )}
+      {state.success ? (
+        <div className="contact-success" role="status">
+          <span className="section-symbol"><Check size={27} aria-hidden /></span>
+          <h2 className="section-title">Mensagem<br /><em>enviada.</em></h2>
+          <p>
+            {isTherapist
+              ? "Recebemos sua manifestação de interesse. A equipe VivaMente vai entrar em contato."
+              : "Recebemos seu pedido de indicação. A equipe VivaMente vai entrar em contato para ajudar você a encontrar um caminho."}
+          </p>
+          <Link href="/" className="landing-text-link">Voltar para a página inicial</Link>
+        </div>
       ) : (
-        <form onSubmit={simulateSubmission} className="company-contact-form">
+        <form action={formAction} noValidate className="company-contact-form">
           <h2>{isTherapist ? "Quero fazer parte" : "Quero uma indicação"}</h2>
-          <div className="contact-field"><label htmlFor="company-name">Seu nome</label><input id="company-name" name="name" autoComplete="name" maxLength={200} required /></div>
-          <div className="contact-field"><label htmlFor="company-email">E-mail</label><input id="company-email" name="email" type="email" autoComplete="email" maxLength={254} required /></div>
-          <div className="contact-field"><label htmlFor="company-phone">Telefone <span>(opcional)</span></label><input id="company-phone" name="phone" type="tel" autoComplete="tel" maxLength={30} /></div>
-          {isTherapist && <div className="contact-field"><label htmlFor="company-specialty">Sua área de atuação</label><input id="company-specialty" name="specialty" maxLength={200} required /></div>}
-          <div className="contact-field"><label htmlFor="company-message">{isTherapist ? "Conte um pouco sobre seu trabalho" : "O que você está buscando?"}</label><textarea id="company-message" name="message" rows={4} maxLength={2000} required /></div>
-          <button type="submit" className="landing-button">Simular {isTherapist ? "interesse" : "solicitação"} <ArrowRight size={18} aria-hidden /></button>
-          <p className="text-caption text-text-muted">Esta prévia não cria cadastro nem confirma atendimento.</p>
+
+          {state.formError && (
+            <div role="alert" className="rounded-lg border border-error bg-error-bg px-4 py-3 text-body-sm text-error">
+              {state.formError}
+            </div>
+          )}
+
+          <div className="contact-field">
+            <label htmlFor="company-name">Seu nome</label>
+            <input
+              id="company-name" name="name" autoComplete="name" maxLength={200} required
+              aria-invalid={Boolean(state.fieldErrors.name)}
+              aria-describedby={state.fieldErrors.name ? "company-name-error" : undefined}
+            />
+            {state.fieldErrors.name && <p id="company-name-error" className="text-body-sm text-error">{state.fieldErrors.name}</p>}
+          </div>
+
+          <div className="contact-field">
+            <label htmlFor="company-email">E-mail</label>
+            <input
+              id="company-email" name="email" type="email" autoComplete="email" maxLength={254} required
+              aria-invalid={Boolean(state.fieldErrors.email)}
+              aria-describedby={state.fieldErrors.email ? "company-email-error" : undefined}
+            />
+            {state.fieldErrors.email && <p id="company-email-error" className="text-body-sm text-error">{state.fieldErrors.email}</p>}
+          </div>
+
+          <div className="contact-field">
+            <label htmlFor="company-phone">Telefone <span>(opcional)</span></label>
+            <input id="company-phone" name="phone" type="tel" autoComplete="tel" maxLength={30} />
+          </div>
+
+          {isTherapist && (
+            <div className="contact-field">
+              <label htmlFor="company-specialty">Sua área de atuação <span>(opcional)</span></label>
+              <input id="company-specialty" name="specialty" maxLength={200} />
+            </div>
+          )}
+
+          <div className="contact-field">
+            <label htmlFor="company-message">{isTherapist ? "Conte um pouco sobre seu trabalho" : "O que você está buscando?"}</label>
+            <textarea
+              id="company-message" name="message" rows={4} required
+              aria-invalid={Boolean(state.fieldErrors.message)}
+              aria-describedby={state.fieldErrors.message ? "company-message-error" : undefined}
+            />
+            {state.fieldErrors.message && <p id="company-message-error" className="text-body-sm text-error">{state.fieldErrors.message}</p>}
+          </div>
+
+          <SubmitButton label={isTherapist ? "Enviar interesse" : "Enviar solicitação"} />
+          <p className="text-caption text-text-muted">
+            {isTherapist
+              ? "Isso é uma manifestação de interesse — não cria conta nem publica um perfil automaticamente."
+              : "Isso cria um pedido de contato — não é uma consulta confirmada."}
+          </p>
         </form>
       )}
     </div>

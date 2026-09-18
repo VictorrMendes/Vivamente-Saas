@@ -30,6 +30,7 @@ Se este documento e o Swagger divergirem em algum detalhe, **o Swagger está cer
 16. [Dashboard](#16-dashboard)
 17. [Health checks](#17-health-checks)
 18. [Endpoints que a Loja/Plataforma NÃO chamam](#18-endpoints-que-a-lojaplataforma-não-chamam)
+19. [Institucional — fila administrativa](#19-institucional--fila-administrativa)
 
 ---
 
@@ -93,7 +94,7 @@ Dois papéis: **`ADMIN`** e **`THERAPIST`**. Regra geral (com uma exceção impo
 | Método | Rota | Corpo | Descrição |
 |---|---|---|---|
 | GET | `/api/v1/me` | — | Dados do usuário autenticado (não confundir com o perfil público, §8) |
-| PATCH | `/api/v1/me` | `{ "email": "..." }` | Só `email` é editável aqui |
+| PATCH | `/api/v1/me` | compatibilidade | Enviar `email` retorna 400; alterações de identidade devem partir do OAuth |
 
 Campos: `id, firebase_uid, email, role, active, created_at, updated_at`.
 
@@ -146,6 +147,8 @@ Campos: `id, professional, name, email, phone, message, service, status, created
 | POST | `/api/v1/public/appointment-requests` | 10/min | Cria um `Lead` (`status=NEW`) e notifica o terapeuta. Ver corpo abaixo |
 | GET | `/api/v1/public/professionals/{slug}` | 30/min | Perfil público — só campos não-sensíveis |
 | GET | `/api/v1/public/professionals/{slug}/available-slots` | 20/min | Horários livres (sem agendamento conflitante) |
+| GET | `/api/v1/public/professionals` | 30/min | Catálogo paginado (`?search=`, `?specialties=`) — só `is_public=true, user.active=true`. Alimenta `/terapeutas` e o sitemap da Loja |
+| POST | `/api/v1/public/institutional-requests` | 10/min | Contato institucional sem terapeuta escolhido (pedido de indicação ou interesse de terapeuta) — ver seção 19 |
 
 **`POST /public/appointment-requests`:**
 ```jsonc
@@ -319,3 +322,24 @@ Sem autenticação, usados por monitoramento — não fazem parte do fluxo de pr
 
 - `POST /api/v1/dev/fake-token` — só existe em `DEBUG=True`, é um atalho de desenvolvimento
 - `PUT/DELETE /api/v1/internal/identity/users/{firebase_uid}` — comunicação **interna** Oauth → Back (sincronização de usuário via JWT RS256 assinado pelo Oauth), nunca chamado por frontend nenhum
+
+---
+
+## 19. Institucional — fila administrativa
+
+Contato institucional (paciente sem terapeuta escolhido, ou terapeuta manifestando interesse em participar). Entidade **separada** de `Lead` de propósito — `Lead.professional` continua obrigatório; só um encaminhamento de uma solicitação `PATIENT` cria um `Lead` de verdade. `THERAPIST_INTEREST` nunca cria `Lead` nem conta — é só acompanhado pela equipe.
+
+**Criação pública** — ver seção 8 (`POST /public/institutional-requests`).
+
+**Fila (somente ADMIN):**
+
+| Método | Rota | Filtros | Descrição |
+|---|---|---|---|
+| GET | `/api/v1/institutional-requests` | `?kind=PATIENT\|THERAPIST_INTEREST`, `?status=`, `?search=` | Lista paginada |
+| GET | `/api/v1/institutional-requests/{id}` | — | Detalhe |
+| PATCH | `/api/v1/institutional-requests/{id}/status` | — | `{ "status": "IN_PROGRESS" \| "CLOSED" }` — `FORWARDED` só via `/forward`, PATCH direto pra esse valor dá `400` |
+| POST | `/api/v1/institutional-requests/{id}/forward` | — | `{ "professional": 12 }` — só `PATIENT`, só terapeuta `is_public=true` e ativo. Cria um `Lead` de verdade e notifica o terapeuta |
+
+Campos: `id, kind, name, email, phone, message, status, forwarded_to, forwarded_lead, forwarded_at, created_at, updated_at`. Status: `NEW → IN_PROGRESS → FORWARDED` (só `PATIENT`) `| CLOSED`.
+
+**Idempotência do encaminhamento:** repetir `POST .../forward` no mesmo pedido já `FORWARDED` responde `400` (`"Esta solicitação já foi encaminhada."`) e **não** cria um segundo `Lead` — mesmo padrão de lock (`select_for_update`) usado em `POST /leads/{id}/convert`.

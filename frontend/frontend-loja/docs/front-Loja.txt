@@ -1,0 +1,177 @@
+Estrutura de rotas
+/
+├── /[slug]
+├── /[slug]/agendar
+├── /[slug]/agendar/sucesso
+├── /sobre
+├── /contato
+├── /privacidade
+└── /termos
+1. Página pública do terapeuta
+GET /[slug]
+
+Consome:
+
+GET /api/v1/public/professionals/{slug}
+
+Exibe:
+
+Foto
+Nome
+CRP/registro, se aplicável
+Biografia
+Especialidades
+Serviços
+Modalidades
+Localização
+CTA de agendamento
+2. Agendamento
+GET  /[slug]/agendar
+POST /api/appointment-requests
+
+Fluxo:
+
+Terapeuta
+    ↓
+Escolher serviço
+    ↓
+Escolher modalidade
+    ↓
+Escolher horário
+    ↓
+Informar dados
+    ↓
+Confirmar
+    ↓
+Solicitação criada
+3. Consulta de disponibilidade
+
+A Loja precisa conseguir descobrir horários disponíveis:
+
+GET /api/professionals/{slug}/availability
+GET /api/professionals/{slug}/available-slots
+
+Esses endpoints seriam BFF do Next, que consultam o Back.
+
+4. Formulário de contato
+POST /api/leads
+
+Dados:
+
+name
+email
+phone
+message
+service
+professional
+
+Next → Django:
+
+Loja
+  ↓
+Next.js BFF
+  ↓
+Django
+  ↓
+Lead
+5. SEO
+
+Cada profissional precisa gerar:
+
+/[slug]
+
+com:
+
+title
+description
+Open Graph
+Twitter/X metadata
+canonical
+sitemap
+robots.txt
+Schema.org/JSON-LD
+Componentes principais
+components/
+├── Header
+├── Footer
+├── ProfessionalHero
+├── ProfessionalBio
+├── Specialties
+├── Services
+├── ServiceCard
+├── AvailabilityCalendar
+├── AppointmentForm
+├── ContactForm
+├── Location
+├── CTA
+├── Testimonials
+├── FAQ
+├── Modal
+├── Button
+├── Input
+├── Select
+├── Dialog
+├── Toast
+├── Skeleton
+└── ErrorState
+Estados importantes
+
+A Loja precisa tratar:
+
+Loading
+Empty
+Error
+Success
+Not Found
+Unavailable
+Submitting
+Rate Limited
+
+Principalmente:
+
+/[slug] inexistente
+        ↓
+     404
+
+Horários indisponíveis
+        ↓
+"Não há horários disponíveis"
+
+Erro no backend
+        ↓
+"Não foi possível carregar..."
+Arquitetura
+                    LOJA
+                   Next.js
+                      │
+              ┌───────┴────────┐
+              │                │
+          Server             Browser
+          Components          Actions
+              │                │
+              └───────┬────────┘
+                      ▼
+                  Next BFF
+                      │
+                    REST
+                      │
+                      ▼
+                   Django
+Para considerar a Loja concluída
+✓ Todas as páginas
+✓ Design System implementado
+✓ Responsividade
+✓ Acessibilidade
+✓ SEO
+✓ BFF
+✓ Perfil dinâmico por slug
+✓ Serviços
+✓ Disponibilidade
+✓ Solicitação de agendamento
+✓ Formulário de contato
+✓ Estados de loading/error/empty
+✓ 404
+✓ Metadata dinâmica
+✓ Sitemap
+✓ Performance
+✓ Testes

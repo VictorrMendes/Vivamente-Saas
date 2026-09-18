@@ -1,6 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
-import type { ApiErrorBody, Envelope } from "./types";
+import type { ApiErrorBody, Envelope, PaginatedEnvelope } from "./types";
 
 /** Erro estruturado retornado pelo Back (4xx/5xx com corpo RFC-9457-like). */
 export class BackApiError extends Error {
@@ -22,12 +22,7 @@ export class BackUnavailableError extends Error {
   }
 }
 
-/**
- * Cliente HTTP server-side para os endpoints públicos do Back. Desembrulha o
- * envelope `{ data, meta }` e nunca loga corpo de request/response (pode
- * conter dados pessoais em .../appointment-requests).
- */
-export async function backFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function fetchJson(path: string, init?: RequestInit): Promise<unknown> {
   let response: Response;
   try {
     response = await fetch(`${env.backApiUrl}${path}`, {
@@ -48,6 +43,20 @@ export async function backFetch<T>(path: string, init?: RequestInit): Promise<T>
     throw new BackApiError(response.status, body);
   }
 
-  const envelope = (await response.json()) as Envelope<T>;
+  return response.json();
+}
+
+/**
+ * Cliente HTTP server-side para os endpoints públicos do Back. Desembrulha o
+ * envelope `{ data, meta }` e nunca loga corpo de request/response (pode
+ * conter dados pessoais em .../appointment-requests e .../institutional-requests).
+ */
+export async function backFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const envelope = (await fetchJson(path, init)) as Envelope<T>;
   return envelope.data;
+}
+
+/** Igual a `backFetch`, mas para listagens paginadas (`{ data, pagination }`). */
+export async function backFetchPaginated<T>(path: string, init?: RequestInit): Promise<PaginatedEnvelope<T>> {
+  return (await fetchJson(path, init)) as PaginatedEnvelope<T>;
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, HeartHandshake, UsersRound } from "lucide-react";
+import { isMockEnabled } from "@/lib/api/mocks";
 import { CompanyContactForm } from "./form";
 
 export const metadata: Metadata = { title: "Converse com a VivaMente", robots: { index: false, follow: false } };
@@ -19,7 +20,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
         <p className="section-description">{isTherapist ? "Apresente sua atuação e conte por que gostaria de fazer parte da VivaMente." : "Conte o que está buscando. A proposta é ajudar você a conhecer profissionais da rede VivaMente."}</p>
         <p className="contact-note">{isTherapist ? "Esta conversa é uma manifestação de interesse, não um cadastro automático na plataforma." : "Não é necessário compartilhar diagnósticos ou detalhes íntimos. Uma breve apresentação é suficiente para começar."}</p>
       </div>
-      <CompanyContactForm key={audience} audience={audience} />
+      <CompanyContactForm key={audience} audience={audience} isMock={isMockEnabled()} />
     </div>
   );
 }

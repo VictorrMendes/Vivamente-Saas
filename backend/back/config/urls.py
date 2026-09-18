@@ -46,6 +46,7 @@ urlpatterns = [
     path("api/v1/", include("apps.clinical_records.urls")),
     path("api/v1/", include("apps.packages.urls")),
     path("api/v1/", include("apps.payments.urls")),
+    path("api/v1/", include("apps.institutional_requests.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema")),
     # Sempre registrada; FakeTokenView.post() ja recusa (403) fora de DEBUG

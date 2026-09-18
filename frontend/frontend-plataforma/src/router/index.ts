@@ -24,6 +24,12 @@ const router = createRouter({
         { path: 'clientes/:id', name: 'cliente-detail', component: () => import('@/pages/Clientes/ClienteDetailPage.vue'), props: true },
         { path: 'servicos', name: 'servicos', component: () => import('@/pages/Servicos/ServicosPage.vue') },
         {
+          path: 'institucional',
+          name: 'institucional',
+          component: () => import('@/pages/Institucional/InstitucionalPage.vue'),
+          meta: { roles: ['ADMIN'] },
+        },
+        {
           path: 'profissionais',
           name: 'profissionais',
           component: () => import('@/pages/Profissionais/ProfissionaisPage.vue'),

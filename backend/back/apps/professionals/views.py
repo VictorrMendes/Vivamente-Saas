@@ -22,7 +22,11 @@ class ProfessionalViewSet(ProfessionalScopedQuerysetMixin, EnvelopeModelViewSet)
     """
     professional_lookup = "user"
     queryset = Professional.objects.all()
-    filterset_fields = ["is_public"]
+    # user__active: opt-in (?user__active=true) pra quem precisa só de
+    # elegíveis (ex.: seletor de encaminhamento institucional) sem mudar o
+    # comportamento padrão das telas administrativas, que continuam vendo
+    # profissionais inativos pra poder gerenciá-los.
+    filterset_fields = ["is_public", "user__active"]
     search_fields = ["full_name", "slug"]
     ordering_fields = ["full_name", "created_at"]
 

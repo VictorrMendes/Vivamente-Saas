@@ -1,13 +1,10 @@
-docs
 .remember
 .gitignore
 .agents
 .context
-CLAUDE.MD
 .mcp.json
 skills-lock.json
 .codex
-AGENTS.md
 
 # Python / Django
 .venv/

@@ -10,10 +10,10 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const segment = usePathname().split("/")[1];
-  const isProfessional = Boolean(segment) && !["sobre", "contato", "privacidade", "termos"].includes(segment);
+  const isProfessional = Boolean(segment) && !["sobre", "contato", "privacidade", "termos", "terapeutas"].includes(segment);
   const navItems = isProfessional
     ? [{ href: `/${segment}#sobre`, label: "Sobre o profissional" }, { href: `/${segment}#servicos`, label: "Atendimentos" }, { href: "/#a-vivamente", label: "A VivaMente" }]
-    : [{ href: "/#a-vivamente", label: "A VivaMente" }, { href: "/#para-voce", label: "Para você" }, { href: "/#para-terapeutas", label: "Para terapeutas" }];
+    : [{ href: "/#a-vivamente", label: "A VivaMente" }, { href: "/#para-voce", label: "Para você" }, { href: "/terapeutas", label: "Terapeutas" }, { href: "/#para-terapeutas", label: "Para terapeutas" }];
   const cta = isProfessional
     ? { href: `/${segment}/agendar`, label: "Entrar em contato" }
     : { href: "/contato?interesse=atendimento", label: "Encontre seu caminho" };
