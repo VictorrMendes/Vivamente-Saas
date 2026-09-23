@@ -3,6 +3,7 @@ import { backApi, oauthApi } from '@/services/api/client';
 import { ApiError } from '@/services/api/errors';
 import { requestPasswordForgot } from '@/services/api/oauth';
 import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
+import type { UserLookupResult } from './useUserLookup';
 import type {
   InstitutionalRequest,
   InstitutionalRequestKind,
@@ -27,6 +28,8 @@ export function useInstitutionalRequests() {
   const statusError = ref<string | null>(null);
   const accountCreatingIds = ref(new Set<number>());
   const accountCreatedIds = ref(new Set<number>());
+  const emailSentIds = ref(new Set<number>());
+  const emailErrors = ref(new Map<number, string>());
   const accountError = ref<string | null>(null);
 
   function isRowBusy(id: number): boolean {
@@ -127,7 +130,7 @@ export function useInstitutionalRequests() {
     accountError.value = null;
     accountCreatingIds.value.add(id);
     try {
-      await oauthApi('/oauth/v1/users', {
+      if (!accountCreatedIds.value.has(id)) await oauthApi('/oauth/v1/users', {
         method: 'POST',
         body: JSON.stringify({
           email,
@@ -135,16 +138,74 @@ export function useInstitutionalRequests() {
           role: 'THERAPIST',
         }),
       });
-      // Melhor esforço: se o e-mail de definição de senha falhar, a conta já
-      // foi criada mesmo assim - não desfazemos nem bloqueamos o fluxo por
-      // isso, só deixamos de marcar sucesso silenciosamente.
-      await requestPasswordForgot({ email }).catch(() => undefined);
       accountCreatedIds.value.add(id);
+      const emailOk = await performEmailSend(id, email);
       const current = requests.value.find((r) => r.id === id);
-      if (current?.status === 'NEW') await performStatusChange(id, 'IN_PROGRESS');
-      return true;
+      const statusOk = current?.status !== 'NEW' || await performStatusChange(id, 'IN_PROGRESS');
+      return emailOk && statusOk;
     } catch (err) {
       accountError.value = err instanceof ApiError ? err.message : 'Não foi possível criar a conta de acesso. Tente novamente.';
+      return false;
+    } finally {
+      accountCreatingIds.value.delete(id);
+    }
+  }
+
+  async function performEmailSend(id: number, email: string) {
+    emailSentIds.value.delete(id);
+    emailErrors.value.delete(id);
+    try {
+      const result = await requestPasswordForgot({ email });
+      if (!result.sent) throw new Error('Envio não confirmado');
+      emailSentIds.value.add(id);
+      return true;
+    } catch {
+      emailErrors.value.set(id, 'A conta está disponível, mas o envio do e-mail não foi confirmado. Tente enviar novamente.');
+      return false;
+    }
+  }
+
+  async function resendAccessEmail(id: number, email: string) {
+    if (isRowBusy(id) || !accountCreatedIds.value.has(id)) return false;
+    accountCreatingIds.value.add(id);
+    try {
+      return await performEmailSend(id, email);
+    } finally {
+      accountCreatingIds.value.delete(id);
+    }
+  }
+
+  // Retoma após recarregar sem criar outra identidade nem reenviar e-mail
+  // automaticamente. O Back só encontra a conta após a sincronização.
+  async function resumeAccessAccount(id: number, email: string) {
+    if (isRowBusy(id)) return false;
+    accountError.value = null;
+    accountCreatingIds.value.add(id);
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      let page = 1;
+      let account: UserLookupResult | undefined;
+      do {
+        const result = await backApi<PaginatedEnvelope<UserLookupResult>>(
+          `/api/v1/users?${new URLSearchParams({ search: email.trim(), page: String(page), per_page: '100' })}`,
+        );
+        account = result.data.find((user) => user.email.toLowerCase() === normalizedEmail);
+        if (account || page >= result.pagination.total_pages) break;
+        page += 1;
+      } while (true);
+      if (!account) {
+        accountError.value = 'Conta ainda não localizada. Se já foi criada, aguarde a sincronização e tente retomar novamente.';
+        return false;
+      }
+      if (account.role !== 'THERAPIST' || !account.active) {
+        accountError.value = 'A conta localizada precisa ser de terapeuta e estar ativa. Revise o cadastro antes de continuar.';
+        return false;
+      }
+      accountCreatedIds.value.add(id);
+      const current = requests.value.find((r) => r.id === id);
+      return current?.status !== 'NEW' || await performStatusChange(id, 'IN_PROGRESS');
+    } catch (err) {
+      accountError.value = err instanceof ApiError ? err.message : 'Não foi possível localizar a conta. Tente novamente.';
       return false;
     } finally {
       accountCreatingIds.value.delete(id);
@@ -163,11 +224,15 @@ export function useInstitutionalRequests() {
     statusError,
     accountCreatingIds,
     accountCreatedIds,
+    emailSentIds,
+    emailErrors,
     accountError,
     isRowBusy,
     load,
     forward,
     setStatus,
     createAccessAccount,
+    resendAccessEmail,
+    resumeAccessAccount,
   };
 }

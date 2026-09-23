@@ -26,7 +26,7 @@ export default async function TherapistsCatalogPage({ searchParams }: Props) {
 
   return (
     <div className="landing-container catalog-page">
-      <div className="catalog-header">
+      <div className="catalog-header" data-reveal>
         <p className="eyebrow"><span className="eyebrow-dot" /> REDE VIVAMENTE</p>
         <h1 className="section-title">Conheça os<br /><em>terapeutas.</em></h1>
         <p className="section-description">Cada profissional tem uma trajetória própria. Explore os perfis e encontre um caminho que faça sentido para você.</p>
@@ -65,7 +65,7 @@ export default async function TherapistsCatalogPage({ searchParams }: Props) {
         <>
           <ul className="catalog-grid">
             {result.catalog.data.map((professional) => (
-              <li key={professional.slug}>
+              <li key={professional.slug} data-reveal>
                 <Link href={`/${professional.slug}`} className="catalog-card">
                   <div className="catalog-card-portrait"><ProfessionalPortrait name={professional.full_name} photoUrl={professional.photo_url} /></div>
                   <h2>{professional.full_name}</h2>

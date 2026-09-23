@@ -1,3 +1,4 @@
+import { normalizeProfessional, type ProfessionalResponse } from '@/types/professional';
 import { ref } from 'vue';
 import { backApi } from '@/services/api/client';
 import type { PaginatedEnvelope } from '@/types/api';
@@ -24,8 +25,8 @@ export function useMyPublicProfile() {
       // O id do Professional é diferente do id do User (/me) — não dá pra
       // montar a URL direto. GET /professionals sem filtro já vem escopado
       // pro próprio registro quando quem chama é THERAPIST.
-      const res = await backApi<PaginatedEnvelope<Professional>>('/api/v1/professionals?per_page=1');
-      profile.value = res.data[0] ?? null;
+      const res = await backApi<PaginatedEnvelope<ProfessionalResponse>>('/api/v1/professionals?per_page=1');
+      profile.value = res.data[0] ? normalizeProfessional(res.data[0]) : null;
       if (!profile.value) error.value = 'Nenhum perfil profissional encontrado pra sua conta.';
     } catch {
       error.value = 'Não foi possível carregar sua página. Tente novamente em instantes.';
@@ -42,11 +43,11 @@ export function useMyPublicProfile() {
     saved.value = false;
     saving.value = true;
     try {
-      const res = await backApi<ApiEnvelope<Professional>>(`/api/v1/professionals/${profile.value.id}/public-profile`, {
+      const res = await backApi<ApiEnvelope<ProfessionalResponse>>(`/api/v1/professionals/${profile.value.id}/public-profile`, {
         method: 'PATCH',
         body: JSON.stringify(patch),
       });
-      profile.value = res.data;
+      profile.value = normalizeProfessional(res.data);
       saved.value = true;
       return true;
     } catch {

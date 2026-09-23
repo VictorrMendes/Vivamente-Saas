@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Brand } from "./brand";
 
 const FOOTER_LINKS = [
-  { href: "/#a-vivamente", label: "A VivaMente" },
+  { href: "/sobre", label: "A VivaMente" },
   { href: "/privacidade", label: "Privacidade" },
   { href: "/termos", label: "Termos" },
 ];

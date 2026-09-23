@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { getCurrentScope, onScopeDispose, ref } from 'vue';
 import { backApi } from '@/services/api/client';
 import type { PaginatedEnvelope } from '@/types/api';
 
@@ -17,9 +17,19 @@ export function useUserLookup() {
   const results = ref<UserLookupResult[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  let version = 0;
+
+  function invalidate() {
+    version += 1;
+    results.value = [];
+    error.value = null;
+    loading.value = false;
+  }
+  if (getCurrentScope()) onScopeDispose(invalidate);
 
   async function search(email: string) {
-    error.value = null;
+    invalidate();
+    const current = version;
     if (!email.trim()) {
       results.value = [];
       return;
@@ -29,14 +39,15 @@ export function useUserLookup() {
       const res = await backApi<PaginatedEnvelope<UserLookupResult>>(
         `/api/v1/users?search=${encodeURIComponent(email)}&per_page=10`,
       );
-      results.value = res.data;
+      if (current === version) results.value = res.data;
     } catch {
+      if (current !== version) return;
       error.value = 'Não foi possível buscar o usuário. Tente novamente.';
       results.value = [];
     } finally {
-      loading.value = false;
+      if (current === version) loading.value = false;
     }
   }
 
-  return { results, loading, error, search };
+  return { results, loading, error, search, invalidate };
 }

@@ -84,7 +84,7 @@ describe('InstitucionalPage — estado encerrado (terminal) na fila', () => {
 describe('InstitucionalPage — criar conta de acesso a partir de um interesse de terapeuta', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  function stubOnboardingFetch(calls: { users: number; forgot: number; status: number }) {
+  function stubOnboardingFetch(calls: { users: number; forgot: number; status: number }, failFirstEmail = false) {
     return vi.fn((url: string) => {
       if (url.includes('/institutional-requests') && !url.includes('/status')) {
         return Promise.resolve(
@@ -106,6 +106,7 @@ describe('InstitucionalPage — criar conta de acesso a partir de um interesse d
       }
       if (url.includes('/oauth/v1/password/forgot')) {
         calls.forgot += 1;
+        if (failFirstEmail && calls.forgot === 1) return Promise.resolve(new Response('{}', { status: 503 }));
         return Promise.resolve(json({ data: { sent: true } }));
       }
       if (url.includes('/status')) {
@@ -113,6 +114,9 @@ describe('InstitucionalPage — criar conta de acesso a partir de um interesse d
         return Promise.resolve(json({
           data: { id: 7, kind: 'THERAPIST_INTEREST', name: 'Ana Terapeuta', email: 'ana@x.com', phone: '', message: '', status: 'IN_PROGRESS', forwardedTo: null, forwardedLead: null, forwardedAt: null, createdAt: '2026-09-10T10:00:00Z' },
         }));
+      }
+      if (url.includes('/api/v1/users?')) {
+        return Promise.resolve(json({ data: [{ id: 42, email: 'ana@x.com', role: 'THERAPIST', active: true }], pagination: { total_pages: 1 } }));
       }
       return Promise.resolve(json({ data: {} }));
     });
@@ -137,10 +141,51 @@ describe('InstitucionalPage — criar conta de acesso a partir de um interesse d
     expect(calls.users).toBe(1);
     expect(calls.forgot).toBe(1);
     expect(calls.status).toBe(1);
-    expect(wrapper.text()).toContain('Conta de acesso criada');
+    expect(wrapper.text()).toContain('Conta de acesso disponível');
+    expect(wrapper.text()).toContain('Pedido de envio do e-mail de definição de senha aceito');
     const link = wrapper.find('a[href*="/profissionais"]');
     expect(link.exists()).toBe(true);
     expect(link.attributes('href')).toContain('email=ana%40x.com');
     expect(link.attributes('href')).toContain('fullName=Ana');
+  });
+
+  it('mostra falha de e-mail e permite reenviar sem recriar a conta', async () => {
+    setActivePinia(createPinia());
+    useAuthStore().mockLogin('ADMIN');
+    const calls = { users: 0, forgot: 0, status: 0 };
+    vi.stubGlobal('fetch', stubOnboardingFetch(calls, true));
+    const router = buildRouter();
+    await router.push('/institucional');
+    const wrapper = mount(InstitucionalPage, { global: { plugins: [router] } });
+    await flushPromises();
+    await wrapper.findAll('button').find((b) => b.text() === 'Criar conta de acesso')!.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').text()).toContain('envio do e-mail não foi confirmado');
+    expect(wrapper.text()).not.toContain('senha aceito');
+    expect(wrapper.find('a[href*="/profissionais"]').exists()).toBe(true);
+    await wrapper.findAll('button').find((b) => b.text() === 'Enviar e-mail de acesso')!.trigger('click');
+    await flushPromises();
+    expect(calls).toEqual({ users: 1, forgot: 2, status: 1 });
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('senha aceito');
+    wrapper.unmount();
+  });
+
+  it('retoma uma conta existente na tela sem criar outra nem prometer envio anterior', async () => {
+    setActivePinia(createPinia());
+    useAuthStore().mockLogin('ADMIN');
+    const calls = { users: 0, forgot: 0, status: 0 };
+    vi.stubGlobal('fetch', stubOnboardingFetch(calls));
+    const router = buildRouter();
+    await router.push('/institucional');
+    const wrapper = mount(InstitucionalPage, { global: { plugins: [router] } });
+    await flushPromises();
+    await wrapper.findAll('button').find((b) => b.text() === 'Já tem conta? Retomar')!.trigger('click');
+    await flushPromises();
+    expect(calls).toEqual({ users: 0, forgot: 0, status: 1 });
+    expect(wrapper.text()).toContain('Conta de acesso disponível');
+    expect(wrapper.text()).not.toContain('senha aceito');
+    expect(wrapper.find('a[href*="/profissionais"]').exists()).toBe(true);
+    wrapper.unmount();
   });
 });

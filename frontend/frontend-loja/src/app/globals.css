@@ -26,6 +26,11 @@ html { scroll-behavior: smooth; }
 :where(a, button, input, textarea, select, summary):focus-visible { outline: 2px solid var(--color-primary-600); outline-offset: 5px; }
 button, summary { cursor: pointer; }
 .landing-container { width: min(100% - 48px, 1152px); margin-inline: auto; }
+/* Let text and controls shrink inside grids, including long public profile data. */
+main :where(section, form, article, li, .landing-container) { min-width: 0; }
+main :where(h1, h2, h3, p, a, label) { overflow-wrap: anywhere; }
+main :where(input, select, textarea) { min-width: 0; max-width: 100%; }
+.company-hero > *, .purpose-layout > *, .purpose-description > *, .audience-section > *, .invitation-layout > *, .faq-section > *, .company-contact-layout > * { min-width: 0; }
 .section-anchor { scroll-margin-top: 104px; }
 .eyebrow { display: flex; align-items: center; gap: 10px; font-size: var(--text-label); font-weight: 600; letter-spacing: .12em; line-height: 1.6; color: var(--color-primary-700); }
 .eyebrow-dot { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: var(--color-secondary-500); }
@@ -182,6 +187,7 @@ button, summary { cursor: pointer; }
 .catalog-search input:focus { outline: none; }
 .catalog-search select { flex-shrink: 0; max-width: 180px; border: none; border-left: 1px solid var(--color-border); background: transparent; padding-left: 12px; font-size: var(--text-body-sm); color: var(--color-text); }
 .catalog-search select:focus { outline: none; }
+.catalog-search :is(input, select):focus-visible { outline: 2px solid var(--color-primary-600); outline-offset: 3px; }
 .catalog-search .landing-button { min-height: 40px; padding: 10px 18px; gap: 8px; }
 .catalog-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; border-block: 1px solid var(--color-border); padding-block: 48px; margin-top: 48px; }
 .catalog-empty h2 { font-family: var(--font-newsreader), Georgia, serif; font-size: var(--text-h4); }
@@ -282,6 +288,45 @@ button, summary { cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .landing-button, .faq-indicator, .desktop-navigation a { transition: none; }
-  .landing-button:hover { transform: none; }
+  .landing-button, .faq-indicator, .desktop-navigation a, .catalog-card { transition: none; }
+  .landing-button:hover, .catalog-card:hover { transform: none; }
+}
+
+/* Motion is opt-in: server-rendered content is always readable without JS. */
+@media (prefers-reduced-motion: no-preference) {
+  .mobile-navigation { animation: menu-enter 200ms ease-out; }
+  .landing-text-link svg, .catalog-card-cta svg { transition: transform 200ms ease; }
+  .landing-button:active { transform: scale(.98); }
+  @media (hover: hover) and (pointer: fine) {
+    .landing-text-link:hover svg, .catalog-card:hover .catalog-card-cta svg { transform: translate(3px, -3px); }
+  }
+}
+@keyframes menu-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 1023px) {
+  .header-inner { gap: 16px; }
+  .desktop-navigation { gap: 14px; font-size: 13px; }
+  .company-contact-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 32px; }
+}
+@media (max-width: 767px) {
+  .landing-container { width: calc(100% - 32px); }
+  .company-contact-layout { grid-template-columns: minmax(0, 1fr); }
+  .catalog-search { display: grid; grid-template-columns: 20px minmax(0, 1fr); padding: 12px; gap: 12px; }
+  .catalog-search input { width: 100%; min-height: 44px; font-size: 16px; }
+  .catalog-search select { grid-column: 1 / -1; width: 100%; max-width: none; min-height: 48px; border-left: none; border-top: 1px solid var(--color-border); padding: 12px 0; font-size: 16px; }
+  .catalog-search button { grid-column: 1 / -1; width: 100%; }
+  .catalog-pagination { flex-wrap: wrap; gap: 16px; }
+  .company-contact-panel { padding: 20px; }
+  .mobile-menu-button { flex-shrink: 0; }
+  .mobile-navigation { max-height: calc(100dvh - 72px); overflow-y: auto; }
+  .landing-actions { align-items: stretch; gap: 12px; }
+  .landing-actions > a { min-height: 48px; }
+}
+@media (max-width: 359px) {
+  .company-hero .landing-actions { flex-direction: column; }
+  .company-hero .landing-text-link { align-self: center; }
+  .connection-art { padding-inline: 24px; }
+  .art-bottom { gap: 12px; }
 }

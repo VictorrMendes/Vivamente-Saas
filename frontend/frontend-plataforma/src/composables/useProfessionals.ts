@@ -1,3 +1,4 @@
+import { normalizeProfessional, type ProfessionalResponse } from '@/types/professional';
 import { ref } from 'vue';
 import { backApi } from '@/services/api/client';
 import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
@@ -28,8 +29,8 @@ export function useProfessionals() {
     if (params.search) query.set('search', params.search);
 
     try {
-      const res = await backApi<PaginatedEnvelope<Professional>>(`/api/v1/professionals?${query}`);
-      professionals.value = res.data;
+      const res = await backApi<PaginatedEnvelope<ProfessionalResponse>>(`/api/v1/professionals?${query}`);
+      professionals.value = res.data.map(normalizeProfessional);
       pagination.value = res.pagination;
     } catch {
       error.value = 'Não foi possível carregar os profissionais. Tente novamente em instantes.';
@@ -44,7 +45,7 @@ export function useProfessionals() {
     saveError.value = null;
     saving.value = true;
     try {
-      const res = await backApi<ApiEnvelope<Professional>>('/api/v1/professionals', {
+      const res = await backApi<ApiEnvelope<ProfessionalResponse>>('/api/v1/professionals', {
         method: 'POST',
         body: JSON.stringify(professional),
       });

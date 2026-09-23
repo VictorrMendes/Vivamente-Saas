@@ -118,6 +118,7 @@ export function CompanyContactForm({ audience, isMock }: { audience: "atendiment
             {state.fieldErrors.message && <p id="company-message-error" className="text-body-sm text-error">{state.fieldErrors.message}</p>}
           </div>
 
+          <p className="text-caption text-text-muted">Usamos os dados para responder e, quando você pede uma indicação, encaminhar o contato a um profissional. Leia a <Link href="/privacidade" className="underline">Política de Privacidade</Link> e os <Link href="/termos" className="underline">Termos de Uso</Link>. Não envie informações sensíveis na mensagem.</p>
           <SubmitButton label={isTherapist ? "Enviar interesse" : "Enviar solicitação"} />
           <p className="text-caption text-text-muted">
             {isTherapist

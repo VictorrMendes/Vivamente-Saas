@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowDown, ArrowUpRight, Clock3, HeartHandshake, Leaf, MapPin, MessageCircle, Plus, Video } from "lucide-react";
 import type { PublicProfessional, PublicService } from "@/lib/api/types";
-import { formatPrice, getInitials } from "@/lib/format";
+import { getInitials } from "@/lib/format";
 import { ProfessionalPortrait } from "./professional-portrait";
 import styles from "./professional-storefront.module.css";
 
@@ -12,7 +12,7 @@ const modalityLabels: Record<PublicService["modality"], string> = {
 const questions = [
   ["Preciso saber qual atendimento escolher?", "Não. Você pode enviar uma solicitação sem escolher um serviço ou horário. Conte brevemente o que procura e converse com o profissional sobre as possibilidades."],
   ["A solicitação já confirma minha consulta?", "Ainda não. O formulário inicia o contato. A consulta só fica confirmada depois que você e o profissional combinam os detalhes."],
-  ["Como saber a modalidade e o valor?", "Cada atendimento informa sua modalidade, duração e valor quando cadastrados. Se o valor estiver sob consulta, combine os detalhes diretamente com o profissional antes de confirmar."],
+  ["Como conhecer os detalhes do atendimento?", "Explore a apresentação e a modalidade de cada atendimento. Para tirar outras dúvidas e combinar os detalhes, converse diretamente com o profissional antes de confirmar."],
 ];
 
 export function ProfessionalStorefront({ professional }: { professional: PublicProfessional }) {
@@ -32,7 +32,7 @@ export function ProfessionalStorefront({ professional }: { professional: PublicP
       <nav className={styles.sectionNav} aria-label="Explore o perfil">
         <div className="landing-container">
           <a href="#servicos"><HeartHandshake size={18} aria-hidden />Atendimentos</a>
-          <a href="#sobre"><Leaf size={18} aria-hidden />Conheça o profissional</a>
+          <a href="#sobre"><Leaf size={18} aria-hidden />Sobre o profissional</a>
           <a href="#como-funciona"><Clock3 size={18} aria-hidden />Como começar</a>
           <a href="#duvidas"><MessageCircle size={18} aria-hidden />Dúvidas frequentes</a>
         </div>
@@ -40,7 +40,7 @@ export function ProfessionalStorefront({ professional }: { professional: PublicP
 
       <section className={styles.hero} aria-labelledby="profile-heading">
         <div className={`landing-container ${styles.heroGrid}`}>
-          <div className={styles.heroCopy}>
+          <div className={styles.heroCopy} data-reveal>
             <p className={styles.eyebrow}><Leaf size={16} aria-hidden /> VIVAMENTE · CONEXÕES PARA O CUIDADO</p>
             <h1 id="profile-heading">Cuidar de você começa com <em>uma boa conversa.</em></h1>
             <p>Um encontro com {professional.full_name}. Conheça os atendimentos e encontre um primeiro passo que faça sentido para o seu momento.</p>
@@ -50,7 +50,7 @@ export function ProfessionalStorefront({ professional }: { professional: PublicP
             </div>
             <span className={styles.heroNote}>No seu tempo. Com espaço para as suas perguntas.</span>
           </div>
-          <div className={styles.profileCard}>
+          <div className={styles.profileCard} data-reveal>
             <ProfessionalPortrait name={professional.full_name} photoUrl={professional.photo_url} />
             <div className={styles.profileCaption}>
               <span>CONHEÇA QUEM VAI TE ATENDER</span>
@@ -66,19 +66,18 @@ export function ProfessionalStorefront({ professional }: { professional: PublicP
       </div>
 
       <section id="servicos" className={`landing-container ${styles.services} ${styles.anchor}`} aria-labelledby="services-heading">
-        <div className={styles.sectionHeading}>
+        <div className={styles.sectionHeading} data-reveal>
           <div><p className={styles.eyebrow}>POSSIBILIDADES PARA O SEU MOMENTO</p><h2 id="services-heading">Encontre seu caminho<br />para o cuidado.</h2></div>
           <p>Explore os atendimentos de {professional.full_name}. Os detalhes são combinados diretamente com o profissional.</p>
         </div>
         {professional.services.length > 0 ? (
           <ul className={styles.serviceGrid}>
             {professional.services.map((service) => (
-              <li key={service.id} className={styles.serviceCard}>
+              <li key={service.id} className={styles.serviceCard} data-reveal>
                 <div className={styles.serviceTop}><span className={styles.serviceIcon}>{service.modality === "IN_PERSON" ? <MapPin size={26} aria-hidden /> : <Video size={26} aria-hidden />}</span><span>{modalityLabels[service.modality]}</span></div>
                 <h3>{service.name}</h3>
                 {service.description && <p className={styles.serviceDescription}>{service.description}</p>}
-                <div className={styles.serviceDetails}><span><Clock3 size={16} aria-hidden /> {service.duration_minutes} minutos</span><strong>{formatPrice(service.price)}</strong></div>
-                <Link className={styles.serviceAction} href={contactHref} aria-label={`Conversar sobre ${service.name}`}>Quero saber mais <ArrowUpRight size={17} aria-hidden /></Link>
+                <div className={styles.serviceFooter}><Link className={styles.serviceAction} href={contactHref} aria-label={`Quero saber mais sobre ${service.name}`}>Quero saber mais <ArrowUpRight size={17} aria-hidden /></Link></div>
               </li>
             ))}
           </ul>
@@ -87,7 +86,7 @@ export function ProfessionalStorefront({ professional }: { professional: PublicP
       </section>
 
       <section id="sobre" className={`${styles.about} ${styles.anchor}`} aria-labelledby="about-heading">
-        <div className={`landing-container ${styles.aboutGrid}`}>
+        <div className={`landing-container ${styles.aboutGrid}`} data-reveal>
           <div><p className={styles.eyebrow}>POR TRÁS DO ATENDIMENTO</p><h2 id="about-heading">Prazer,<br />{professional.full_name}.</h2>{professional.registration && <p className={styles.registration}>{professional.registration}</p>}</div>
           <div><p className={styles.bio}>{professional.bio || "Conheça o trabalho deste profissional em uma primeira conversa. Tire suas dúvidas sobre os atendimentos e as possibilidades de cuidado."}</p>
             {professional.specialties.length > 0 && <><h3 className={styles.specialtiesLabel}>Áreas de atuação</h3><ul className={styles.specialties}>{professional.specialties.map(specialty => <li key={specialty.id}>{specialty.name}</li>)}</ul></>}
@@ -98,19 +97,19 @@ export function ProfessionalStorefront({ professional }: { professional: PublicP
 
       <section id="como-funciona" className={`landing-container ${styles.process} ${styles.anchor}`} aria-labelledby="process-heading">
         <p className={styles.eyebrow}>SIMPLES, DESDE O PRIMEIRO PASSO</p><h2 id="process-heading">Do seu jeito. No seu tempo.</h2>
-        <ol className={styles.steps}>
+        <ol className={styles.steps} data-reveal>
           <li><span>01</span><h3>Conte o que procura</h3><p>Envie uma solicitação. Serviço e horário de preferência são opcionais.</p></li>
-          <li><span>02</span><h3>Converse com o profissional</h3><p>Alinhe modalidade, disponibilidade, valores e suas dúvidas sobre o atendimento.</p></li>
+          <li><span>02</span><h3>Converse com o profissional</h3><p>Alinhe modalidade, disponibilidade e suas dúvidas sobre o atendimento.</p></li>
           <li><span>03</span><h3>Combinem o encontro</h3><p>A consulta fica confirmada quando os detalhes forem acordados entre vocês.</p></li>
         </ol>
       </section>
 
-      <section id="duvidas" className={`landing-container ${styles.faq} ${styles.anchor}`} aria-labelledby="faq-heading">
+      <section id="duvidas" className={`landing-container ${styles.faq} ${styles.anchor}`} aria-labelledby="faq-heading" data-reveal>
         <div><p className={styles.eyebrow}>ANTES DE COMEÇAR</p><h2 id="faq-heading">Podemos esclarecer<br />algumas dúvidas.</h2></div>
         <div>{questions.map(([question, answer]) => <details key={question}><summary>{question}<Plus size={19} aria-hidden /></summary><p>{answer}</p></details>)}</div>
       </section>
 
-      <section className={`landing-container ${styles.invitation}`} aria-labelledby="invitation-heading">
+      <section className={`landing-container ${styles.invitation}`} aria-labelledby="invitation-heading" data-reveal>
         <div><p className={styles.eyebrow}>O PRÓXIMO PASSO É SEU</p><h2 id="invitation-heading">Uma conversa pode<br />ser um bom começo.</h2><p>Fale com {professional.full_name} para conhecer as possibilidades.</p></div>
         <div><Link href={contactHref} className={styles.lightButton}>Solicitar atendimento <ArrowUpRight size={18} aria-hidden /></Link><small>Enviar uma solicitação não confirma uma consulta.</small></div>
       </section>

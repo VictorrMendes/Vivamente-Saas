@@ -1,33 +1,17 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted } from 'vue';
 import { Settings } from '@lucide/vue';
 import { useMe } from '@/composables/useMe';
 import { useTheme } from '@/composables/useTheme';
-import { useAuthStore } from '@/stores/auth';
 import type { ThemePreference } from '@/composables/useTheme';
 import Badge from '@/components/ui/Badge.vue';
-import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
-import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
-const router = useRouter();
-const auth = useAuthStore();
-const { me, loading, error, revoking, revokeError, load, revokeAllSessions } = useMe();
+const { me, loading, error, load } = useMe();
 const { theme, setTheme } = useTheme();
 
 const THEME_LABEL: Record<ThemePreference, string> = { system: 'Automático (sistema)', light: 'Claro', dark: 'Escuro' };
-
-const revokeConfirmOpen = ref(false);
-async function handleRevokeConfirmed() {
-  revokeConfirmOpen.value = false;
-  const ok = await revokeAllSessions();
-  if (ok) {
-    await auth.logout();
-    router.push({ name: 'login' });
-  }
-}
 
 onMounted(load);
 </script>
@@ -83,26 +67,6 @@ onMounted(load);
           </p>
         </div>
       </div>
-
-      <div class="mt-6 rounded-lg border border-border bg-surface p-4">
-        <h2 class="mb-1 font-display text-h6 text-text">Segurança</h2>
-        <p class="mb-3 text-body-sm text-text-muted">
-          Encerra sua sessão neste e em qualquer outro dispositivo conectado com esta conta.
-        </p>
-        <Button variant="destructive" size="sm" :loading="revoking" @click="revokeConfirmOpen = true">
-          Encerrar todas as sessões
-        </Button>
-        <p v-if="revokeError" role="alert" class="mt-2 text-body-sm text-error">{{ revokeError }}</p>
-      </div>
     </template>
-
-    <ConfirmDialog
-      :open="revokeConfirmOpen"
-      title="Encerrar todas as sessões"
-      description="Você será desconectado deste e de todos os outros dispositivos. Será preciso entrar novamente."
-      confirm-label="Encerrar sessões"
-      @update:open="(v) => { revokeConfirmOpen = v; }"
-      @confirm="handleRevokeConfirmed"
-    />
   </div>
 </template>

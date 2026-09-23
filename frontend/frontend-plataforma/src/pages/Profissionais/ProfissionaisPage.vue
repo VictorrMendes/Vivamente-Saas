@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { UserCog } from '@lucide/vue';
 import { useProfessionals } from '@/composables/useProfessionals';
@@ -15,7 +15,7 @@ const router = useRouter();
 const route = useRoute();
 const { professionals, pagination, showLoading, error, saving, saveError, load, create } = useProfessionals();
 const { specialties, load: loadSpecialties, create: createSpecialty } = useSpecialties();
-const { results: userResults, loading: userSearchLoading, error: userSearchError, search: searchUsers } = useUserLookup();
+const { results: userResults, loading: userSearchLoading, error: userSearchError, search: searchUsers, invalidate: invalidateUserSearch } = useUserLookup();
 
 const search = ref('');
 const page = ref(1);
@@ -35,10 +35,15 @@ function selectUser(user: UserLookupResult) {
 
 let userSearchTimer: ReturnType<typeof setTimeout>;
 watch(userSearch, (value) => {
+  invalidateUserSearch();
   if (selectedUser.value && value !== selectedUser.value.email) selectedUser.value = null;
   newProfessional.user = 0;
   clearTimeout(userSearchTimer);
   userSearchTimer = setTimeout(() => searchUsers(value), 400);
+});
+onUnmounted(() => {
+  clearTimeout(userSearchTimer);
+  clearTimeout(searchTimer);
 });
 
 function toggleSpecialty(id: number) {
@@ -118,7 +123,7 @@ onMounted(() => {
         O profissional precisa de uma conta já existente (Firebase) — busque pelo e-mail e confirme a pessoa certa.
       </p>
       <div class="flex flex-wrap gap-3">
-        <div class="min-w-[240px]">
+        <div class="min-w-0 w-full sm:w-auto sm:min-w-[240px]">
           <label for="prof-user-search" class="mb-1 block text-label uppercase tracking-label text-text-muted">Conta de acesso (e-mail)</label>
           <input
             id="prof-user-search"
@@ -195,7 +200,7 @@ onMounted(() => {
             {{ specialty.name }}
           </label>
         </div>
-        <div class="mt-2 flex items-end gap-2">
+        <div class="mt-2 flex flex-wrap items-end gap-2">
           <input
             v-model="newSpecialtyName"
             type="text"

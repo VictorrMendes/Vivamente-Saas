@@ -25,7 +25,7 @@ export default function Home() {
   return (
     <div className="company-landing">
       <section className="landing-container company-hero" aria-labelledby="company-title">
-        <div className="company-hero-copy">
+        <div className="company-hero-copy" data-reveal>
           <p className="eyebrow"><span className="eyebrow-dot" /> VIVAMENTE TERAPIAS</p>
           <h1 id="company-title" className="hero-title">Cuidar começa<br />com uma boa<br /><em>conexão.</em></h1>
           <p className="hero-description">Entre quem busca acolhimento e quem escolheu cuidar, existe um encontro. A VivaMente ajuda esse encontro a acontecer.</p>
@@ -35,7 +35,7 @@ export default function Home() {
           </div>
           <a className="hero-explore" href="#a-vivamente"><ArrowDown size={16} aria-hidden /> Conheça o nosso propósito</a>
         </div>
-        <div className="connection-art" aria-hidden="true">
+        <div className="connection-art" aria-hidden="true" data-reveal>
           <div className="connection-art-grid" />
           <span className="art-caption">PESSOAS, ANTES DE TUDO.</span>
           <div className="connection-arches"><span /><span /></div>
@@ -45,7 +45,7 @@ export default function Home() {
       </section>
 
       <section id="a-vivamente" className="company-purpose section-anchor" aria-labelledby="purpose-title">
-        <div className="landing-container purpose-layout">
+        <div className="landing-container purpose-layout" data-reveal>
           <p className="eyebrow">NOSSO PROPÓSITO</p>
           <div>
             <h2 id="purpose-title" className="section-title">Pessoas que precisam de cuidado.<br /><span className="text-text-muted">Pessoas que fazem do cuidado seu trabalho.</span></h2>
@@ -55,7 +55,7 @@ export default function Home() {
       </section>
 
       <section id="para-voce" className="landing-container audience-section section-anchor" aria-labelledby="patient-title">
-        <div className="audience-intro">
+        <div className="audience-intro" data-reveal>
           <span className="section-symbol"><HeartHandshake size={25} strokeWidth={1.4} aria-hidden /></span>
           <p className="eyebrow">PARA QUEM BUSCA ATENDIMENTO</p>
           <h2 id="patient-title" className="section-title">O primeiro passo<br />não precisa ser<br /><em>sozinho.</em></h2>
@@ -64,14 +64,14 @@ export default function Home() {
         </div>
         <ol id="como-funciona" className="patient-steps section-anchor">
           {patientSteps.map((step, index) => (
-            <li key={step.title}><span className="step-number">0{index + 1}</span><div><h3>{step.title}</h3><p>{step.text}</p></div></li>
+            <li key={step.title} data-reveal><span className="step-number">0{index + 1}</span><div><h3>{step.title}</h3><p>{step.text}</p></div></li>
           ))}
           <li className="steps-note"><MessageCircle size={18} aria-hidden /><p>Um pedido de atendimento abre uma conversa. A consulta é confirmada depois, com o profissional.</p></li>
         </ol>
       </section>
 
       <section id="para-terapeutas" className="therapist-invitation section-anchor" aria-labelledby="therapist-title">
-        <div className="landing-container invitation-layout">
+        <div className="landing-container invitation-layout" data-reveal>
           <div>
             <p className="eyebrow">PARA QUEM ESCOLHEU CUIDAR</p>
             <h2 id="therapist-title" className="section-title">Seu trabalho merece<br /><em>novas conexões.</em></h2>
@@ -86,7 +86,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="perguntas" className="landing-container faq-section section-anchor" aria-labelledby="faq-title">
+      <section id="perguntas" className="landing-container faq-section section-anchor" aria-labelledby="faq-title" data-reveal>
         <div><p className="eyebrow">ANTES DO PRIMEIRO PASSO</p><h2 id="faq-title" className="section-title">Vamos esclarecer<br />algumas dúvidas?</h2></div>
         <div className="faq-list">{questions.map(({ question, answer }) => <details key={question}><summary>{question}<span className="faq-indicator" aria-hidden>+</span></summary><p>{answer}</p></details>)}</div>
       </section>

@@ -27,12 +27,16 @@ const {
   statusError,
   accountCreatingIds,
   accountCreatedIds,
+  emailSentIds,
+  emailErrors,
   accountError,
   isRowBusy,
   load,
   forward,
   setStatus,
   createAccessAccount,
+  resendAccessEmail,
+  resumeAccessAccount,
 } = useInstitutionalRequests();
 const { professionals, loading: targetsLoading, error: targetsError, load: loadTargets } = useForwardTargets();
 
@@ -209,7 +213,12 @@ onMounted(() => {
           <!-- Interesse de terapeuta: acompanhamento + onboarding (criar conta -> criar perfil). Encerrado é terminal — sem botões, só o indicador. -->
           <div v-else-if="item.status !== 'CLOSED'" class="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
             <template v-if="accountCreatedIds.has(item.id)">
-              <span class="text-body-sm text-success">Conta de acesso criada — e-mail de definição de senha enviado.</span>
+              <span class="text-body-sm text-success">Conta de acesso disponível.</span>
+              <span v-if="emailSentIds.has(item.id)" role="status" class="text-body-sm text-success">Pedido de envio do e-mail de definição de senha aceito.</span>
+              <p v-if="emailErrors.has(item.id)" role="alert" class="text-body-sm text-error">{{ emailErrors.get(item.id) }}</p>
+              <Button size="sm" variant="secondary" :disabled="isRowBusy(item.id)" :loading="accountCreatingIds.has(item.id)" @click="resendAccessEmail(item.id, item.email)">
+                {{ emailSentIds.has(item.id) ? 'Reenviar e-mail de acesso' : 'Enviar e-mail de acesso' }}
+              </Button>
               <RouterLink :to="newProfessionalLink(item)" class="text-body-sm text-primary-600 underline">Criar perfil profissional →</RouterLink>
             </template>
             <Button
@@ -220,6 +229,9 @@ onMounted(() => {
               @click="handleCreateAccount(item.id, item.email)"
             >
               Criar conta de acesso
+            </Button>
+            <Button v-if="!accountCreatedIds.has(item.id)" size="sm" variant="secondary" :disabled="isRowBusy(item.id)" @click="resumeAccessAccount(item.id, item.email)">
+              Já tem conta? Retomar
             </Button>
             <Button
               v-if="item.status === 'NEW'"

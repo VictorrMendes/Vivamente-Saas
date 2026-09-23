@@ -1,3 +1,4 @@
+import { normalizeProfessional, type ProfessionalResponse } from '@/types/professional';
 import { computed, ref } from 'vue';
 import { backApi } from '@/services/api/client';
 import type { PaginatedEnvelope } from '@/types/api';
@@ -21,8 +22,8 @@ export function useProfessionalOptions() {
       let page = 1;
       let totalPages = 1;
       do {
-        const res = await backApi<PaginatedEnvelope<Professional>>(`/api/v1/professionals?page=${page}&per_page=100`);
-        all.push(...res.data);
+        const res = await backApi<PaginatedEnvelope<ProfessionalResponse>>(`/api/v1/professionals?page=${page}&per_page=100`);
+        all.push(...res.data.map(normalizeProfessional));
         totalPages = res.pagination.total_pages;
         page += 1;
       } while (page <= totalPages);

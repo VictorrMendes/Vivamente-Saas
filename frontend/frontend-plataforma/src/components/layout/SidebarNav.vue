@@ -11,7 +11,7 @@ const emit = defineEmits<{ navigate: [] }>();
 </script>
 
 <template>
-  <nav class="flex-1 space-y-1 px-3 py-4" aria-label="Navegação principal">
+  <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Navegação principal">
     <RouterLink
       v-for="item in items"
       :key="item.to"

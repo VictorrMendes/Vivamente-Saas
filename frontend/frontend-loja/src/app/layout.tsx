@@ -3,6 +3,7 @@ import { Newsreader, Public_Sans } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { PageMotion } from "@/components/page-motion";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col font-body">
         <a href="#conteudo" className="skip-link">Pular para o conteúdo</a>
         <Header />
-        <main id="conteudo" className="flex-1">{children}</main>
+        <PageMotion>{children}</PageMotion>
         <Footer />
       </body>
     </html>

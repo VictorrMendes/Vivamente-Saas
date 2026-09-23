@@ -1,21 +1,32 @@
 import type { Metadata } from "next";
-import { PendingContentNotice } from "@/components/pending-content-notice";
+import Link from "next/link";
+import { InstitutionalDocument } from "../../components/institutional-document";
+import { LegalIdentity } from "../../components/legal-identity";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
+  description: "Como a VivaMente trata as informações do site público, suas finalidades e os direitos de quem entra em contato.",
+  alternates: { canonical: "/privacidade" },
   robots: { index: false },
 };
 
 export default function PrivacidadePage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
-      <h1 className="font-display text-h3 text-text sm:text-h2">Política de Privacidade</h1>
-      <div className="mt-6">
-        <PendingContentNotice>
-          Pendência de conteúdo: o texto jurídico da Política de Privacidade ainda não foi
-          definido. Não publique esta página em produção sem revisão jurídica.
-        </PendingContentNotice>
-      </div>
-    </div>
+    <InstitutionalDocument
+      title="Política de Privacidade"
+      introduction="Esta política explica quais informações são usadas no site público da VivaMente, por que elas são necessárias e como você pode exercer seus direitos."
+      updatedAt="22 de setembro de 2026"
+      sections={[
+        { id: "responsavel", title: "Quem é responsável", content: <><p>A VivaMente organiza o site público e o recebimento das solicitações institucionais. O profissional que recebe um pedido também utiliza as informações para responder e conduzir a relação com você.</p><LegalIdentity /><p>Esta política cobre o catálogo e os formulários públicos. Registros de atendimento e o uso da plataforma profissional têm contexto próprio e devem ser informados na relação com o profissional.</p></> },
+        { id: "dados", title: "Quais informações usamos", content: <ul><li><strong>Contato com a equipe:</strong> nome, e-mail, telefone opcional, tipo de interesse e mensagem. Para terapeutas, a área de atuação também pode ser informada.</li><li><strong>Pedido a um profissional:</strong> nome, e-mail, telefone opcional e mensagem. Serviço e horário de preferência são opcionais.</li><li><strong>Perfil público:</strong> nome, apresentação, foto quando cadastrada, registro profissional, especialidades e apresentação dos serviços publicados.</li><li><strong>Dados técnicos:</strong> informações da requisição, como endereço IP, podem ser processadas pelos serviços que recebem o acesso, inclusive para controlar abuso e excesso de solicitações.</li></ul> },
+        { id: "finalidades", title: "Finalidades do tratamento", content: <><p>Usamos as informações para responder ao contato, apresentar possibilidades da rede, encaminhar pedidos e acompanhar o interesse de terapeutas. Nome, e-mail e mensagem são necessários para processar os formulários; sem eles, a solicitação não pode ser enviada.</p><p>Pedidos relacionados a uma possível contratação podem envolver procedimentos preliminares solicitados por você. Obrigações legais e proteção de direitos também podem justificar tratamentos específicos. Medidas de segurança devem considerar sua necessidade e os direitos da pessoa afetada. Quando um tratamento exigir consentimento, ele deverá ser solicitado de forma específica.</p></> },
+        { id: "compartilhamento", title: "Quem recebe os dados", content: <><p>Solicitações institucionais são recebidas pela equipe responsável. Um pedido de indicação pode ser encaminhado a um profissional da rede, junto com os dados de contato e a mensagem necessários para responder. Quando você usa o formulário de um perfil, o pedido é direcionado àquele profissional.</p><p>Fornecedores de hospedagem, banco de dados e comunicação podem processar informações para viabilizar o serviço. Os formulários não publicam seu nome, e-mail ou mensagem no catálogo.</p><p>Os fornecedores, locais de processamento e eventuais transferências internacionais da operação de produção serão informados na versão definitiva desta política.</p></> },
+        { id: "sensibilidade", title: "Informações sensíveis", content: <><p>Não envie diagnósticos, exames, prontuários, documentos de identificação ou detalhes íntimos. Dados sobre saúde podem ser sensíveis e exigem cuidados adicionais. Estes formulários servem ao primeiro contato e não se destinam a uma avaliação clínica.</p><p>Evite incluir informações de terceiros. Quando o pedido envolver uma criança ou adolescente, o contato deve ser conduzido pelo responsável legal, sem expor informações sensíveis no campo de mensagem.</p></> },
+        { id: "conservacao", title: "Conservação e segurança", content: <><p>A proposta é conservar as informações pelo período necessário ao atendimento da solicitação, ao acompanhamento da relação e às obrigações aplicáveis. A análise de um pedido de exclusão considera essas finalidades e eventuais necessidades de conservação previstas em lei; isso não significa exclusão automática de todos os registros.</p><p>O sistema utiliza permissões para restringir o acesso aos contatos. A operação deve incluir proteção das comunicações, gestão de acessos e backups. Nenhum sistema oferece segurança absoluta.</p></> },
+        { id: "navegacao", title: "Cookies e navegação", content: <><p>Não é necessário criar conta para consultar a Loja. A implementação atual do site público não inclui ferramentas de publicidade ou análise de audiência. Serviços técnicos de hospedagem podem processar informações necessárias à navegação e à segurança.</p><p>Se forem adicionadas tecnologias que exijam uma escolha sua, as finalidades e as opções correspondentes deverão ser apresentadas antes de sua utilização.</p></> },
+        { id: "direitos", title: "Seus direitos e contato", content: <><p>Conforme a LGPD, você pode solicitar informações sobre o tratamento, acesso e correção, além de pedir anonimização, bloqueio ou eliminação quando cabíveis. Também pode solicitar informações sobre compartilhamento e exercer os direitos relacionados a consentimento e portabilidade nas condições aplicáveis.</p><p>O atendimento pode exigir uma verificação proporcional de identidade para proteger seus dados. O canal desta versão é fictício; o endereço ativo será publicado com a identificação da responsável.</p><p>Consulte as orientações da <a href="https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares">ANPD sobre os direitos dos titulares</a> e a <a href="https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm">Lei Geral de Proteção de Dados</a>.</p></> },
+        { id: "alteracoes", title: "Atualizações", content: <><p>A data no início identifica a última atualização. Mudanças relevantes nas finalidades, no compartilhamento ou nos canais de atendimento deverão ser apresentadas com clareza.</p><p>Veja também os <Link href="/termos">Termos de Uso</Link> para entender o funcionamento das solicitações.</p></> },
+      ]}
+    />
   );
 }

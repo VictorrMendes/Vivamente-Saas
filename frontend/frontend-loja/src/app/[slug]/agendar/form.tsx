@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useFormStatus } from "react-dom";
+import Link from "next/link";
 import type { AvailabilitySlot, PublicService } from "@/lib/api/types";
 import { submitAppointmentRequest, type ActionState } from "./actions";
 
@@ -221,6 +222,7 @@ export function AppointmentForm({ slug, services, slots }: Props) {
         )}
       </div>
 
+      <p className="text-caption text-text-muted">Seus dados e sua mensagem serão direcionados ao profissional deste perfil para responder ao contato. Leia a <Link href="/privacidade" className="underline">Política de Privacidade</Link> e os <Link href="/termos" className="underline">Termos de Uso</Link>. Não envie diagnósticos ou documentos pela mensagem.</p>
       <SubmitButton />
     </form>
   );

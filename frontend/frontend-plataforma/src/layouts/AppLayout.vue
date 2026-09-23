@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterView, RouterLink, useRouter } from 'vue-router';
 import {
   LayoutDashboard,
@@ -15,10 +15,12 @@ import {
   Settings,
   Menu,
   Inbox,
+  LogOut,
   type LucideIcon,
 } from '@lucide/vue';
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, VisuallyHidden } from 'reka-ui';
 import { useAuthStore } from '@/stores/auth';
+import { useMyPublicProfile } from '@/composables/useMyPublicProfile';
 import type { UserRole } from '@/types/auth';
 import SidebarNav from '@/components/layout/SidebarNav.vue';
 import SidebarProfile from '@/components/layout/SidebarProfile.vue';
@@ -49,12 +51,23 @@ const navItems: NavItem[] = [
 const auth = useAuthStore();
 const router = useRouter();
 const mobileNavOpen = ref(false);
+const areaLabel = computed(() => auth.role === 'ADMIN' ? 'Área administrativa' : 'Área do terapeuta');
 
 const visibleNavItems = computed(() =>
   navItems
     .filter((item) => !item.roles || (auth.role && item.roles.includes(auth.role)))
     .map((item, index) => ({ ...item, number: String(index + 1).padStart(2, '0') })),
 );
+
+// O User da conta não tem campo de nome (só e-mail) - o nome de verdade só
+// existe no Professional, e só pra THERAPIST. Busca uma vez aqui (raiz do
+// shell autenticado) e repassa pro header e pro SidebarProfile (2 instâncias:
+// mobile e desktop), em vez de cada um buscar por conta própria.
+const { profile: myProfile, load: loadMyProfile } = useMyPublicProfile();
+onMounted(() => {
+  if (auth.role === 'THERAPIST') loadMyProfile();
+});
+const displayName = computed(() => (auth.role === 'THERAPIST' ? myProfile.value?.fullName : null) || auth.user?.email || '');
 
 async function handleLogout() {
   await auth.logout();
@@ -65,12 +78,12 @@ async function handleLogout() {
 
 <template>
   <div class="flex min-h-screen bg-background">
-    <aside class="sidebar-dark hidden w-64 shrink-0 flex-col rounded-r-3xl bg-primary-900 lg:flex">
-      <div class="flex h-16 items-center gap-2 px-6">
+    <aside class="sidebar-dark sticky top-0 hidden h-dvh w-64 shrink-0 flex-col rounded-r-3xl bg-primary-900 lg:flex">
+      <div class="flex h-16 shrink-0 items-center gap-2 px-6">
         <span class="font-display text-h6 tracking-tight text-text-inverse">VivaMente</span>
       </div>
       <SidebarNav :items="visibleNavItems" />
-      <SidebarProfile @logout="handleLogout" />
+      <SidebarProfile :display-name="displayName" @logout="handleLogout" />
     </aside>
 
     <DialogRoot v-model:open="mobileNavOpen">
@@ -82,7 +95,7 @@ async function handleLogout() {
           <VisuallyHidden as-child>
             <DialogTitle>Menu de navegação</DialogTitle>
           </VisuallyHidden>
-          <div class="flex h-16 items-center justify-between px-6">
+          <div class="flex h-16 shrink-0 items-center justify-between px-6">
             <span class="font-display text-h6 tracking-tight text-text-inverse">VivaMente</span>
             <button
               type="button"
@@ -94,13 +107,13 @@ async function handleLogout() {
             </button>
           </div>
           <SidebarNav :items="visibleNavItems" @navigate="mobileNavOpen = false" />
-          <SidebarProfile @logout="handleLogout" />
+          <SidebarProfile :display-name="displayName" @logout="handleLogout" />
         </DialogContent>
       </DialogPortal>
     </DialogRoot>
 
     <div class="flex min-w-0 flex-1 flex-col">
-      <header class="flex h-16 items-center gap-3 border-b border-border bg-surface px-4 lg:px-6">
+      <header class="sticky top-0 z-30 flex min-h-16 shrink-0 items-center gap-2 border-b border-border bg-surface px-4 py-2 lg:gap-3 lg:px-6">
         <button
           type="button"
           class="rounded-md p-1.5 text-text-muted hover:bg-surface-sunken hover:text-text lg:hidden"
@@ -109,11 +122,14 @@ async function handleLogout() {
         >
           <Menu :size="22" aria-hidden="true" />
         </button>
-        <span class="font-display text-h6 text-primary-700 lg:hidden">VivaMente</span>
+        <div class="min-w-0 shrink-0">
+          <span class="block font-display text-body font-medium text-primary-700 lg:hidden">VivaMente</span>
+          <span class="text-caption font-medium text-primary-700">{{ areaLabel }}</span>
+        </div>
 
         <div class="ml-auto flex items-center gap-3">
-          <p class="hidden text-body-sm text-text-muted sm:block">
-            Olá, <span class="font-medium text-text">{{ auth.user?.email }}</span>
+          <p class="hidden min-w-0 truncate text-body-sm text-text-muted xl:block">
+            Olá, <span class="font-medium text-text">{{ displayName }}</span>
           </p>
           <RouterLink
             to="/notificacoes"
@@ -122,6 +138,15 @@ async function handleLogout() {
           >
             <Bell :size="20" aria-hidden="true" />
           </RouterLink>
+          <button
+            type="button"
+            class="flex shrink-0 items-center gap-1.5 rounded-md p-2 text-body-sm text-text-muted hover:bg-surface-sunken hover:text-text"
+            aria-label="Sair da conta"
+            @click="handleLogout"
+          >
+            <LogOut :size="18" aria-hidden="true" />
+            Sair
+          </button>
         </div>
       </header>
 

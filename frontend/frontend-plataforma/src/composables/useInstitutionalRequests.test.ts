@@ -217,6 +217,83 @@ describe('useInstitutionalRequests', () => {
       expect(queue.isRowBusy(1)).toBe(false);
     });
 
+    it.each([503, 200])('permite repetir apenas o e-mail após envio não confirmado (HTTP %i)', async (status) => {
+      const base = stubOnboardingFetch();
+      let attempts = 0;
+      const fetchMock = vi.fn((url: string) => {
+        if (url.includes('/password/forgot') && attempts++ === 0) return Promise.resolve(json({ data: { sent: false } }, status));
+        return base(url);
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      const queue = useInstitutionalRequests();
+      expect(await queue.createAccessAccount(1, 'ana@x.com')).toBe(false);
+      expect(queue.accountCreatedIds.value.has(1)).toBe(true);
+      expect(queue.emailSentIds.value.has(1)).toBe(false);
+      expect(queue.emailErrors.value.get(1)).toContain('não foi confirmado');
+      expect(await queue.resendAccessEmail(1, 'ana@x.com')).toBe(true);
+      expect(queue.emailSentIds.value.has(1)).toBe(true);
+      expect(queue.emailErrors.value.has(1)).toBe(false);
+      expect(fetchMock.mock.calls.filter(([url]) => url.includes('/oauth/v1/users'))).toHaveLength(1);
+    });
+
+    it('repetir a criação na mesma sessão não cria outra conta', async () => {
+      const fetchMock = stubOnboardingFetch();
+      vi.stubGlobal('fetch', fetchMock);
+      const queue = useInstitutionalRequests();
+      await queue.createAccessAccount(1, 'ana@x.com');
+      await queue.createAccessAccount(1, 'ana@x.com');
+      expect(fetchMock.mock.calls.filter(([url]) => url.includes('/oauth/v1/users'))).toHaveLength(1);
+    });
+
+    it('retoma conta sincronizada após recarregar, sem recriar nem enviar e-mail automaticamente', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(json({ data: [{ id: 42, email: 'ana@x.com', role: 'THERAPIST', active: true }], pagination: { total_pages: 1 } }));
+      vi.stubGlobal('fetch', fetchMock);
+      const queue = useInstitutionalRequests();
+      expect(await queue.resumeAccessAccount(1, ' ANA@x.com ')).toBe(true);
+      expect(queue.accountCreatedIds.value.has(1)).toBe(true);
+      expect(queue.emailSentIds.value.has(1)).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/users?');
+    });
+
+    it.each([
+      { email: 'outra-ana@x.com', role: 'THERAPIST', active: true },
+      { email: 'ana@x.com', role: 'ADMIN', active: true },
+      { email: 'ana@x.com', role: 'THERAPIST', active: false },
+    ])('não retoma uma conta inelegível: %j', async (account) => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ data: [{ id: 42, ...account }], pagination: { total_pages: 1 } })));
+      const queue = useInstitutionalRequests();
+      expect(await queue.resumeAccessAccount(1, 'ana@x.com')).toBe(false);
+      expect(queue.accountCreatedIds.value.has(1)).toBe(false);
+      expect(queue.accountError.value).toBeTruthy();
+    });
+
+    it('resposta vazia por sincronização pendente permite tentar retomar novamente', async () => {
+      vi.stubGlobal('fetch', vi.fn()
+        .mockResolvedValueOnce(json({ data: [], pagination: { total_pages: 1 } }))
+        .mockResolvedValueOnce(json({ data: [{ id: 42, email: 'ana@x.com', role: 'THERAPIST', active: true }], pagination: { total_pages: 1 } })));
+      const queue = useInstitutionalRequests();
+      expect(await queue.resumeAccessAccount(1, 'ana@x.com')).toBe(false);
+      expect(queue.accountError.value).toContain('sincronização');
+      expect(await queue.resumeAccessAccount(1, 'ana@x.com')).toBe(true);
+      expect(queue.accountError.value).toBeNull();
+    });
+
+    it('mantém falhas de envio associadas à linha correta', async () => {
+      const base = stubOnboardingFetch();
+      let sends = 0;
+      vi.stubGlobal('fetch', vi.fn((url: string) => {
+        if (url.includes('/password/forgot') && sends++ === 0) return Promise.resolve(json({}, 503));
+        return base(url);
+      }));
+      const queue = useInstitutionalRequests();
+      await queue.createAccessAccount(1, 'ana@x.com');
+      await queue.createAccessAccount(2, 'bia@x.com');
+      expect(queue.emailErrors.value.has(1)).toBe(true);
+      expect(queue.emailSentIds.value.has(1)).toBe(false);
+      expect(queue.emailSentIds.value.has(2)).toBe(true);
+    });
+
     it('não deixa criar conta duas vezes na mesma linha enquanto a primeira está em voo', async () => {
       const pending = pendingResponse();
       const fetchMock = vi.fn().mockReturnValue(pending.promise);

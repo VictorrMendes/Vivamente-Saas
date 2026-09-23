@@ -3,8 +3,8 @@ import { loadProfessionalsCatalog } from "@/lib/api/professionals-catalog";
 
 /**
  * Rotas estáticas e indexáveis + perfis públicos, enumerados via
- * GET /api/v1/public/professionals (catálogo). /sobre, /privacidade e
- * /termos continuam de fora até terem conteúdo real (robots: noindex).
+ * GET /api/v1/public/professionals (catálogo). As páginas jurídicas
+ * permanecem fora do sitemap enquanto sua identificação está em revisão.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: siteUrl, changeFrequency: "weekly", priority: 1 },
     { url: `${siteUrl}/terapeutas`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${siteUrl}/sobre`, changeFrequency: "monthly", priority: 0.6 },
   ];
 
   const professionalRoutes: MetadataRoute.Sitemap = [];

@@ -18,13 +18,21 @@ describe("vitrine do terapeuta", () => {
     expect(html).toContain('href="/ana-teste/agendar"');
     expect(html).toContain("Atendimento de teste");
     expect(html).toContain("Especialidade de teste");
-    expect(html).toContain("Valor sob consulta");
-    expect(html).toContain("50 minutos");
+    expect(html).not.toContain("Valor sob consulta");
+    expect(html).not.toMatch(/50 minutos|duração/i);
     expect(html).toContain("Enviar uma solicitação não confirma uma consulta.");
     for (const id of ["servicos", "sobre", "como-funciona", "duvidas"]) {
       expect(html).toContain(`href="#${id}"`);
       expect(html).toContain(`id="${id}"`);
     }
+  });
+
+  it("não anuncia preços nem duração mesmo quando cadastrados no serviço", () => {
+    const html = renderToStaticMarkup(<ProfessionalStorefront professional={{ ...professional, services: [{ ...professional.services[0], price: "9876.54" }] }} />);
+    expect(html).not.toMatch(/R\$|9\.876|9876|sob consulta/i);
+    expect(html).toContain("Atendimento de teste");
+    expect(html).not.toMatch(/50 minutos|duration_minutes|duração/i);
+    expect(html).toContain('href="/ana-teste/agendar"');
   });
 
   it("oferece contato sem inventar serviços quando o cadastro está vazio", () => {

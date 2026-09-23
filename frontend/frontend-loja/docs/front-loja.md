@@ -36,6 +36,13 @@ Repare que a Loja **não tem login** e **nunca fala com o Oauth**. Você só con
 
 ## 2. Sua responsabilidade
 
+### Apresentação pública da Loja
+
+- Sobre, Privacidade e Termos têm conteúdo completo. As páginas jurídicas usam identificação fictícia explícita e mantêm `noindex` durante o desenvolvimento, conforme autorização do usuário. A preparação para publicação está em [conteudo-institucional.md](conteudo-institucional.md).
+- Não exibir preços, duração das sessões ou indicadores como “valor sob consulta”, mesmo quando o contrato da API inclui `price` e `duration_minutes`. A vitrine apresenta serviço, descrição, modalidade e contato.
+- Layouts devem funcionar de 320px a desktop, com navegação e formulários acessíveis sem rolagem horizontal.
+- Animações de entrada são progressivas, respeitam `prefers-reduced-motion` e mantêm o conteúdo disponível sem JavaScript.
+
 - ✅ Páginas públicas (`/`, `/[slug]`, `/[slug]/agendar`, `/sobre`, `/contato`, `/privacidade`, `/termos`).
 - ✅ SEO: cada página de terapeuta precisa rankear bem no Google e ficar bonita quando compartilhada no WhatsApp/Instagram.
 - ✅ Formulário de solicitação de atendimento (transforma um visitante em Lead lá no Back).

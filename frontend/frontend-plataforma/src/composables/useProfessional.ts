@@ -1,3 +1,4 @@
+import { normalizeProfessional, type ProfessionalResponse } from '@/types/professional';
 import { ref } from 'vue';
 import { backApi } from '@/services/api/client';
 import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
@@ -32,8 +33,8 @@ export function useProfessional() {
     }, 300);
 
     try {
-      const res = await backApi<ApiEnvelope<Professional>>(`/api/v1/professionals/${id}`);
-      professional.value = res.data;
+      const res = await backApi<ApiEnvelope<ProfessionalResponse>>(`/api/v1/professionals/${id}`);
+      professional.value = normalizeProfessional(res.data);
     } catch {
       error.value = 'Não foi possível carregar este profissional. Tente novamente em instantes.';
     } finally {
@@ -60,11 +61,11 @@ export function useProfessional() {
     saveError.value = null;
     saving.value = true;
     try {
-      const res = await backApi<ApiEnvelope<Professional>>(`/api/v1/professionals/${id}`, {
+      const res = await backApi<ApiEnvelope<ProfessionalResponse>>(`/api/v1/professionals/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(patch),
       });
-      professional.value = res.data;
+      professional.value = normalizeProfessional(res.data);
       return true;
     } catch {
       saveError.value = 'Não foi possível salvar as alterações. Tente novamente.';

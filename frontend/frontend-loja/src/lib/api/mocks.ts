@@ -41,8 +41,8 @@ export function mockProfessional(slug: string): PublicProfessional {
       },
       {
         id: 2,
-        name: "Sessão sem valor definido (exemplo)",
-        description: "Testa o estado \"valor sob consulta\".",
+        name: "Acolhimento inicial (exemplo)",
+        description: "Uma primeira conversa para conhecer as possibilidades de atendimento. Serviço fictício para demonstração.",
         duration_minutes: 50,
         price: null,
         modality: "ONLINE",
