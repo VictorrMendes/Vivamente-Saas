@@ -19,6 +19,7 @@ ACCOUNTS_UPDATE_URL = "https://identitytoolkit.googleapis.com/v1/accounts:update
 ACCOUNTS_RESET_PASSWORD_URL = (
     "https://identitytoolkit.googleapis.com/v1/accounts:resetPassword"
 )
+FIREBASE_CLOCK_SKEW_SECONDS = 5
 
 
 class FirebaseAuthError(ExternalServiceError):
@@ -110,6 +111,11 @@ def refresh_id_token(refresh_token):
 
     return {
         "idToken": payload["id_token"],
+        # A Firebase rotaciona o refresh token a cada uso - o antigo enviado
+        # acima ja fica invalido depois desta chamada. Sem devolver o novo
+        # aqui, a view nao teria como reemitir o cookie e a proxima renovacao
+        # falharia.
+        "refreshToken": payload["refresh_token"],
         "expiresIn": int(payload["expires_in"]),
         "firebase_uid": payload["user_id"],
     }
@@ -119,7 +125,11 @@ def verify_id_token(id_token):
     get_firebase_app()
 
     try:
-        return firebase_auth.verify_id_token(id_token, check_revoked=True)
+        return firebase_auth.verify_id_token(
+            id_token, check_revoked=True,
+            # Mesma tolerancia curta do Back; assinatura e revogacao seguem obrigatorias.
+            clock_skew_seconds=FIREBASE_CLOCK_SKEW_SECONDS,
+        )
     except CertificateFetchError as exc:
         raise ExternalServiceError(
             "Falha de comunicacao com o Firebase."

@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth';
 import { ApiError, backApi, oauthApi } from './client';
 
 const session = {
-  idToken: 'new-token', refreshToken: 'new-refresh', expiresIn: 3600,
+  idToken: 'new-token', expiresIn: 3600,
   user: { id: '1', email: 'test@example.com', role: 'THERAPIST' },
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -47,7 +47,6 @@ describe('client — renovação e expiração', () => {
     await expect(backApi('/resource')).rejects.toBeInstanceOf(Error);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(useAuthStore().isAuthenticated).toBe(false);
-    expect(useAuthStore().refreshToken).toBeNull();
     expect(router.replace).toHaveBeenCalledWith({ name: 'login', query: { redirect: '/agenda?dia=2026-09-05#lista' } });
   });
 

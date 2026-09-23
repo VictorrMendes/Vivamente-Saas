@@ -94,6 +94,7 @@ class RefreshIdTokenTests(TestCase):
             status_code=200,
             json=lambda: {
                 "id_token": "new-id-token",
+                "refresh_token": "rotated-refresh-token",
                 "expires_in": "3600",
                 "user_id": "uid_123",
             },
@@ -104,6 +105,25 @@ class RefreshIdTokenTests(TestCase):
         self.assertEqual(result["idToken"], "new-id-token")
         self.assertEqual(result["expiresIn"], 3600)
         self.assertEqual(result["firebase_uid"], "uid_123")
+
+    @patch("apps.auth.services.requests.post")
+    def test_returns_rotated_refresh_token(self, mock_post):
+        # A Firebase sempre rotaciona o refresh token a cada uso - sem
+        # devolver o novo valor aqui, a RefreshView não teria como reemitir
+        # o cookie e a próxima renovação falharia (o antigo já foi invalidado).
+        mock_post.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "id_token": "new-id-token",
+                "refresh_token": "rotated-refresh-token",
+                "expires_in": "3600",
+                "user_id": "uid_123",
+            },
+        )
+
+        result = services.refresh_id_token("refresh-token")
+
+        self.assertEqual(result["refreshToken"], "rotated-refresh-token")
 
     @patch("apps.auth.services.requests.post")
     def test_raises_on_invalid_refresh_token(self, mock_post):
@@ -123,7 +143,7 @@ class VerifyIdTokenTests(TestCase):
 
         self.assertEqual(claims["uid"], "uid_123")
         mock_firebase_auth.verify_id_token.assert_called_once_with(
-            "id-token", check_revoked=True
+            "id-token", check_revoked=True, clock_skew_seconds=5
         )
 
     @patch("apps.auth.services.get_firebase_app")

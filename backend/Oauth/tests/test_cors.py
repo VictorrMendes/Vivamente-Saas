@@ -9,3 +9,11 @@ class CorsTests(TestCase):
         self.assertEqual(
             response["Access-Control-Allow-Origin"], "http://localhost:3000"
         )
+
+    def test_allowed_origin_gets_credentials_header(self):
+        # Sem isso, fetch(..., credentials: 'include') do front é bloqueado
+        # pelo browser mesmo com a origem permitida - necessário pro cookie
+        # httpOnly de refresh (login/refresh/logout) funcionar.
+        response = self.client.get("/health", HTTP_ORIGIN="http://localhost:3000")
+
+        self.assertEqual(response["Access-Control-Allow-Credentials"], "true")

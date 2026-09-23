@@ -6,7 +6,6 @@ from apps.auth.serializers import (
     LogoutSerializer,
     PasswordForgotSerializer,
     PasswordResetSerializer,
-    RefreshSerializer,
     RegisterSerializer,
 )
 
@@ -42,13 +41,6 @@ class LoginSerializerTests(SimpleTestCase):
 
     def test_rejects_invalid_email(self):
         serializer = LoginSerializer(data={"email": "not-an-email", "password": "x"})
-
-        self.assertFalse(serializer.is_valid())
-
-
-class RefreshSerializerTests(SimpleTestCase):
-    def test_requires_refresh_token(self):
-        serializer = RefreshSerializer(data={})
 
         self.assertFalse(serializer.is_valid())
 

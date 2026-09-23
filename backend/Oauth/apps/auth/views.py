@@ -19,7 +19,6 @@ from apps.auth.serializers import (
     PasswordForgotSerializer,
     PasswordResetSerializer,
     RefreshResponseSerializer,
-    RefreshSerializer,
     RegisterSerializer,
     RoleUpdateSerializer,
     UserActiveUpdateSerializer,
@@ -41,6 +40,20 @@ from core.schema import (
 
 def _client_ip(request):
     return request.META.get("REMOTE_ADDR")
+
+
+# Cookie nunca legivel por JS (mitiga roubo de refresh token via XSS - o
+# idToken continua em memoria no front, de vida curta). Path restrito ao
+# endpoint de refresh: o cookie nunca e enviado nas outras rotas do Oauth.
+REFRESH_COOKIE_NAME = "refresh_token"
+REFRESH_COOKIE_PATH = "/oauth/v1/refresh"
+
+
+def _set_refresh_cookie(response, value):
+    response.set_cookie(
+        REFRESH_COOKIE_NAME, value,
+        httponly=True, secure=True, samesite="Lax", path=REFRESH_COOKIE_PATH,
+    )
 
 
 def _register_user(request_data):
@@ -114,11 +127,10 @@ class LoginView(APIView):
             user=user, event="login", ip_address=_client_ip(request)
         )
 
-        return Response(
+        response = Response(
             success_envelope(
                 {
                     "idToken": tokens["idToken"],
-                    "refreshToken": tokens["refreshToken"],
                     "expiresIn": tokens["expiresIn"],
                     "user": {
                         "id": user.firebase_uid,
@@ -128,6 +140,8 @@ class LoginView(APIView):
                 }
             )
         )
+        _set_refresh_cookie(response, tokens["refreshToken"])
+        return response
 
 
 class LogoutView(APIView):
@@ -154,24 +168,25 @@ class LogoutView(APIView):
             user=request.user, event="logout", ip_address=_client_ip(request)
         )
 
-        return Response(success_envelope({"loggedOut": True}))
+        response = Response(success_envelope({"loggedOut": True}))
+        response.delete_cookie(REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+        return response
 
 
 class RefreshView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        request=RefreshSerializer,
+        request=None,
         responses={200: envelope_of(RefreshResponseSerializer)},
     )
     def post(self, request):
-        serializer = RefreshSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        refresh_token = request.COOKIES.get(REFRESH_COOKIE_NAME)
+        if not refresh_token:
+            raise exceptions.AuthenticationFailed("Sem sessão para renovar.")
 
         try:
-            tokens = services.refresh_id_token(
-                serializer.validated_data["refreshToken"]
-            )
+            tokens = services.refresh_id_token(refresh_token)
         except services.FirebaseAuthError as exc:
             raise exceptions.AuthenticationFailed(str(exc)) from exc
 
@@ -183,11 +198,15 @@ class RefreshView(APIView):
                 "Conta desativada ou removida."
             )
 
-        return Response(
+        response = Response(
             success_envelope(
                 {"idToken": tokens["idToken"], "expiresIn": tokens["expiresIn"]}
             )
         )
+        # A Firebase rotaciona o refresh token a cada uso - o cookie precisa
+        # ser reemitido com o novo valor, senao a proxima renovacao falha.
+        _set_refresh_cookie(response, tokens["refreshToken"])
+        return response
 
 
 class MeView(APIView):

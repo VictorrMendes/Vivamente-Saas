@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { mapOAuthSession, mapOAuthRefresh } from './oauth';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mapOAuthSession, mapOAuthRefresh, requestOAuthLogin, requestOAuthRefresh } from './oauth';
 
 const sessionDto = {
-  idToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600,
+  idToken: 'test-token', expiresIn: 3600,
   user: { id: '1', email: 'test@example.com', role: 'THERAPIST' as const },
 };
 
@@ -19,7 +19,6 @@ describe('mapper OAuth — login', () => {
   it.each([
     undefined, null, {}, sessionDto, { data: null },
     { data: { ...sessionDto, idToken: '' } },
-    { data: { ...sessionDto, refreshToken: null } },
     { data: { ...sessionDto, expiresIn: 0 } },
     { data: { ...sessionDto, expiresIn: Infinity } },
     { data: { ...sessionDto, user: { ...sessionDto.user, role: 'UNKNOWN' } } },
@@ -51,5 +50,34 @@ describe('mapper OAuth — refresh', () => {
     { data: { expiresIn: 3600 } },
   ])('rejeita respostas de refresh inválidas (%#)', (body) => {
     expect(() => mapOAuthRefresh(body)).toThrow('Resposta de autenticação inválida');
+  });
+});
+
+// O refresh token nunca passa por JS - vai/vem só via cookie httpOnly
+// (Set-Cookie do Oauth). Sem credentials: 'include', o browser não manda
+// nem aceita esse cookie em requisições cross-origin.
+describe('requestOAuthLogin / requestOAuthRefresh — cookie httpOnly', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('login manda credentials: include', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: { idToken: 'tok', expiresIn: 3600, user: { id: '1', email: 'a@a.com', role: 'ADMIN' } },
+    })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await requestOAuthLogin({ email: 'a@a.com', senha: 'x' });
+
+    expect(fetchMock.mock.calls[0]![1].credentials).toBe('include');
+  });
+
+  it('refresh manda credentials: include e nenhum corpo (o cookie vai sozinho)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { idToken: 'tok', expiresIn: 3600 } })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await requestOAuthRefresh();
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init.credentials).toBe('include');
+    expect(init.body).toBeUndefined();
   });
 });

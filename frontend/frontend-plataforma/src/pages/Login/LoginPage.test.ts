@@ -78,7 +78,7 @@ describe('LoginPage', () => {
     ['//example.com', '/dashboard'],
   ])('autentica pelo OAuth e volta ao destino permitido: %s', async (destination, expected) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: {
-      idToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600,
+      idToken: 'test-token', expiresIn: 3600,
       user: { id: '1', email: 'test@example.com', role: 'THERAPIST' },
     } }))));
     const wrapper = await renderPage(`/login?redirect=${encodeURIComponent(destination)}`);

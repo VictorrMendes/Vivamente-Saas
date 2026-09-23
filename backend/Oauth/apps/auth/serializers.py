@@ -12,10 +12,6 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 
-class RefreshSerializer(serializers.Serializer):
-    refreshToken = serializers.CharField()
-
-
 class LogoutSerializer(serializers.Serializer):
     allDevices = serializers.BooleanField(required=False, default=False)
 
@@ -48,7 +44,6 @@ class LoginUserSerializer(serializers.Serializer):
 
 class LoginResponseSerializer(serializers.Serializer):
     idToken = serializers.CharField()
-    refreshToken = serializers.CharField()
     expiresIn = serializers.IntegerField()
     user = LoginUserSerializer()
 

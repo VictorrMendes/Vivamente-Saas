@@ -19,7 +19,6 @@ describe('authStore — envelope do Oauth', () => {
           JSON.stringify({
             data: {
               idToken: 'tok',
-              refreshToken: 'ref',
               expiresIn: 3600,
               user: { id: '1', email: 'admin@vivamente.dev', role: 'ADMIN' },
             },
@@ -33,12 +32,11 @@ describe('authStore — envelope do Oauth', () => {
     await auth.login('admin@vivamente.dev', 'senha123');
 
     expect(auth.idToken).toBe('tok');
-    expect(auth.refreshToken).toBe('ref');
     expect(auth.user?.email).toBe('admin@vivamente.dev');
     expect(auth.isAuthenticated).toBe(true);
   });
 
-  it('no refresh, atualiza só idToken/expiresAt e preserva user/refreshToken (contrato real do Back só devolve idToken+expiresIn)', async () => {
+  it('no refresh, atualiza só idToken/expiresAt e preserva user (contrato real do Back só devolve idToken+expiresIn; refreshToken vive num cookie httpOnly, nunca em memória JS)', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { idToken: 'novo-token', expiresIn: 7200 } }), { status: 200 })),
@@ -47,13 +45,11 @@ describe('authStore — envelope do Oauth', () => {
     const auth = useAuthStore();
     auth.$patch({
       idToken: 'antigo-token',
-      refreshToken: 'ref-valido',
       user: { id: '1', email: 'test@example.com', role: 'THERAPIST' },
     });
     await auth.refresh();
 
     expect(auth.idToken).toBe('novo-token');
-    expect(auth.refreshToken).toBe('ref-valido');
     expect(auth.user?.email).toBe('test@example.com');
     expect(auth.role).toBe('THERAPIST');
     expect(auth.expiresAt).toBeGreaterThan(Date.now() + 7190000);
@@ -66,7 +62,7 @@ describe('authStore — envelope do Oauth', () => {
       vi.fn().mockImplementation((_url: string, init: RequestInit) => {
         sentBody = JSON.parse(init.body as string);
         return Promise.resolve(new Response(JSON.stringify({
-          data: { idToken: 'tok', refreshToken: 'ref', expiresIn: 3600, user: { id: '1', email: 'a@a.com', role: 'ADMIN' } },
+          data: { idToken: 'tok', expiresIn: 3600, user: { id: '1', email: 'a@a.com', role: 'ADMIN' } },
         }), { status: 200 }));
       }),
     );
@@ -77,13 +73,30 @@ describe('authStore — envelope do Oauth', () => {
     expect(sentBody).toEqual({ email: 'a@a.com', password: 'minhasenha' });
   });
 
+  it('login e refresh mandam credentials: include, pro cookie httpOnly do refresh token ser aceito/enviado', async () => {
+    // mockImplementation (não mockResolvedValue): cada Response só pode ter
+    // o corpo lido uma vez - login() e refresh() cada um faz sua própria
+    // chamada, precisam de instâncias de Response separadas.
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
+      data: { idToken: 'tok', expiresIn: 3600, user: { id: '1', email: 'a@a.com', role: 'ADMIN' } },
+    }), { status: 200 })));
+    vi.stubGlobal('fetch', fetchMock);
+    const auth = useAuthStore();
+
+    await auth.login('a@a.com', 'minhasenha');
+    await auth.refresh();
+
+    for (const call of fetchMock.mock.calls) {
+      expect((call[1] as RequestInit).credentials).toBe('include');
+    }
+  });
+
   it('limpa a sessão imediatamente mesmo se logout remoto falhar', async () => {
     const auth = useAuthStore();
     auth.mockLogin();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
     const logout = auth.logout();
     expect(auth.idToken).toBeNull();
-    expect(auth.refreshToken).toBeNull();
     await expect(logout).resolves.toBeUndefined();
   });
 
@@ -97,7 +110,6 @@ describe('authStore — envelope do Oauth', () => {
     resolve(new Response(JSON.stringify({ data: { idToken: 'late-token', expiresIn: 3600 } })));
     await expect(refreshing).rejects.toThrow('Sessão encerrada');
     expect(auth.isAuthenticated).toBe(false);
-    expect(auth.refreshToken).toBeNull();
   });
 
   it('não persiste tokens no armazenamento do navegador', async () => {
@@ -117,6 +129,35 @@ describe('authStore — envelope do Oauth', () => {
 
     const auth = useAuthStore();
     await expect(auth.login('admin@vivamente.dev', 'errada')).rejects.toThrow('E-mail ou senha inválidos.');
+    expect(auth.isAuthenticated).toBe(false);
+  });
+});
+
+describe('authStore — loginWithDevBackdoor (diferente de mockLogin: autentica de verdade)', () => {
+  beforeEach(() => setActivePinia(createPinia()));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('usa o token real devolvido pelo backdoor de dev do Back, não uma string inventada', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ token: 'jwt-de-verdade', uid: 'seed-admin-1', email: 'admin@vivamenteterapias.example.com', role: 'ADMIN' })),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const auth = useAuthStore();
+
+    await auth.loginWithDevBackdoor('ADMIN');
+
+    expect(auth.idToken).toBe('jwt-de-verdade');
+    expect(auth.isAuthenticated).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toContain('/api/v1/dev/fake-token');
+    expect(JSON.parse(init.body)).toEqual({ uid: 'seed-admin-1', email: 'admin@vivamenteterapias.example.com', role: 'ADMIN' });
+  });
+
+  it('falha do backdoor não deixa uma sessão fake pela metade', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 403 })));
+    const auth = useAuthStore();
+
+    await expect(auth.loginWithDevBackdoor('ADMIN')).rejects.toThrow();
     expect(auth.isAuthenticated).toBe(false);
   });
 });

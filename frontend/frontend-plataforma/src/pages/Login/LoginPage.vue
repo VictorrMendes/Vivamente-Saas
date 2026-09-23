@@ -44,7 +44,10 @@ async function handleSubmit() {
   try {
     const devAccount = devAccounts.value?.[form.email];
     if (devAccount && devAccount.password === form.password) {
-      auth.mockLogin(devAccount.role);
+      // loginWithDevBackdoor (não mockLogin) - autentica de verdade contra o
+      // Back real via backdoor de dev, pra funcionar com dados reais sem
+      // precisar do Firebase. mockLogin fica reservado pros testes.
+      await auth.loginWithDevBackdoor(devAccount.role);
       await goToRedirect();
       return;
     }

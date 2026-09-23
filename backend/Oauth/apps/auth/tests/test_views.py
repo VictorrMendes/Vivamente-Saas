@@ -94,6 +94,11 @@ class LoginViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"]["user"]["role"], "THERAPIST")
+        self.assertNotIn("refreshToken", response.data["data"])
+        cookie = response.cookies["refresh_token"]
+        self.assertEqual(cookie.value, "refresh-token")
+        self.assertTrue(cookie["httponly"])
+        self.assertEqual(cookie["path"], "/oauth/v1/refresh")
         self.assertEqual(OauthSession.objects.count(), 1)
         self.assertEqual(OauthAuditLog.objects.filter(event="login").count(), 1)
 
@@ -200,11 +205,14 @@ class LogoutViewTests(TestCase):
         self.addCleanup(patcher.stop)
         self.client.credentials(HTTP_AUTHORIZATION="Bearer fake-token")
 
-    def test_logout_logs_audit_event(self):
+    def test_logout_logs_audit_event_and_clears_refresh_cookie(self):
         response = self.client.post("/oauth/v1/logout", {}, format="json")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(OauthAuditLog.objects.filter(event="logout").count(), 1)
+        cookie = response.cookies["refresh_token"]
+        self.assertEqual(cookie.value, "")
+        self.assertEqual(cookie["max-age"], 0)
 
     @patch("apps.auth.views.services.revoke_refresh_tokens")
     def test_logout_all_devices_revokes_tokens(self, mock_revoke):
@@ -223,21 +231,35 @@ class RefreshViewTests(TestCase):
             firebase_uid="uid_123", email="ana@x.com", role="THERAPIST"
         )
 
+    def _post_refresh(self, cookie_value="old-refresh"):
+        if cookie_value is not None:
+            self.client.cookies["refresh_token"] = cookie_value
+        return self.client.post("/oauth/v1/refresh", {}, format="json")
+
     @patch("apps.auth.views.services.refresh_id_token")
-    def test_returns_new_id_token(self, mock_refresh):
+    def test_returns_new_id_token_and_reemits_rotated_cookie(self, mock_refresh):
         mock_refresh.return_value = {
             "idToken": "new-id-token",
+            "refreshToken": "rotated-refresh",
             "expiresIn": 3600,
             "firebase_uid": "uid_123",
         }
 
-        response = self.client.post(
-            "/oauth/v1/refresh", {"refreshToken": "old-refresh"}, format="json"
-        )
+        response = self._post_refresh()
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"]["idToken"], "new-id-token")
         self.assertNotIn("firebase_uid", response.data["data"])
+        self.assertNotIn("refreshToken", response.data["data"])
+        cookie = response.cookies["refresh_token"]
+        self.assertEqual(cookie.value, "rotated-refresh")
+        self.assertTrue(cookie["httponly"])
+        mock_refresh.assert_called_once_with("old-refresh")
+
+    def test_missing_cookie_returns_401(self):
+        response = self._post_refresh(cookie_value=None)
+
+        self.assertEqual(response.status_code, 401)
 
     @patch("apps.auth.views.services.refresh_id_token")
     def test_invalid_refresh_token_returns_401(self, mock_refresh):
@@ -245,9 +267,7 @@ class RefreshViewTests(TestCase):
             "Refresh token invalido."
         )
 
-        response = self.client.post(
-            "/oauth/v1/refresh", {"refreshToken": "bad"}, format="json"
-        )
+        response = self._post_refresh(cookie_value="bad")
 
         self.assertEqual(response.status_code, 401)
 
@@ -257,13 +277,12 @@ class RefreshViewTests(TestCase):
         self.user.save(update_fields=["active"])
         mock_refresh.return_value = {
             "idToken": "new-id-token",
+            "refreshToken": "rotated-refresh",
             "expiresIn": 3600,
             "firebase_uid": "uid_123",
         }
 
-        response = self.client.post(
-            "/oauth/v1/refresh", {"refreshToken": "old-refresh"}, format="json"
-        )
+        response = self._post_refresh()
 
         self.assertEqual(response.status_code, 401)
 
@@ -271,13 +290,12 @@ class RefreshViewTests(TestCase):
     def test_removed_user_cannot_refresh(self, mock_refresh):
         mock_refresh.return_value = {
             "idToken": "new-id-token",
+            "refreshToken": "rotated-refresh",
             "expiresIn": 3600,
             "firebase_uid": "uid_does_not_exist_locally",
         }
 
-        response = self.client.post(
-            "/oauth/v1/refresh", {"refreshToken": "old-refresh"}, format="json"
-        )
+        response = self._post_refresh()
 
         self.assertEqual(response.status_code, 401)
 

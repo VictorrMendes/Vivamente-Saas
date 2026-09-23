@@ -79,6 +79,10 @@ BACK_SYNC_TIMEOUT_SECONDS = float(
 )
 
 CORS_ALLOWED_ORIGINS = ALLOWED_ORIGINS
+# Sem isso, o browser bloqueia fetch(..., credentials: 'include') mesmo com
+# a origem permitida - necessario pro cookie httpOnly de refresh (login/
+# refresh/logout) ser enviado/aceito entre o front e este servico.
+CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exception_handler.oauth_exception_handler",

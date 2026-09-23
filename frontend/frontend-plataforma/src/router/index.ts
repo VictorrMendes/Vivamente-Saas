@@ -5,6 +5,7 @@ import { safeLoginRedirect } from './redirect';
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: '/confirmar-sessao', name: 'confirmar-sessao', component: () => import('@/pages/Agenda/ConfirmationPage.vue') },
     {
       path: '/login',
       name: 'login',
@@ -28,6 +29,7 @@ const router = createRouter({
         { path: '', redirect: '/dashboard' },
         { path: 'dashboard', name: 'dashboard', component: () => import('@/pages/Dashboard/DashboardPage.vue') },
         { path: 'agenda', name: 'agenda', component: () => import('@/pages/Agenda/AgendaPage.vue') },
+        { path: 'consultas/:id', name: 'consulta', component: () => import('@/pages/Agenda/SessionPage.vue'), props: true, meta: { roles: ['THERAPIST'] } },
         { path: 'leads', name: 'leads', component: () => import('@/pages/Leads/LeadsPage.vue') },
         { path: 'leads/:id', name: 'lead-detail', component: () => import('@/pages/Leads/LeadDetailPage.vue'), props: true },
         { path: 'clientes', name: 'clientes', component: () => import('@/pages/Clientes/ClientesPage.vue') },
@@ -68,8 +70,21 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach((to) => {
+// Um reload zera o idToken em memória, mas o refresh token pode continuar
+// válido no cookie httpOnly - antes de mandar pro /login, tenta uma
+// renovação silenciosa uma única vez (não a cada navegação: só faz sentido
+// tentar de novo depois de um login/logout, que já muda sessionVersion e
+// portanto isAuthenticated por outro caminho).
+let restoreAttempted = false;
+
+router.beforeEach(async (to) => {
+  if (to.name === 'confirmar-sessao') return;
   const auth = useAuthStore();
+
+  if (!restoreAttempted) {
+    restoreAttempted = true;
+    if (!auth.isAuthenticated) await auth.restoreSession();
+  }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } };
