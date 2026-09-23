@@ -20,7 +20,7 @@ const professionals: Professional[] = [
 
 function mountForm(overrides: Record<string, unknown> = {}) {
   return mount(AppointmentForm, {
-    props: { clients, services: [], packages, role: 'THERAPIST', saving: false, saveError: null, ...overrides },
+    props: { clients, services: [], packages, role: 'THERAPIST', saving: false, ...overrides },
   });
 }
 
@@ -44,7 +44,8 @@ describe('AppointmentForm — acessibilidade, validação e pacote por cliente',
 
     // troca pro cliente 2 — o pacote 10 (da Maria) não é mais elegível, deve ser limpo.
     await clientSelect!.setValue('2');
-    expect((packageSelect!.element as HTMLSelectElement).value).toBe('');
+    // o pacote da Maria sai; o único elegível do Carlos é escolhido no lugar
+    expect((packageSelect!.element as HTMLSelectElement).value).toBe('20');
     const options = packageSelect!.findAll('option').map((o) => o.element.value);
     expect(options).not.toContain('10');
     expect(options).toContain('20');
@@ -161,3 +162,64 @@ describe('AppointmentForm — acessibilidade, validação e pacote por cliente',
     expect(emitted.package).toBeNull();
   });
 });
+
+describe('AppointmentForm — preenchimento pelo plano do cliente e recorrência', () => {
+  const services = [
+    { id: 7, name: 'Terapia individual', durationMinutes: 50, price: 200, modality: 'ONLINE' as const },
+    { id: 8, name: 'Avaliação', durationMinutes: 60, price: 300, modality: 'ONLINE' as const },
+  ];
+  const plan: Package[] = [
+    { id: 10, client: 1, service: 7, name: 'Plano 4 sessões', totalSessions: 4, totalValue: 600, status: 'ACTIVE', startDate: '2026-01-01', usedSessions: 0, remainingSessions: 4 },
+    { id: 11, client: 2, service: 8, name: 'Vencido', totalSessions: 4, totalValue: 400, status: 'COMPLETED', startDate: '2026-01-01', usedSessions: 4, remainingSessions: 0 },
+  ];
+  const field = (wrapper: ReturnType<typeof mountForm>, label: string) =>
+    wrapper.findAll('label').find((l) => l.text().startsWith(label))!;
+  const control = (wrapper: ReturnType<typeof mountForm>, label: string) =>
+    wrapper.find(`#${field(wrapper, label).attributes('for')}`);
+
+  it('escolher o cliente preenche pacote, serviço e valor por sessão', async () => {
+    const wrapper = mountForm({ services, packages: plan });
+    await control(wrapper, 'Cliente').setValue('1');
+
+    expect((control(wrapper, 'Pacote').element as HTMLSelectElement).value).toBe('10');
+    expect((control(wrapper, 'Serviço').element as HTMLSelectElement).value).toBe('7');
+    expect((control(wrapper, 'Valor').element as HTMLInputElement).value).toBe('150');
+    expect(wrapper.text()).toContain('Plano 4 sessões');
+  });
+
+  it('cliente sem pacote utilizável limpa serviço e valor; escolher serviço puxa o preço dele', async () => {
+    const wrapper = mountForm({ services, packages: plan });
+    await control(wrapper, 'Cliente').setValue('1');
+    await control(wrapper, 'Cliente').setValue('2'); // plano do 2 está concluído
+
+    expect((control(wrapper, 'Pacote').element as HTMLSelectElement).value).toBe('');
+    expect((control(wrapper, 'Serviço').element as HTMLSelectElement).value).toBe('');
+    expect((control(wrapper, 'Valor').element as HTMLInputElement).value).toBe('0');
+
+    await control(wrapper, 'Serviço').setValue('8');
+    expect((control(wrapper, 'Valor').element as HTMLInputElement).value).toBe('300');
+  });
+
+  it('edição não é sobrescrita pelo plano do cliente', () => {
+    const initial: Appointment = { id: 1, client: 1, startsAt: '2027-01-01T13:00:00Z', endsAt: '2027-01-01T13:50:00Z', status: 'PENDING', price: 99 };
+    const wrapper = mountForm({ services, packages: plan, initial });
+    expect((control(wrapper, 'Valor').element as HTMLInputElement).value).toBe('99');
+    expect(wrapper.text()).not.toContain('Repetir');
+  });
+
+  it('recorrência emite recurrence + occurrences, limitada às sessões do pacote', async () => {
+    const wrapper = mountForm({ services, packages: plan });
+    await control(wrapper, 'Cliente').setValue('1');
+    await control(wrapper, 'Repetir').setValue('BIWEEKLY');
+    await control(wrapper, 'Total de consultas').setValue('9'); // pacote só tem 4
+    await wrapper.find('form').trigger('submit.prevent');
+    expect(wrapper.emitted('submit')).toBeUndefined();
+    expect(wrapper.text()).toContain('entre 2 e 4');
+
+    await control(wrapper, 'Total de consultas').setValue('3');
+    await wrapper.find('form').trigger('submit.prevent');
+    const payload = wrapper.emitted('submit')![0]![0] as Record<string, unknown>;
+    expect(payload).toMatchObject({ client: 1, service: 7, package: 10, price: 150, recurrence: 'BIWEEKLY', occurrences: 3 });
+  });
+});
+

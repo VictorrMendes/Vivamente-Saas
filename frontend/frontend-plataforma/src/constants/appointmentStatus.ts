@@ -5,6 +5,8 @@ export const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
   CONFIRMED: 'Confirmado',
   COMPLETED: 'Concluído',
   CANCELLED: 'Cancelado',
+  DECLINED: 'Recusado',
+  IN_PROGRESS: 'Em atendimento',
 };
 
 export const APPOINTMENT_STATUS_VARIANT: Record<AppointmentStatus, 'warning' | 'primary' | 'success' | 'neutral'> = {
@@ -12,4 +14,6 @@ export const APPOINTMENT_STATUS_VARIANT: Record<AppointmentStatus, 'warning' | '
   CONFIRMED: 'primary',
   COMPLETED: 'success',
   CANCELLED: 'neutral',
+  DECLINED: 'neutral',
+  IN_PROGRESS: 'success',
 };

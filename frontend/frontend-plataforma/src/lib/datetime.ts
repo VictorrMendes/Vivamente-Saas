@@ -2,6 +2,12 @@ export function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso));
 }
 
+/** dd/mm/aaaa a partir de ISO completo ou de uma data pura (YYYY-MM-DD, sem desvio de fuso). */
+export function formatDate(value: string): string {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : new Date(value);
+  return new Intl.DateTimeFormat('pt-BR').format(date);
+}
+
 export function formatTime(iso: string): string {
   return new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short' }).format(new Date(iso));
 }

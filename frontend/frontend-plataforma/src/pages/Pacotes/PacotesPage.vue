@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { Package as PackageIcon } from '@lucide/vue';
 import { usePackages } from '@/composables/usePackages';
 import { useClientOptions } from '@/composables/useClientOptions';
+import { useServices } from '@/composables/useServices';
 import { formatCurrency } from '@/lib/currency';
 import type { NewPackage, PackageStatus } from '@/types/package';
 import Badge from '@/components/ui/Badge.vue';
@@ -27,6 +28,7 @@ const PACKAGE_STATUS_VARIANT: Record<PackageStatus, 'success' | 'neutral'> = {
 const route = useRoute();
 const { packages, pagination, showLoading, error, saving, saveError, removingId, load, create, update, remove } = usePackages();
 const { clients, clientName, load: loadClients } = useClientOptions();
+const { services, load: loadServices } = useServices();
 
 const page = ref(1);
 const filterClient = ref<number | ''>('');
@@ -48,6 +50,7 @@ const presetClient = route.query.client ? Number(route.query.client) : undefined
 const showNewForm = ref(Boolean(presetClient) || route.query.new === '1');
 const emptyNewPackage = {
   client: presetClient ?? ('' as number | ''),
+  service: '' as number | '',
   name: '',
   totalSessions: 1,
   totalValue: 0,
@@ -75,6 +78,7 @@ async function handleCreate() {
   if (formError.value) return;
   const payload: NewPackage = {
     client: newPackage.client as number,
+    service: newPackage.service || null,
     name: newPackage.name,
     totalSessions: Number(newPackage.totalSessions),
     totalValue: Number(newPackage.totalValue),
@@ -103,6 +107,7 @@ async function handleStatusChange(id: number, status: PackageStatus) {
 onMounted(() => {
   fetchPackages();
   loadClients();
+  loadServices();
 });
 </script>
 
@@ -156,6 +161,17 @@ onMounted(() => {
         >
           <option value="" disabled>Selecione…</option>
           <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+      <div>
+        <label for="pkg-service" class="mb-1 block text-label uppercase tracking-label text-text-muted">Serviço</label>
+        <select
+          id="pkg-service"
+          v-model="newPackage.service"
+          class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+        >
+          <option value="">Nenhum</option>
+          <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }}</option>
         </select>
       </div>
       <div>

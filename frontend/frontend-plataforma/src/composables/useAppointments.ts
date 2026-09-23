@@ -9,6 +9,8 @@ const STATUS_AFTER_ACTION: Record<AppointmentAction, AppointmentStatus> = {
   confirm: 'CONFIRMED',
   cancel: 'CANCELLED',
   complete: 'COMPLETED',
+  start: 'IN_PROGRESS',
+  reopen: 'PENDING',
 };
 
 // O Back serializa price como string decimal (ou null), igual em Services/Packages/Payments.
@@ -96,8 +98,12 @@ export function useAppointments() {
       await backApi<void>(`/api/v1/appointments/${id}/${action}`, { method: 'PATCH' });
       const target = appointments.value.find((a) => a.id === id);
       if (target) target.status = STATUS_AFTER_ACTION[action];
-    } catch {
-      actionError.value = 'Não foi possível atualizar o agendamento. Tente novamente.';
+      return true;
+    } catch (err) {
+      // 400/403 trazem a causa em português (transição inválida, sem permissão).
+      const known = err instanceof ApiError && (err.status === 400 || err.status === 403);
+      actionError.value = known ? err.message : 'Não foi possível atualizar o agendamento. Tente novamente.';
+      return false;
     } finally {
       pendingActionId.value = null;
     }

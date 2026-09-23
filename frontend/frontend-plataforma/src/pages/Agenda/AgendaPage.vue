@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ApiError, backApi } from '@/services/api/client';
+import { useToast } from '@/composables/useToast';
+import type { ApiEnvelope } from '@/types/api';
+import AppointmentActions from '@/components/calendar/AppointmentActions.vue';
 import { Calendar } from 'v-calendar';
 import 'v-calendar/style.css';
 import { useAppointments } from '@/composables/useAppointments';
@@ -13,12 +17,11 @@ import { useTheme } from '@/composables/useTheme';
 import { useAuthStore } from '@/stores/auth';
 import { formatCurrency } from '@/lib/currency';
 import { formatTime, toDateOnly } from '@/lib/datetime';
-import type { Appointment, AppointmentStatus, NewAppointment } from '@/types/appointment';
-import { APPOINTMENT_STATUS_LABEL as STATUS_LABEL, APPOINTMENT_STATUS_VARIANT as STATUS_VARIANT } from '@/constants/appointmentStatus';
+import type { Appointment, AppointmentAction, AppointmentStatus, NewAppointment } from '@/types/appointment';
+import { APPOINTMENT_STATUS_LABEL as STATUS_LABEL } from '@/constants/appointmentStatus';
 import { APPOINTMENT_MODALITY_LABEL } from '@/constants/appointmentModality';
 import { CalendarDays } from '@lucide/vue';
 import Button from '@/components/ui/Button.vue';
-import Badge from '@/components/ui/Badge.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import AvailabilityList from '@/components/calendar/AvailabilityList.vue';
 import AppointmentForm from '@/components/forms/AppointmentForm.vue';
@@ -26,7 +29,9 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import ModuleBanner from '@/components/layout/ModuleBanner.vue';
 
 const auth = useAuthStore();
+const toast = useToast();
 const route = useRoute();
+const router = useRouter();
 const { appointments, showLoading, error, actionError, pendingActionId, saving, saveError, load, updateStatus, create, update } =
   useAppointments();
 const { services, load: loadServices } = useServices();
@@ -107,12 +112,20 @@ const editingId = ref<number | null>(null);
 
 async function handleCreate(appt: NewAppointment) {
   const ok = await create(appt);
-  if (ok) showNewForm.value = false;
+  if (ok) {
+    toast.success(appt.recurrence ? `${appt.occurrences} consultas agendadas.` : 'Consulta agendada.');
+    showNewForm.value = false;
+    // A série nasce inteira no Back; a resposta traz só a 1ª consulta.
+    if (appt.recurrence) reload();
+  }
 }
 
 async function handleUpdate(id: number, appt: NewAppointment) {
   const ok = await update(id, appt);
-  if (ok) editingId.value = null;
+  if (ok) {
+    toast.success('Consulta atualizada.');
+    editingId.value = null;
+  }
 }
 
 const filteredAppointments = computed(() =>
@@ -128,11 +141,22 @@ async function handleAddSlot() {
     newSlotError.value = 'O horário final precisa ser depois do inicial.';
     return;
   }
-  await createSlot({
+  if (await createSlot({
     startsAt: new Date(`${newSlot.date}T${newSlot.startTime}:00`).toISOString(),
     endsAt: new Date(`${newSlot.date}T${newSlot.endTime}:00`).toISOString(),
-  });
+  })) toast.success('Horário adicionado.');
 }
+
+// "+" dentro da coluna do dia: mesma criação, sem passar pelo formulário de baixo.
+async function addSlotFromColumn(slot: { date: string; startTime: string; endTime: string }) {
+  const ok = await createSlot({
+    startsAt: new Date(`${slot.date}T${slot.startTime}:00`).toISOString(),
+    endsAt: new Date(`${slot.date}T${slot.endTime}:00`).toISOString(),
+  });
+  if (ok) toast.success('Horário adicionado.');
+  return ok;
+}
+watch(slotError, (message) => { if (message) toast.error(message); });
 
 const appointmentsByDate = computed(() => {
   const map = new Map<string, Appointment[]>();
@@ -161,15 +185,71 @@ function onDayClick(day: { id: string }) {
   selectedDate.value = day.id;
 }
 
+// Falhas de ação (iniciar, cancelar, confirmar) viram toast, não texto solto na página.
+watch(actionError, (message) => { if (message) toast.error(message); });
+// Erros de salvar (ex.: horário já ocupado) também viram toast, não texto dentro do formulário.
+watch(saveError, (message) => { if (message) toast.error(message); });
+
+const STATUS_CHANGED: Partial<Record<AppointmentAction, string>> = {
+  confirm: 'Consulta confirmada.',
+  cancel: 'Consulta cancelada.',
+  reopen: 'Consulta voltou para pendente.',
+  complete: 'Consulta concluída.',
+};
+async function changeStatus(id: number, action: AppointmentAction) {
+  const ok = await updateStatus(id, action);
+  const message = STATUS_CHANGED[action];
+  if (ok && message) toast.success(message);
+}
+
 const cancelTargetId = ref<number | null>(null);
 function handleCancelConfirmed() {
-  if (cancelTargetId.value != null) updateStatus(cancelTargetId.value, 'cancel');
+  if (cancelTargetId.value != null) changeStatus(cancelTargetId.value, 'cancel');
   cancelTargetId.value = null;
 }
+
+const requestingId = ref<number | null>(null);
+const confirmationInvite = ref<{ whatsappUrl: string; confirmationUrl: string } | null>(null);
+async function requestConfirmation(appt: Appointment) {
+  const id = appt.id;
+  requestingId.value = id;
+  confirmationInvite.value = null;
+  try {
+    confirmationInvite.value = (await backApi<ApiEnvelope<{ whatsappUrl: string; confirmationUrl: string }>>(
+      `/api/v1/appointments/${id}/request-confirmation`, { method: 'POST' },
+    )).data;
+  } catch (err) {
+    // O Back já devolve a causa em português (ex.: WhatsApp do cliente ausente).
+    const validation = err instanceof ApiError && err.status === 400;
+    toast.error(
+      validation ? err.message : 'Não foi possível gerar o convite agora. Tente novamente em instantes.',
+      validation && /whatsapp/i.test(err.message) ? { label: 'Abrir cadastro do cliente', to: `/clientes/${appt.client}` } : undefined,
+    );
+  }
+  finally { requestingId.value = null; }
+}
+async function startSession(appt: Appointment) {
+  if (appt.status === 'IN_PROGRESS' || await updateStatus(appt.id, 'start')) router.push(`/consultas/${appt.id}`);
+}
+function refreshResponses() {
+  if (!document.hidden && !editingId.value && !showNewForm.value && pendingActionId.value === null) reload();
+}
+const responseTimer = setInterval(refreshResponses, 30000);
+onMounted(() => window.addEventListener('focus', refreshResponses));
+onUnmounted(() => { clearInterval(responseTimer); window.removeEventListener('focus', refreshResponses); });
 </script>
 
 <template>
   <div>
+    <div v-if="confirmationInvite" role="status" class="mb-4 space-y-3 rounded-xl border border-border bg-surface p-4">
+      <p class="text-body-sm text-text">Convite preparado. Abra o WhatsApp e envie a mensagem ao cliente. A confirmação será registrada quando ele responder pelo link.</p>
+      <p v-if="confirmationInvite.confirmationUrl.includes('localhost')" class="text-caption text-text-muted">Ambiente local: o link só funciona neste computador. Para enviar a pacientes, configure o endereço público da Plataforma.</p>
+      <div class="flex flex-wrap gap-3">
+        <a :href="confirmationInvite.whatsappUrl" target="_blank" rel="noopener noreferrer" class="text-body-sm font-medium text-primary-700 underline">Abrir WhatsApp para enviar</a>
+        <a :href="confirmationInvite.confirmationUrl" target="_blank" rel="noopener noreferrer" class="text-body-sm text-primary-700 underline">Visualizar link do paciente</a>
+        <button type="button" class="text-body-sm text-text-muted" @click="confirmationInvite = null">Fechar</button>
+      </div>
+    </div>
     <ModuleBanner
       :icon="CalendarDays"
       title="Agenda"
@@ -227,7 +307,6 @@ function handleCancelConfirmed() {
         :packages="packages"
         :professionals="professionals"
         :saving="saving"
-        :save-error="saveError"
         @submit="handleCreate"
         @cancel="showNewForm = false"
       />
@@ -259,10 +338,6 @@ function handleCancelConfirmed() {
           {{ new Date(`${selectedDate}T00:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) }}
         </h2>
 
-        <p v-if="actionError" role="alert" class="mt-2 rounded-md bg-error-bg px-3 py-2 text-body-sm text-error">
-          {{ actionError }}
-        </p>
-
         <p v-if="selectedDayAppointments.length === 0" class="mt-3 text-body-sm text-text-muted">
           Nenhum agendamento neste dia.
         </p>
@@ -278,7 +353,6 @@ function handleCancelConfirmed() {
               :packages="packages"
               :professionals="professionals"
               :saving="saving"
-              :save-error="saveError"
               @submit="(a) => handleUpdate(appt.id, a)"
               @cancel="editingId = null"
             />
@@ -297,45 +371,9 @@ function handleCancelConfirmed() {
                 </div>
               </div>
 
-              <div class="flex flex-wrap items-center gap-2">
-                <Badge :variant="STATUS_VARIANT[appt.status]" size="sm">{{ STATUS_LABEL[appt.status] }}</Badge>
-
-                <Button
-                  v-if="appt.status === 'PENDING' || appt.status === 'CONFIRMED'"
-                  size="sm"
-                  variant="ghost"
-                  @click="editingId = appt.id"
-                >
-                  Editar
-                </Button>
-                <Button
-                  v-if="appt.status === 'PENDING'"
-                  size="sm"
-                  variant="primary"
-                  :loading="pendingActionId === appt.id"
-                  @click="updateStatus(appt.id, 'confirm')"
-                >
-                  Confirmar
-                </Button>
-                <Button
-                  v-if="appt.status === 'CONFIRMED'"
-                  size="sm"
-                  variant="primary"
-                  :loading="pendingActionId === appt.id"
-                  @click="updateStatus(appt.id, 'complete')"
-                >
-                  Concluir
-                </Button>
-                <Button
-                  v-if="appt.status === 'PENDING' || appt.status === 'CONFIRMED'"
-                  size="sm"
-                  variant="ghost"
-                  :loading="pendingActionId === appt.id"
-                  @click="cancelTargetId = appt.id"
-                >
-                  Cancelar
-                </Button>
-              </div>
+              <AppointmentActions :appointment="appt" :role="auth.role" :busy="pendingActionId === appt.id || requestingId === appt.id"
+                @edit="editingId = appt.id" @confirm="changeStatus(appt.id, 'confirm')" @reopen="changeStatus(appt.id, 'reopen')"
+                @cancel="cancelTargetId = appt.id" @request-confirmation="requestConfirmation(appt)" @start="startSession(appt)" />
             </div>
           </li>
         </ul>
@@ -358,6 +396,8 @@ function handleCancelConfirmed() {
         <AvailabilityList
           :slots="slots"
           :pending-id="removingId"
+          :submit-slot="addSlotFromColumn"
+          :saving="savingSlot"
           class="mt-4"
           @remove="removeSlot"
           @toggle-block="toggleBlock"
@@ -401,9 +441,7 @@ function handleCancelConfirmed() {
           <Button type="submit" size="md" :loading="savingSlot">Adicionar horário</Button>
         </form>
 
-        <p v-if="newSlotError || slotError" role="alert" class="mt-2 text-body-sm text-error">
-          {{ newSlotError || slotError }}
-        </p>
+        <p v-if="newSlotError" role="alert" class="mt-2 text-body-sm text-error">{{ newSlotError }}</p>
       </template>
     </section>
 

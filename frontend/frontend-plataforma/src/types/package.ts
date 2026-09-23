@@ -6,6 +6,8 @@ export type PackageStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export interface Package {
   id: number;
   client: number;
+  /** Serviço do plano: a consulta nova do cliente já herda ele. */
+  service?: number | null;
   name: string;
   totalSessions: number;
   totalValue: number;
@@ -19,6 +21,7 @@ export interface Package {
 
 export interface NewPackage {
   client: number;
+  service?: number | null;
   name: string;
   totalSessions: number;
   totalValue: number;

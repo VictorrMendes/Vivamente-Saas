@@ -40,8 +40,10 @@ export function useAvailability() {
         body: JSON.stringify(slot),
       });
       slots.value.push(res.data);
+      return true;
     } catch {
       saveError.value = 'Não foi possível salvar o horário. Tente novamente.';
+      return false;
     } finally {
       saving.value = false;
     }

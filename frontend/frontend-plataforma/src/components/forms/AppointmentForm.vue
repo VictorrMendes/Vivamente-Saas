@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, useId, watch } from 'vue';
-import type { Appointment, AppointmentModality, NewAppointment } from '@/types/appointment';
+import type { Appointment, AppointmentModality, AppointmentRecurrence, NewAppointment } from '@/types/appointment';
 import type { Client } from '@/types/client';
 import type { Service } from '@/types/service';
 import type { Package } from '@/types/package';
@@ -22,7 +22,6 @@ const props = defineProps<{
   /** Só usado quando role === 'ADMIN' — o Back exige professional explícito nesse caso. */
   professionals?: Professional[];
   saving: boolean;
-  saveError: string | null;
 }>();
 const emit = defineEmits<{ submit: [appt: NewAppointment]; cancel: [] }>();
 
@@ -48,20 +47,81 @@ const form = reactive({
   callLink: props.initial?.callLink ?? '',
   price: props.initial?.price ?? 0,
   notes: props.initial?.notes ?? '',
+  recurrence: '' as AppointmentRecurrence | '',
+  occurrences: 4,
 });
+
+const RECURRENCE_LABEL: Record<AppointmentRecurrence, string> = {
+  WEEKLY: 'Toda semana',
+  BIWEEKLY: 'A cada 2 semanas (quinzenal)',
+  MONTHLY: 'Todo mês',
+};
+
 
 // Pacote só faz sentido pro cliente selecionado — reduz erro de "pacote não pertence a este cliente" (validado no Back).
 const clientPackages = computed(() => props.packages.filter((p) => p.client === form.client));
 
 // Trocar o cliente invalida o pacote selecionado — nunca manda um pacote que não é mais elegível.
+// Em consulta nova, o terapeuta só escolhe o cliente: o pacote ativo dele traz o serviço e o
+// valor por sessão (total ÷ sessões); sem pacote, serviço e valor voltam ao vazio.
+const autofilledFrom = ref<Package | null>(null);
+
+function usablePackage(clientId: number | '') {
+  return props.packages.find(
+    (p) => p.client === clientId && p.status === 'ACTIVE' && p.remainingSessions > 0
+      && !(p.expirationDate && p.expirationDate < toDateOnly(new Date())),
+  );
+}
+
+function applyPackage(pkg: Package | undefined) {
+  form.package = pkg?.id ?? '';
+  form.service = pkg?.service ?? '';
+  form.price = pkg && pkg.totalSessions > 0 ? Math.round((pkg.totalValue / pkg.totalSessions) * 100) / 100 : 0;
+  autofilledFrom.value = pkg ?? null;
+}
+
 watch(
   () => form.client,
   () => {
     if (form.package && !clientPackages.value.some((p) => p.id === form.package)) {
       form.package = '';
     }
+    if (!props.initial) applyPackage(usablePackage(form.client));
   },
 );
+
+// Escolher outro pacote na mão refaz o preenchimento; escolher só o serviço (sem pacote) puxa o preço dele.
+watch(
+  () => form.package,
+  (id) => {
+    if (props.initial) return;
+    const pkg = props.packages.find((p) => p.id === id);
+    if (pkg && autofilledFrom.value?.id !== pkg.id) applyPackage(pkg);
+  },
+);
+watch(
+  () => form.service,
+  (id) => {
+    if (props.initial || form.package) return;
+    const service = props.services.find((s) => s.id === id);
+    if (service) form.price = service.price;
+  },
+);
+
+// Cliente/pacote vindos por link (ou pacotes que chegam depois do formulário abrir).
+watch(
+  () => props.packages,
+  () => {
+    if (props.initial || !form.client) return;
+    applyPackage(props.packages.find((p) => p.id === form.package) ?? usablePackage(form.client));
+  },
+  { immediate: true },
+);
+
+const recurrenceMax = computed(() => {
+  const pkg = props.packages.find((p) => p.id === form.package);
+  return Math.min(52, pkg ? pkg.remainingSessions : 52);
+});
 
 // Link da chamada só se aplica a ONLINE/HYBRID — some ao trocar a modalidade,
 // senão um valor digitado antes ficaria escondido mas ainda seria enviado.
@@ -84,6 +144,9 @@ const validationError = computed(() => {
   if (form.endTime <= form.startTime) return 'O horário final precisa ser depois do inicial.';
   if (!props.initial && form.date < todayDateOnly) return 'A data não pode estar no passado.';
   if (form.price < 0) return 'O valor não pode ser negativo.';
+  if (form.recurrence && (!Number.isInteger(form.occurrences) || form.occurrences < 2 || form.occurrences > recurrenceMax.value)) {
+    return `O total de consultas deve ficar entre 2 e ${recurrenceMax.value}.`;
+  }
   if (form.callLink && !/^https?:\/\//i.test(form.callLink)) return 'O link da chamada precisa começar com http:// ou https://.';
   return null;
 });
@@ -104,6 +167,11 @@ function handleSubmit() {
     price: form.price,
     notes: form.notes,
   };
+
+  if (!props.initial && form.recurrence) {
+    payload.recurrence = form.recurrence;
+    payload.occurrences = form.occurrences;
+  }
 
   // Só reenvia o pacote se ele realmente mudou. Em edição, incluir a chave mesmo sem
   // mudança faz o Back revalidar contra o pacote já vinculado (apps/appointments/
@@ -229,6 +297,37 @@ function handleSubmit() {
       </div>
     </div>
 
+    <div v-if="!initial" class="flex flex-wrap items-end gap-3">
+      <div>
+        <label :for="fieldId('recurrence')" class="mb-1 block text-label uppercase tracking-label text-text-muted">Repetir</label>
+        <select
+          :id="fieldId('recurrence')"
+          v-model="form.recurrence"
+          class="h-10 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+        >
+          <option value="">Não repete</option>
+          <option v-for="(label, value) in RECURRENCE_LABEL" :key="value" :value="value">{{ label }}</option>
+        </select>
+      </div>
+      <div v-if="form.recurrence">
+        <label :for="fieldId('occurrences')" class="mb-1 block text-label uppercase tracking-label text-text-muted">Total de consultas</label>
+        <input
+          :id="fieldId('occurrences')"
+          v-model.number="form.occurrences"
+          type="number"
+          min="2"
+          :max="recurrenceMax"
+          class="h-10 w-28 rounded-md border border-border bg-surface px-3 text-body text-text focus-visible:border-primary-600"
+        />
+      </div>
+      <p v-if="form.recurrence" class="pb-2 text-body-sm text-text-muted">
+        Mesmo dia da semana e horário, contando esta consulta.
+      </p>
+    </div>
+    <p v-if="!initial && autofilledFrom" class="text-body-sm text-text-muted">
+      Serviço e valor preenchidos pelo pacote “{{ autofilledFrom.name }}” — pode ajustar.
+    </p>
+
     <div v-if="form.modality === 'ONLINE' || form.modality === 'HYBRID'">
       <label :for="fieldId('call-link')" class="mb-1 block text-label uppercase tracking-label text-text-muted">Link da chamada</label>
       <input
@@ -251,7 +350,6 @@ function handleSubmit() {
     </div>
 
     <p v-if="formError" role="alert" class="text-body-sm text-error">{{ formError }}</p>
-    <p v-if="saveError" role="alert" class="text-body-sm text-error">{{ saveError }}</p>
 
     <div class="flex gap-2">
       <Button type="submit" size="md" :loading="saving">Salvar</Button>

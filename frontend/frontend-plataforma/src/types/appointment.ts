@@ -2,7 +2,8 @@
 // serializers.py — APPOINTMENT_FIELDS). price/modality/service são opcionais
 // no model (null=True/blank=True); professional não é exposto aqui porque a
 // UI nunca precisa ler esse campo (filtra por query param quando precisa).
-export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'DECLINED' | 'COMPLETED' | 'CANCELLED';
+export type AppointmentRecurrence = 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
 export type AppointmentModality = 'ONLINE' | 'IN_PERSON' | 'HYBRID';
 
 export interface Appointment {
@@ -17,9 +18,13 @@ export interface Appointment {
   callLink?: string;
   price?: number;
   notes?: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  confirmationRequestedAt?: string | null;
+  confirmationSource?: 'PATIENT' | 'PROFESSIONAL' | '';
 }
 
-export type AppointmentAction = 'confirm' | 'cancel' | 'complete';
+export type AppointmentAction = 'confirm' | 'cancel' | 'complete' | 'start' | 'reopen';
 
 export interface NewAppointment {
   client: number;
@@ -35,6 +40,9 @@ export interface NewAppointment {
   callLink?: string;
   price?: number;
   notes?: string;
+  /** Só na criação: repete no mesmo dia/horário; `occurrences` conta a 1ª consulta. */
+  recurrence?: AppointmentRecurrence;
+  occurrences?: number;
 }
 
 export type AppointmentPatch = Partial<NewAppointment>;

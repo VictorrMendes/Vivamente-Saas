@@ -1,10 +1,4 @@
-/**
- * Campos confirmados no contrato real do Back
- * (postman/VivaMente-Back.postman_collection.json, pastas 4 e 7/16).
- * `email`/`phone`/`active`/`modality`/`location`/`services` que existiam
- * aqui antes eram invenção minha — removidos. E-mail vive no User (via
- * `user`), não duplicado no Professional.
- */
+/** Modelo usado pelas telas, após normalizar os serializers de leitura/escrita. */
 export interface Professional {
   id: number;
   user: number;
@@ -15,6 +9,19 @@ export interface Professional {
   specialtyIds: number[];
   photoUrl?: string;
   createdAt?: string;
+}
+
+/** GET inclui objetos em specialties; POST/PATCH devolvem specialty_ids. */
+export type ProfessionalResponse = Omit<Professional, 'specialtyIds'> & (
+  | { specialties: { id: number; name: string }[]; specialtyIds?: never }
+  | { specialtyIds: number[]; specialties?: never }
+);
+
+export function normalizeProfessional(response: ProfessionalResponse): Professional {
+  return {
+    ...response,
+    specialtyIds: response.specialties?.map((specialty) => specialty.id) ?? response.specialtyIds ?? [],
+  };
 }
 
 export interface NewProfessional {
