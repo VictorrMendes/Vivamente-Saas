@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Users } from '@lucide/vue';
@@ -79,6 +80,7 @@ onMounted(fetchClients);
       <div>
         <label for="client-name" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nome</label>
         <input
+          :maxlength="LIMITS.name"
           id="client-name"
           v-model="newClient.name"
           type="text"
@@ -89,6 +91,7 @@ onMounted(fetchClients);
       <div>
         <label for="client-email" class="mb-1 block text-label uppercase tracking-label text-text-muted">E-mail</label>
         <input
+          :maxlength="LIMITS.email"
           id="client-email"
           v-model="newClient.email"
           type="email"
@@ -99,6 +102,7 @@ onMounted(fetchClients);
       <div>
         <label for="client-phone" class="mb-1 block text-label uppercase tracking-label text-text-muted">Telefone</label>
         <input
+          :maxlength="LIMITS.phone"
           id="client-phone"
           v-model="newClient.phone"
           type="tel"
@@ -118,6 +122,7 @@ onMounted(fetchClients);
       <div>
         <label for="client-document" class="mb-1 block text-label uppercase tracking-label text-text-muted">Documento</label>
         <input
+          :maxlength="LIMITS.document"
           id="client-document"
           v-model="newClient.document"
           type="text"
@@ -130,6 +135,7 @@ onMounted(fetchClients);
           Observações administrativas
         </label>
         <input
+          :maxlength="LIMITS.notes"
           id="client-notes"
           v-model="newClient.administrativeNotes"
           type="text"
@@ -141,6 +147,7 @@ onMounted(fetchClients);
     <p v-if="formError || saveError" role="alert" class="mt-2 text-body-sm text-error">{{ formError || saveError }}</p>
 
     <input
+      :maxlength="LIMITS.search"
       v-model="search"
       type="search"
       placeholder="Buscar por nome…"

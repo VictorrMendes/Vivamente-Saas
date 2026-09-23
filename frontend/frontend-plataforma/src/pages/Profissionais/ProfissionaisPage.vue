@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
+import FieldCount from '@/components/ui/FieldCount.vue';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { UserCog } from '@lucide/vue';
@@ -126,6 +128,7 @@ onMounted(() => {
         <div class="min-w-0 w-full sm:w-auto sm:min-w-[240px]">
           <label for="prof-user-search" class="mb-1 block text-label uppercase tracking-label text-text-muted">Conta de acesso (e-mail)</label>
           <input
+            :maxlength="LIMITS.email"
             id="prof-user-search"
             v-model="userSearch"
             type="text"
@@ -155,6 +158,7 @@ onMounted(() => {
         <div>
           <label for="prof-slug" class="mb-1 block text-label uppercase tracking-label text-text-muted">Slug (URL pública)</label>
           <input
+            :maxlength="LIMITS.slug"
             id="prof-slug"
             v-model="newProfessional.slug"
             type="text"
@@ -166,6 +170,7 @@ onMounted(() => {
         <div class="min-w-[200px] flex-1">
           <label for="prof-name" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nome completo</label>
           <input
+            :maxlength="LIMITS.name"
             id="prof-name"
             v-model="newProfessional.fullName"
             type="text"
@@ -177,11 +182,13 @@ onMounted(() => {
       <div>
         <label for="prof-bio" class="mb-1 block text-label uppercase tracking-label text-text-muted">Bio</label>
         <textarea
+          :maxlength="LIMITS.bio"
           id="prof-bio"
           v-model="newProfessional.bio"
           rows="3"
           class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:border-primary-600"
         />
+        <FieldCount :value="newProfessional.bio" :max="LIMITS.bio" />
       </div>
       <div>
         <span class="mb-1 block text-label uppercase tracking-label text-text-muted">Especialidades</span>
@@ -202,6 +209,7 @@ onMounted(() => {
         </div>
         <div class="mt-2 flex flex-wrap items-end gap-2">
           <input
+            :maxlength="LIMITS.specialty"
             v-model="newSpecialtyName"
             type="text"
             placeholder="Nova especialidade"
@@ -219,6 +227,7 @@ onMounted(() => {
     <p v-if="saveError" role="alert" class="mt-2 text-body-sm text-error">{{ saveError }}</p>
 
     <input
+      :maxlength="LIMITS.search"
       v-model="search"
       type="search"
       placeholder="Buscar por nome…"

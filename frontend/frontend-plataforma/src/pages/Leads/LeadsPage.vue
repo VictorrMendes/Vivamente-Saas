@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
 import { onMounted, ref, watch } from 'vue';
 import { UserPlus } from '@lucide/vue';
 import { useLeads } from '@/composables/useLeads';
@@ -75,6 +76,7 @@ onMounted(fetchLeads);
       </div>
 
       <input
+        :maxlength="LIMITS.search"
         v-model="search"
         type="search"
         placeholder="Buscar por nome…"

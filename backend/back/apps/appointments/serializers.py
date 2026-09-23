@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from config.limits import NOTES_MAX
+
 from .models import Appointment, AvailabilitySlot
 
 
@@ -75,6 +77,7 @@ class AppointmentWriteSerializer(serializers.ModelSerializer):
         fields = APPOINTMENT_FIELDS + ["recurrence", "occurrences"]
         read_only_fields = ["id", "status", "created_at", "started_at", "finished_at",
                             "confirmation_requested_at", "confirmation_source"]
+        extra_kwargs = {"notes": {"max_length": NOTES_MAX}}
 
     def validate(self, attrs):
         _validate_period(attrs, self.instance)

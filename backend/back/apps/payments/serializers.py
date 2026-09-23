@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from config.limits import PAYMENT_DESCRIPTION_MAX
+
 from .models import Payment
 
 PAYMENT_FIELDS = [
@@ -33,6 +35,7 @@ class PaymentWriteSerializer(serializers.ModelSerializer):
         # `paid_at` so muda via transicao de status (services.py), nunca
         # setado direto; `receipt_number` e sempre gerado no servidor.
         read_only_fields = ["id", "paid_at", "receipt_number", "created_at", "updated_at"]
+        extra_kwargs = {"description": {"max_length": PAYMENT_DESCRIPTION_MAX}}
 
 
 class PaymentSelfWriteSerializer(PaymentWriteSerializer):

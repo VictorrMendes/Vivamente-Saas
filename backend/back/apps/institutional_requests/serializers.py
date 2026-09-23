@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from config.limits import MESSAGE_MAX
+
 from apps.professionals.models import Professional
 
 from .models import InstitutionalRequest
@@ -12,6 +14,7 @@ class InstitutionalRequestPublicCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = InstitutionalRequest
         fields = ["kind", "name", "email", "phone", "message"]
+        extra_kwargs = {"message": {"max_length": MESSAGE_MAX}}
 
 
 class InstitutionalRequestSerializer(serializers.ModelSerializer):

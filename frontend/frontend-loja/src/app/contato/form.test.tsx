@@ -73,3 +73,15 @@ describe("CompanyContactForm — preservação de valores", () => {
     expect(screen.getByText(/foi simulado/i)).toBeTruthy();
   });
 });
+
+describe("CompanyContactForm — limites de caracteres", () => {
+  it("campos têm maxLength do Back e a mensagem mostra o contador", () => {
+    render(<CompanyContactForm audience="atendimento" isMock={false} />);
+    expect(screen.getByLabelText("Seu nome")).toHaveProperty("maxLength", 200);
+    expect(screen.getByLabelText("E-mail")).toHaveProperty("maxLength", 254);
+    const message = screen.getByLabelText("O que você está buscando?");
+    expect(message).toHaveProperty("maxLength", 2000);
+    fireEvent.change(message, { target: { value: "olá" } });
+    expect(screen.getByText("3/2000")).toBeTruthy();
+  });
+});

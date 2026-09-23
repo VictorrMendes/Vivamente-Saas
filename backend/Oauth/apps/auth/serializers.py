@@ -2,14 +2,14 @@ from rest_framework import serializers
 
 
 class RegisterSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(min_length=6, write_only=True)
+    email = serializers.EmailField(max_length=254)
+    password = serializers.CharField(min_length=6, max_length=128, write_only=True)
     role = serializers.ChoiceField(choices=["ADMIN", "THERAPIST"])
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+    email = serializers.EmailField(max_length=254)
+    password = serializers.CharField(max_length=128, write_only=True)
 
 
 class LogoutSerializer(serializers.Serializer):
@@ -21,12 +21,12 @@ class EmailVerifySerializer(serializers.Serializer):
 
 
 class PasswordForgotSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(max_length=254)
 
 
 class PasswordResetSerializer(serializers.Serializer):
     token = serializers.CharField()
-    newPassword = serializers.CharField(min_length=6, write_only=True)
+    newPassword = serializers.CharField(min_length=6, max_length=128, write_only=True)
 
 
 class UserSerializer(serializers.Serializer):

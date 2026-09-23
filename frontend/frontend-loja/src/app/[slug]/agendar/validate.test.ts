@@ -31,4 +31,21 @@ describe("validateContactFields", () => {
       message: "Escreva uma mensagem para o profissional.",
     });
   });
+
+  it("rejeita valores acima dos limites do Back (nome 200, e-mail 254, telefone 30, mensagem 2000)", () => {
+    const errors = validateContactFields({
+      name: "n".repeat(201),
+      email: `${"e".repeat(250)}@x.com`,
+      phone: "1".repeat(31),
+      message: "m".repeat(2001),
+    });
+    expect(Object.keys(errors).sort()).toEqual(["email", "message", "name", "phone"]);
+    expect(errors.message).toBe("A mensagem pode ter no máximo 2000 caracteres.");
+  });
+
+  it("aceita exatamente no limite", () => {
+    expect(
+      validateContactFields({ name: "n".repeat(200), email: "a@x.com", phone: "1".repeat(30), message: "m".repeat(2000) }),
+    ).toEqual({});
+  });
 });

@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import type { AvailabilitySlot, PublicService } from "@/lib/api/types";
 import { submitAppointmentRequest, type ActionState } from "./actions";
+import { FieldCount } from "@/components/field-count";
+import { LIMITS } from "@/lib/field-limits";
 
 const initialActionState: ActionState = { fieldErrors: {}, formError: null };
 
@@ -94,6 +96,7 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           id="name"
           name="name"
           type="text"
+          maxLength={LIMITS.name}
           required
           value={values.name}
           onChange={handleChange}
@@ -116,6 +119,7 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           id="email"
           name="email"
           type="email"
+          maxLength={LIMITS.email}
           required
           value={values.email}
           onChange={handleChange}
@@ -138,10 +142,18 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           id="phone"
           name="phone"
           type="tel"
+          maxLength={LIMITS.phone}
           value={values.phone}
           onChange={handleChange}
+          aria-invalid={Boolean(state.fieldErrors.phone)}
+          aria-describedby={state.fieldErrors.phone ? "phone-error" : undefined}
           className={FIELD_CLASS}
         />
+        {state.fieldErrors.phone && (
+          <p id="phone-error" className="text-body-sm text-error">
+            {state.fieldErrors.phone}
+          </p>
+        )}
       </div>
 
       {services.length > 0 && (
@@ -208,6 +220,7 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           id="message"
           name="message"
           rows={4}
+          maxLength={LIMITS.message}
           required
           value={values.message}
           onChange={handleChange}
@@ -215,6 +228,7 @@ export function AppointmentForm({ slug, services, slots }: Props) {
           aria-describedby={state.fieldErrors.message ? "message-error" : undefined}
           className="rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:outline-none focus-visible:shadow-focus"
         />
+        <FieldCount value={values.message} max={LIMITS.message} />
         {state.fieldErrors.message && (
           <p id="message-error" className="text-body-sm text-error">
             {state.fieldErrors.message}

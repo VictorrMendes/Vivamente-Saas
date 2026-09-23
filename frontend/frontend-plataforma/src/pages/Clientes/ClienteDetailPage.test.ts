@@ -155,3 +155,111 @@ describe('ClienteDetailPage — layout da área do cliente', () => {
   });
 });
 
+
+describe('ClienteDetailPage — modal Plano e pagamento', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    useToast().toasts.forEach((t) => useToast().dismiss(t.id));
+    document.body.innerHTML = '';
+  });
+
+  const catalog = [
+    { id: 7, professional: 1, service: null, name: 'Plano 4 sessões', description: '', total_sessions: 4, total_value: '600.00', validity_days: 60 },
+  ];
+  const bodies: { url: string; body: unknown }[] = [];
+
+  function planFetch() {
+    const base = richFetch();
+    bodies.length = 0;
+    return vi.fn((url: string, init?: RequestInit) => {
+      const post = init?.method === 'POST';
+      if (post) bodies.push({ url, body: JSON.parse(init!.body as string) });
+      if (url.includes('/package-plans') && post) return Promise.resolve(json({ data: { id: 8, professional: 1, service: null, name: 'Mensal', total_sessions: 8, total_value: '1000.00' } }));
+      if (url.includes('/package-plans')) return Promise.resolve(json(page(catalog)));
+      if (url.includes('/packages/assign')) {
+        return Promise.resolve(json({ data: { id: 30, client: 1, plan: 7, name: 'Plano 4 sessões', total_sessions: 4, total_value: '600.00', status: 'ACTIVE', start_date: '2026-09-23', used_sessions: 0, remaining_sessions: 4 } }));
+      }
+      if (url.includes('/payments') && post) {
+        return Promise.resolve(json({ data: { id: 9, client: 1, amount: '150.00', due_date: '2026-10-01', status: 'PENDING', receipt_number: 'REC-000009' } }));
+      }
+      return base(url, init);
+    });
+  }
+
+  async function openDialog() {
+    const wrapper = await renderRich('THERAPIST', planFetch());
+    await wrapper.findAll('button').find((b) => b.text() === 'Plano e pagamento')!.trigger('click');
+    await flushPromises();
+    return wrapper;
+  }
+  const body = () => document.body;
+  const setField = async (selector: string, value: string) => {
+    const el = body().querySelector(selector) as HTMLInputElement | HTMLSelectElement;
+    el.value = value;
+    el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? 'change' : 'input'));
+    await flushPromises();
+  };
+  const submitForm = async (form: Element | null) => {
+    (form as HTMLFormElement).dispatchEvent(new Event('submit', { cancelable: true }));
+    await flushPromises();
+  };
+
+  it('abre no plano ativo do cliente, com o progresso e o catálogo para atribuir', async () => {
+    const wrapper = await openDialog();
+    expect(body().textContent).toContain('Plano e pagamento');
+    expect(body().textContent).toContain('3 de 8 restantes');
+    expect(body().querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('5');
+    expect(body().textContent).toContain('Plano 4 sessões — 4 sessões');
+    wrapper.unmount();
+  });
+
+  it('atribui um pacote do catálogo ao cliente (sem redigitar nada) e avisa por toast', async () => {
+    const wrapper = await openDialog();
+    await setField('#assign-plan', '7');
+    await submitForm(body().querySelector('#assign-plan')!.closest('form'));
+
+    const assignCall = bodies.find((b) => b.url.includes('/packages/assign'))!;
+    expect(assignCall.body).toMatchObject({ client: 1, plan: 7 });
+    expect(useToast().toasts.some((t) => t.kind === 'success' && t.message.includes('atribuído'))).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('cria um novo pacote dentro do modal e já o deixa selecionado', async () => {
+    const wrapper = await openDialog();
+    const openCreate = [...body().querySelectorAll('button')].find((b) => b.textContent?.includes('Criar novo pacote'))!;
+    openCreate.click();
+    await flushPromises();
+
+    const nameInput = body().querySelector('input[placeholder^="Ex.: Pacote mensal"]') as HTMLInputElement;
+    nameInput.value = 'Mensal';
+    nameInput.dispatchEvent(new Event('input'));
+    await submitForm(nameInput.closest('form'));
+
+    expect(bodies.find((b) => b.url.includes('/package-plans'))!.body).toMatchObject({ name: 'Mensal', total_sessions: 4 });
+    expect((body().querySelector('#assign-plan') as HTMLSelectElement).value).toBe('8');
+    wrapper.unmount();
+  });
+
+  it('Gerar cobrança de um plano leva à aba Cobrança com o valor do plano; o link fica indisponível', async () => {
+    const wrapper = await openDialog();
+    [...body().querySelectorAll('button')].find((b) => b.textContent?.includes('Gerar cobrança'))!.click();
+    await flushPromises();
+    expect((body().querySelector('#pay-link-amount') as HTMLInputElement).value).toBe('1200');
+
+    await submitForm(body().querySelector('#pay-link-amount')!.closest('form'));
+    expect(bodies.find((b) => b.url.includes('/payments'))!.body).toMatchObject({ client: 1, amount: '1200.00', description: 'Plano Plano 8 sessões' });
+    expect(body().textContent).toContain('REC-000009');
+    expect((body().querySelector('input[aria-label="Link de pagamento"]') as HTMLInputElement).value).toContain('Disponível quando a integração');
+    wrapper.unmount();
+  });
+
+  it('cobrança com valor vazio mostra o erro no modal e não envia nada', async () => {
+    const wrapper = await openDialog();
+    [...body().querySelectorAll('[role="tab"]')].find((b) => b.textContent === 'Cobrança')!.dispatchEvent(new Event('click'));
+    await flushPromises();
+    await submitForm(body().querySelector('#pay-link-amount')!.closest('form'));
+    expect(body().textContent).toContain('Informe um valor maior que zero.');
+    expect(bodies.some((b) => b.url.includes('/payments'))).toBe(false);
+    wrapper.unmount();
+  });
+});

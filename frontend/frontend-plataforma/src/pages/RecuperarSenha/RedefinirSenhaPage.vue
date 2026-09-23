@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
 import { computed, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { confirmPasswordReset } from '@/services/api/oauth';
@@ -61,6 +62,7 @@ async function handleSubmit() {
           <div>
             <label for="reset-password" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nova senha</label>
             <input
+              :maxlength="LIMITS.password"
               id="reset-password"
               v-model="newPassword"
               type="password"

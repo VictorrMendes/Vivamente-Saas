@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
+import FieldCount from '@/components/ui/FieldCount.vue';
 import { computed, reactive, ref, useId, watch } from 'vue';
 import type { Appointment, AppointmentModality, AppointmentRecurrence, NewAppointment } from '@/types/appointment';
 import type { Client } from '@/types/client';
@@ -331,6 +333,7 @@ function handleSubmit() {
     <div v-if="form.modality === 'ONLINE' || form.modality === 'HYBRID'">
       <label :for="fieldId('call-link')" class="mb-1 block text-label uppercase tracking-label text-text-muted">Link da chamada</label>
       <input
+        :maxlength="LIMITS.url"
         :id="fieldId('call-link')"
         v-model="form.callLink"
         type="url"
@@ -342,11 +345,13 @@ function handleSubmit() {
     <div>
       <label :for="fieldId('notes')" class="mb-1 block text-label uppercase tracking-label text-text-muted">Observações operacionais</label>
       <textarea
+        :maxlength="LIMITS.notes"
         :id="fieldId('notes')"
         v-model="form.notes"
         rows="2"
         class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:border-primary-600"
       />
+      <FieldCount :value="form.notes" :max="LIMITS.notes" />
     </div>
 
     <p v-if="formError" role="alert" class="text-body-sm text-error">{{ formError }}</p>

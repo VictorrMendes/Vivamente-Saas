@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from config.limits import CLINICAL_CONTENT_MAX
+
 from .models import ClinicalRecord
 
 CLINICAL_RECORD_FIELDS = [
@@ -31,3 +33,4 @@ class ClinicalRecordWriteSerializer(serializers.ModelSerializer):
         model = ClinicalRecord
         fields = CLINICAL_RECORD_FIELDS
         read_only_fields = ["id", "professional", "author", "created_at", "updated_at"]
+        extra_kwargs = {"content": {"max_length": CLINICAL_CONTENT_MAX}}

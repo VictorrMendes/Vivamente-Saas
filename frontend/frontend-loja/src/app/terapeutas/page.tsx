@@ -4,6 +4,7 @@ import { ArrowUpRight, Search, UserRound } from "lucide-react";
 import { loadCatalogSpecialties, loadProfessionalsCatalog } from "@/lib/api/professionals-catalog";
 import { backendErrorMessage } from "@/lib/api/professionals";
 import { ProfessionalPortrait } from "@/components/professional-portrait";
+import { LIMITS } from "@/lib/field-limits";
 
 export const metadata: Metadata = {
   title: "Terapeutas da VivaMente",
@@ -16,7 +17,9 @@ type Props = {
 };
 
 export default async function TherapistsCatalogPage({ searchParams }: Props) {
-  const { q, page: pageParam, especialidade } = await searchParams;
+  const { q: qParam, page: pageParam, especialidade } = await searchParams;
+  // A URL é livre: o maxLength do input não vale pra quem monta o link na mão.
+  const q = qParam?.slice(0, LIMITS.search);
   const page = Math.max(1, Number(pageParam) || 1);
   const specialtyId = Number(especialidade) || undefined;
   const [result, specialties] = await Promise.all([
@@ -33,7 +36,7 @@ export default async function TherapistsCatalogPage({ searchParams }: Props) {
         <form className="catalog-search" role="search" action="/terapeutas">
           <Search size={18} aria-hidden />
           <label htmlFor="catalog-q" className="sr-only">Buscar por nome</label>
-          <input id="catalog-q" type="search" name="q" placeholder="Buscar por nome" defaultValue={q ?? ""} />
+          <input id="catalog-q" type="search" name="q" maxLength={LIMITS.search} placeholder="Buscar por nome" defaultValue={q ?? ""} />
           {specialties.length > 0 && (
             <>
               <label htmlFor="catalog-especialidade" className="sr-only">Filtrar por especialidade</label>

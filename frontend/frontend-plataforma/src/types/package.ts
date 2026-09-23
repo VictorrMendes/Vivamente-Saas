@@ -6,6 +6,8 @@ export type PackageStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export interface Package {
   id: number;
   client: number;
+  /** Plano do catálogo de onde este pacote foi atribuído (null se o plano foi excluído ou o pacote é avulso). */
+  plan?: number | null;
   /** Serviço do plano: a consulta nova do cliente já herda ele. */
   service?: number | null;
   name: string;
@@ -31,3 +33,24 @@ export interface NewPackage {
 }
 
 export type PackagePatch = Partial<NewPackage> & { status?: PackageStatus };
+
+// Catálogo do profissional (apps/packages PackagePlan): o modelo de pacote,
+// sem cliente. "Atribuir" cria um Package copiando estes campos.
+export interface PackagePlan {
+  id: number;
+  service?: number | null;
+  name: string;
+  description?: string;
+  totalSessions: number;
+  totalValue: number;
+  validityDays?: number | null;
+}
+
+export interface NewPackagePlan {
+  service?: number | null;
+  name: string;
+  description?: string;
+  totalSessions: number;
+  totalValue: number;
+  validityDays?: number | null;
+}

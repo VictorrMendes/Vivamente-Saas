@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { ArrowRight, Check, FlaskConical } from "lucide-react";
 import { submitCompanyContact, type ContactActionState } from "./actions";
+import { FieldCount } from "@/components/field-count";
+import { LIMITS } from "@/lib/field-limits";
 
 const initialActionState: ContactActionState = { fieldErrors: {}, formError: null, success: false };
 
@@ -70,7 +72,7 @@ export function CompanyContactForm({ audience, isMock }: { audience: "atendiment
           <div className="contact-field">
             <label htmlFor="company-name">Seu nome</label>
             <input
-              id="company-name" name="name" autoComplete="name" maxLength={200} required
+              id="company-name" name="name" autoComplete="name" maxLength={LIMITS.name} required
               value={values.name} onChange={handleChange}
               aria-invalid={Boolean(state.fieldErrors.name)}
               aria-describedby={state.fieldErrors.name ? "company-name-error" : undefined}
@@ -81,7 +83,7 @@ export function CompanyContactForm({ audience, isMock }: { audience: "atendiment
           <div className="contact-field">
             <label htmlFor="company-email">E-mail</label>
             <input
-              id="company-email" name="email" type="email" autoComplete="email" maxLength={254} required
+              id="company-email" name="email" type="email" autoComplete="email" maxLength={LIMITS.email} required
               value={values.email} onChange={handleChange}
               aria-invalid={Boolean(state.fieldErrors.email)}
               aria-describedby={state.fieldErrors.email ? "company-email-error" : undefined}
@@ -92,16 +94,19 @@ export function CompanyContactForm({ audience, isMock }: { audience: "atendiment
           <div className="contact-field">
             <label htmlFor="company-phone">Telefone <span>(opcional)</span></label>
             <input
-              id="company-phone" name="phone" type="tel" autoComplete="tel" maxLength={30}
+              id="company-phone" name="phone" type="tel" autoComplete="tel" maxLength={LIMITS.phone}
               value={values.phone} onChange={handleChange}
+              aria-invalid={Boolean(state.fieldErrors.phone)}
+              aria-describedby={state.fieldErrors.phone ? "company-phone-error" : undefined}
             />
+            {state.fieldErrors.phone && <p id="company-phone-error" className="text-body-sm text-error">{state.fieldErrors.phone}</p>}
           </div>
 
           {isTherapist && (
             <div className="contact-field">
               <label htmlFor="company-specialty">Sua área de atuação <span>(opcional)</span></label>
               <input
-                id="company-specialty" name="specialty" maxLength={200}
+                id="company-specialty" name="specialty" maxLength={LIMITS.specialty}
                 value={values.specialty} onChange={handleChange}
               />
             </div>
@@ -110,11 +115,12 @@ export function CompanyContactForm({ audience, isMock }: { audience: "atendiment
           <div className="contact-field">
             <label htmlFor="company-message">{isTherapist ? "Conte um pouco sobre seu trabalho" : "O que você está buscando?"}</label>
             <textarea
-              id="company-message" name="message" rows={4} required
+              id="company-message" name="message" rows={4} maxLength={LIMITS.message} required
               value={values.message} onChange={handleChange}
               aria-invalid={Boolean(state.fieldErrors.message)}
               aria-describedby={state.fieldErrors.message ? "company-message-error" : undefined}
             />
+            <FieldCount value={values.message} max={LIMITS.message} />
             {state.fieldErrors.message && <p id="company-message-error" className="text-body-sm text-error">{state.fieldErrors.message}</p>}
           </div>
 

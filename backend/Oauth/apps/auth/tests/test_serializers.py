@@ -81,3 +81,19 @@ class PasswordResetSerializerTests(SimpleTestCase):
         )
 
         self.assertTrue(serializer.is_valid())
+
+
+def _errors(serializer_class, data):
+    serializer = serializer_class(data=data)
+    serializer.is_valid()
+    return serializer.errors
+
+
+class InputLengthLimitTests(SimpleTestCase):
+    def test_email_and_password_have_upper_bounds(self):
+        long_email = "a" * 250 + "@x.com"
+        self.assertIn("email", _errors(LoginSerializer, {"email": long_email, "password": "x"}))
+        self.assertIn("email", _errors(PasswordForgotSerializer, {"email": long_email}))
+        self.assertIn("password", _errors(LoginSerializer, {"email": "a@x.com", "password": "x" * 129}))
+        self.assertIn("newPassword", _errors(PasswordResetSerializer, {"token": "t", "newPassword": "x" * 129}))
+        self.assertNotIn("password", _errors(LoginSerializer, {"email": "a@x.com", "password": "x" * 128}))

@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from config.limits import MESSAGE_MAX
+
 from apps.professionals.models import Professional
 from apps.services.models import Service
 
@@ -31,6 +33,7 @@ class LeadWriteSerializer(serializers.ModelSerializer):
         model = Lead
         fields = LEAD_FIELDS
         read_only_fields = ["id", "status", "created_at", "updated_at"]
+        extra_kwargs = {"message": {"max_length": MESSAGE_MAX}}
 
 
 class LeadSelfWriteSerializer(LeadWriteSerializer):
@@ -51,7 +54,7 @@ class PublicAppointmentRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200)
     email = serializers.EmailField()
     phone = serializers.CharField(max_length=30, required=False, allow_blank=True, default="")
-    message = serializers.CharField(required=False, allow_blank=True, default="")
+    message = serializers.CharField(max_length=MESSAGE_MAX, required=False, allow_blank=True, default="")
     service = serializers.IntegerField(required=False, allow_null=True)
     preferredSlot = serializers.DateTimeField(required=False, allow_null=True)
 

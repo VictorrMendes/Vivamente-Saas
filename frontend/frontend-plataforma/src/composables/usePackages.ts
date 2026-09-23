@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { backApi } from '@/services/api/client';
+import { ApiError } from '@/services/api/errors';
 import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
 import type { NewPackage, Package, PackagePatch } from '@/types/package';
 
@@ -91,6 +92,26 @@ export function usePackages() {
     }
   }
 
+  // Atribui um plano do catálogo ao cliente: o Back cria o Pacote dele copiando o plano.
+  async function assign(client: number, plan: number, startDate?: string) {
+    saveError.value = null;
+    saving.value = true;
+    try {
+      const res = await backApi<ApiEnvelope<Package>>('/api/v1/packages/assign', {
+        method: 'POST',
+        body: JSON.stringify({ client, plan, startDate }),
+      });
+      const assigned = parseValue(res.data);
+      packages.value.push(assigned);
+      return assigned;
+    } catch (err) {
+      saveError.value = err instanceof ApiError && err.status === 400 ? err.message : 'Não foi possível atribuir o plano. Tente novamente.';
+      return null;
+    } finally {
+      saving.value = false;
+    }
+  }
+
   async function remove(id: number) {
     saveError.value = null;
     removingId.value = id;
@@ -104,5 +125,5 @@ export function usePackages() {
     }
   }
 
-  return { packages, loading, showLoading, error, saving, saveError, removingId, pagination, load, create, update, remove };
+  return { packages, loading, showLoading, error, saving, saveError, removingId, pagination, load, create, update, remove, assign };
 }

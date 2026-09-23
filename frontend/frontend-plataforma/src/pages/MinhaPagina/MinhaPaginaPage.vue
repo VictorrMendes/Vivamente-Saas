@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
+import FieldCount from '@/components/ui/FieldCount.vue';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { FileEdit } from '@lucide/vue';
 import { useMyPublicProfile } from '@/composables/useMyPublicProfile';
@@ -145,11 +147,13 @@ onMounted(() => {
         <div>
           <label for="my-bio" class="mb-1 block text-label uppercase tracking-label text-text-muted">Bio</label>
           <textarea
+            :maxlength="LIMITS.bio"
             id="my-bio"
             v-model="form.bio"
             rows="4"
             class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:border-primary-600"
           />
+          <FieldCount :value="form.bio" :max="LIMITS.bio" />
         </div>
 
         <div>

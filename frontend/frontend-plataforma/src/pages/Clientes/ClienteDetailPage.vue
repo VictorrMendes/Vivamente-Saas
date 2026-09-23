@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
+import FieldCount from '@/components/ui/FieldCount.vue';
 import ClinicalRecordFields from '@/components/forms/ClinicalRecordFields.vue';
 import { clinicalFields, parseClinicalContent } from '@/lib/clinicalContent';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
@@ -19,6 +21,7 @@ import Button from '@/components/ui/Button.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import Pagination from '@/components/ui/Pagination.vue';
+import ClientPlanDialog from '@/components/clients/ClientPlanDialog.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
@@ -216,6 +219,7 @@ async function handleSave() {
   }
 }
 
+const paymentDialogOpen = ref(false);
 const deleteClientConfirmOpen = ref(false);
 async function handleDeleteConfirmed() {
   deleteClientConfirmOpen.value = false;
@@ -293,12 +297,13 @@ const labelClass = 'mb-1 block text-label uppercase tracking-label text-text-mut
           >
             <CalendarPlus :size="16" aria-hidden="true" />Nova consulta
           </RouterLink>
-          <RouterLink
-            :to="`/financeiro?client=${client.id}`"
+          <button
+            type="button"
             class="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface px-4 text-button font-medium text-text transition-colors hover:bg-surface-sunken"
+            @click="paymentDialogOpen = true"
           >
-            <Wallet :size="16" aria-hidden="true" />Pagamento
-          </RouterLink>
+            <Wallet :size="16" aria-hidden="true" />Plano e pagamento
+          </button>
           <details class="relative">
             <summary
               class="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-md border border-border text-text hover:bg-surface-sunken"
@@ -340,7 +345,7 @@ const labelClass = 'mb-1 block text-label uppercase tracking-label text-text-mut
           </dd>
           <dd v-else class="mt-1 text-body-sm text-text-muted">
             Sem pacote ativo.
-            <RouterLink :to="`/pacotes?client=${client.id}`" class="text-primary-700 hover:underline">Criar pacote</RouterLink>
+            <button type="button" class="text-primary-700 hover:underline" @click="paymentDialogOpen = true">Atribuir pacote</button>
           </dd>
         </div>
       </dl>
@@ -375,15 +380,15 @@ const labelClass = 'mb-1 block text-label uppercase tracking-label text-text-mut
           <form v-if="editing" class="grid gap-3 sm:grid-cols-2" novalidate @submit.prevent="handleSave">
             <div class="sm:col-span-2">
               <label for="edit-name" :class="labelClass">Nome</label>
-              <input id="edit-name" v-model="editForm.name" type="text" required :class="inputClass" />
+              <input :maxlength="LIMITS.name" id="edit-name" v-model="editForm.name" type="text" required :class="inputClass" />
             </div>
             <div>
               <label for="edit-email" :class="labelClass">E-mail</label>
-              <input id="edit-email" v-model="editForm.email" type="email" required :class="inputClass" />
+              <input :maxlength="LIMITS.email" id="edit-email" v-model="editForm.email" type="email" required :class="inputClass" />
             </div>
             <div>
               <label for="edit-phone" :class="labelClass">Telefone</label>
-              <input id="edit-phone" v-model="editForm.phone" type="tel" required :class="inputClass" />
+              <input :maxlength="LIMITS.phone" id="edit-phone" v-model="editForm.phone" type="tel" required :class="inputClass" />
             </div>
             <div>
               <label for="edit-birth" :class="labelClass">Nascimento</label>
@@ -391,16 +396,18 @@ const labelClass = 'mb-1 block text-label uppercase tracking-label text-text-mut
             </div>
             <div>
               <label for="edit-document" :class="labelClass">Documento</label>
-              <input id="edit-document" v-model="editForm.document" type="text" :class="inputClass" />
+              <input :maxlength="LIMITS.document" id="edit-document" v-model="editForm.document" type="text" :class="inputClass" />
             </div>
             <div class="sm:col-span-2">
               <label for="edit-notes" :class="labelClass">Observações administrativas</label>
               <textarea
+                :maxlength="LIMITS.notes"
                 id="edit-notes"
                 v-model="editForm.administrativeNotes"
                 rows="3"
                 class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:border-primary-600"
               />
+              <FieldCount :value="editForm.administrativeNotes" :max="LIMITS.notes" />
             </div>
             <p v-if="editFormError" role="alert" class="text-body-sm text-error sm:col-span-2">{{ editFormError }}</p>
             <div class="flex gap-2 sm:col-span-2">
@@ -588,6 +595,13 @@ const labelClass = 'mb-1 block text-label uppercase tracking-label text-text-mut
       </section>
     </template>
 
+    <ClientPlanDialog
+      v-if="client"
+      v-model:open="paymentDialogOpen"
+      :client-id="client.id"
+      :client-name="client.name"
+      @changed="loadPackages({ client: clientId, status: 'ACTIVE' })"
+    />
     <ConfirmDialog
       :open="deleteClientConfirmOpen"
       title="Excluir cliente"

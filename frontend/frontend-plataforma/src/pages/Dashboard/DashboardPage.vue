@@ -112,7 +112,7 @@ onMounted(() => {
               {{ pkg.name }} — {{ clientName(pkg.client) }}
               ({{ pkg.remainingSessions === 0 ? 'sem sessões' : '1 sessão restante' }})
             </span>
-            <RouterLink to="/pacotes" class="shrink-0 text-primary-700 hover:underline">Ver pacote</RouterLink>
+            <RouterLink :to="`/clientes/${pkg.client}`" class="shrink-0 text-primary-700 hover:underline">Ver cliente</RouterLink>
           </li>
         </ul>
       </div>

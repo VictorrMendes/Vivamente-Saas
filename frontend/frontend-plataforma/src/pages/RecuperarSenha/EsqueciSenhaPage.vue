@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
 import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { requestPasswordForgot } from '@/services/api/oauth';
@@ -46,6 +47,7 @@ async function handleSubmit() {
           <div>
             <label for="forgot-email" class="mb-1 block text-label uppercase tracking-label text-text-muted">E-mail</label>
             <input
+              :maxlength="LIMITS.email"
               id="forgot-email"
               v-model="email"
               type="email"

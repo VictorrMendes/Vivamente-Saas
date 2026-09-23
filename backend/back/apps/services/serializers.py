@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from config.limits import DESCRIPTION_MAX
+
 from .models import Service
 
 
@@ -33,6 +35,7 @@ class ServiceWriteSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+        extra_kwargs = {"description": {"max_length": DESCRIPTION_MAX}}
 
 
 class ServiceSelfWriteSerializer(ServiceWriteSerializer):

@@ -4,6 +4,7 @@ import { createInstitutionalRequest } from "@/lib/api/institutional-requests";
 import { BackApiError, BackUnavailableError } from "@/lib/api/back-client";
 import { validateContactFields, type ContactFieldErrors } from "../[slug]/agendar/validate";
 import type { InstitutionalRequestKind } from "@/lib/api/types";
+import { LIMITS } from "@/lib/field-limits";
 
 export type ContactActionState = {
   fieldErrors: ContactFieldErrors;
@@ -30,14 +31,17 @@ export async function submitCompanyContact(
   const specialty = String(formData.get("specialty") ?? "").trim();
   let message = String(formData.get("message") ?? "").trim();
 
-  const fieldErrors = validateContactFields({ name, email, message });
+  const fieldErrors = validateContactFields({ name, email, message, phone });
+  // "Área de atuação" entra no início da mensagem: o total é que não pode passar do limite.
+  const specialtyPrefix = audience === "terapeuta" && specialty ? `Área de atuação: ${specialty}\n` : "";
+  if (!fieldErrors.message && specialtyPrefix.length + message.length > LIMITS.message) {
+    fieldErrors.message = `A mensagem pode ter no máximo ${LIMITS.message - specialtyPrefix.length} caracteres.`;
+  }
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors, formError: null, success: false };
   }
 
-  if (audience === "terapeuta" && specialty) {
-    message = `Área de atuação: ${specialty}\n${message}`;
-  }
+  message = `${specialtyPrefix}${message}`;
 
   try {
     await createInstitutionalRequest({

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
+import FieldCount from '@/components/ui/FieldCount.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProfessional } from '@/composables/useProfessional';
@@ -123,6 +125,7 @@ onMounted(() => {
             <div>
               <label for="edit-name" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nome completo</label>
               <input
+                :maxlength="LIMITS.name"
                 id="edit-name"
                 v-model="editForm.fullName"
                 type="text"
@@ -133,11 +136,13 @@ onMounted(() => {
             <div>
               <label for="edit-bio" class="mb-1 block text-label uppercase tracking-label text-text-muted">Bio</label>
               <textarea
+                :maxlength="LIMITS.bio"
                 id="edit-bio"
                 v-model="editForm.bio"
                 rows="3"
                 class="w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text focus-visible:border-primary-600"
               />
+              <FieldCount :value="editForm.bio" :max="LIMITS.bio" />
             </div>
             <div>
               <span class="mb-1 block text-label uppercase tracking-label text-text-muted">Especialidades</span>

@@ -10,6 +10,27 @@ from apps.services.models import Service
 _APPOINTMENT_CANCELLED = "CANCELLED"
 
 
+class PackagePlan(models.Model):
+    """Catálogo do profissional: o modelo de pacote (serviço, sessões, valor) que ele atribui a clientes."""
+
+    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name="package_plans")
+    service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True, related_name="package_plans")
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    total_sessions = models.PositiveIntegerField()
+    total_value = models.DecimalField(max_digits=10, decimal_places=2)
+    validity_days = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "package_plans"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Package(models.Model):
     ACTIVE = "ACTIVE"
     COMPLETED = "COMPLETED"
@@ -18,6 +39,7 @@ class Package(models.Model):
 
     professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name="packages")
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="packages")
+    plan = models.ForeignKey(PackagePlan, on_delete=models.SET_NULL, null=True, blank=True, related_name="packages")
     service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True, related_name="packages")
     name = models.CharField(max_length=200)
     total_sessions = models.PositiveIntegerField()

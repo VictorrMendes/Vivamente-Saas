@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
 import { onMounted, reactive, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
@@ -92,6 +93,7 @@ async function handleSubmit() {
         <div>
           <label for="email" class="mb-1 block text-label uppercase tracking-label text-text-muted">E-mail</label>
           <input
+            :maxlength="LIMITS.email"
             id="email"
             v-model="form.email"
             type="email"
@@ -104,6 +106,7 @@ async function handleSubmit() {
         <div>
           <label for="password" class="mb-1 block text-label uppercase tracking-label text-text-muted">Senha</label>
           <input
+            :maxlength="LIMITS.password"
             id="password"
             v-model="form.password"
             type="password"

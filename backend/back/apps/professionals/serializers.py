@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from config.limits import BIO_MAX
+
 from .models import Professional, Specialty
 
 
@@ -53,6 +55,7 @@ class ProfessionalWriteSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {"bio": {"max_length": BIO_MAX}}
 
 
 class ProfessionalSelfUpdateSerializer(ProfessionalWriteSerializer):

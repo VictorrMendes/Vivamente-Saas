@@ -16,6 +16,7 @@ export interface NewPayment {
   client: number;
   amount: number;
   dueDate: string;
+  description?: string;
 }
 
 export type PaymentPatch = Partial<NewPayment> & { status?: PaymentStatus };

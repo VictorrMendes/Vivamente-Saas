@@ -41,7 +41,7 @@ export async function submitAppointmentRequest(
   const serviceRaw = String(formData.get("service") ?? "");
   const preferredSlot = String(formData.get("preferredSlot") ?? "") || null;
 
-  const fieldErrors: ActionState["fieldErrors"] = validateContactFields({ name, email, message });
+  const fieldErrors: ActionState["fieldErrors"] = validateContactFields({ name, email, message, phone });
 
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors, formError: null };

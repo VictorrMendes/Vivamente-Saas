@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
 import { computed, reactive, ref, useId } from 'vue';
 import type { NewService, Service, ServiceModality } from '@/types/service';
 import Button from '@/components/ui/Button.vue';
@@ -45,6 +46,7 @@ function handleSubmit() {
       <div>
         <label :for="fieldId('name')" class="mb-1 block text-label uppercase tracking-label text-text-muted">Nome</label>
         <input
+          :maxlength="LIMITS.name"
           :id="fieldId('name')"
           v-model="form.name"
           type="text"
@@ -88,6 +90,7 @@ function handleSubmit() {
       <div class="min-w-[200px] flex-1">
         <label :for="fieldId('description')" class="mb-1 block text-label uppercase tracking-label text-text-muted">Descrição</label>
         <input
+          :maxlength="LIMITS.description"
           :id="fieldId('description')"
           v-model="form.description"
           type="text"

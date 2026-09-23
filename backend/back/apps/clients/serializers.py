@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from config.limits import NOTES_MAX
+
 from .models import Client
 
 CLIENT_FIELDS = [
@@ -30,6 +32,7 @@ class ClientWriteSerializer(serializers.ModelSerializer):
         fields = CLIENT_FIELDS
         # `lead` so e preenchido pelo fluxo de conversao (POST /leads/{id}/convert)
         read_only_fields = ["id", "lead", "created_at", "updated_at"]
+        extra_kwargs = {"administrative_notes": {"max_length": NOTES_MAX}}
 
 
 class ClientSelfWriteSerializer(ClientWriteSerializer):

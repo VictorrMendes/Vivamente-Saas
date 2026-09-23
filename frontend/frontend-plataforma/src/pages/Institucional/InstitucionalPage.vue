@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LIMITS } from '@/lib/fieldLimits';
 import { onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Inbox, RotateCw } from '@lucide/vue';
@@ -128,6 +129,7 @@ onMounted(() => {
       </div>
 
       <input
+        :maxlength="LIMITS.search"
         v-model="search"
         type="search"
         placeholder="Buscar por nome…"
