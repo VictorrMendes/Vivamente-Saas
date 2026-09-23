@@ -37,11 +37,15 @@ class Appointment(models.Model):
     CONFIRMED = "CONFIRMED"
     CANCELLED = "CANCELLED"
     COMPLETED = "COMPLETED"
+    DECLINED = "DECLINED"
+    IN_PROGRESS = "IN_PROGRESS"
     STATUS_CHOICES = [
         (PENDING, "Pendente"),
         (CONFIRMED, "Confirmado"),
         (CANCELLED, "Cancelado"),
         (COMPLETED, "Concluído"),
+        (DECLINED, "Recusado"),
+        (IN_PROGRESS, "Em atendimento"),
     ]
 
     ONLINE = "ONLINE"
@@ -67,6 +71,13 @@ class Appointment(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     notes = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    confirmation_requested_at = models.DateTimeField(null=True, blank=True)
+    confirmation_source = models.CharField(max_length=20, blank=True, default="")
+    # Only the digest is persisted; the bearer link is never part of the serializers.
+    confirmation_digest = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    confirmation_expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "appointments"
@@ -86,7 +97,7 @@ class Appointment(models.Model):
                     ("professional", RangeOperators.EQUAL),
                     (TsTzRange("starts_at", "ends_at"), RangeOperators.OVERLAPS),
                 ],
-                condition=~models.Q(status="CANCELLED"),
+                condition=~models.Q(status__in=["CANCELLED", "DECLINED"]),
             ),
         ]
 

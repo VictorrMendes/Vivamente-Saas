@@ -1,0 +1,28 @@
+name: Frontend Plataforma Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/frontend-plataforma
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/frontend-plataforma/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Testes
+        run: npm test
+
+      - name: Build (inclui typecheck via vue-tsc)
+        run: npm run build

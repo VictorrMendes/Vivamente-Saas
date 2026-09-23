@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from apps.clients.models import Client
 from apps.professionals.models import Professional
+from apps.services.models import Service
 
 # String literal, nao import de apps.appointments.models.Appointment.CANCELLED,
 # de proposito: evita ciclo de import (Appointment tera FK pra Package).
@@ -17,6 +18,7 @@ class Package(models.Model):
 
     professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name="packages")
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="packages")
+    service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True, related_name="packages")
     name = models.CharField(max_length=200)
     total_sessions = models.PositiveIntegerField()
     total_value = models.DecimalField(max_digits=10, decimal_places=2)
@@ -39,7 +41,7 @@ class Package(models.Model):
         # Computado ao vivo a partir de appointments.package (related_name
         # "appointments"), nunca um contador mutavel duplicado - fonte unica
         # de verdade e a agenda em si.
-        return self.appointments.exclude(status=_APPOINTMENT_CANCELLED).count()
+        return self.appointments.exclude(status__in=[_APPOINTMENT_CANCELLED, "DECLINED"]).count()
 
     @property
     def remaining_sessions(self):

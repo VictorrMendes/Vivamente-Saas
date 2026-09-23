@@ -4,9 +4,11 @@ from apps.accounts.models import User
 from config.mixins import resolve_own_professional_or_403
 
 
-def _validate_ownership(professional, client):
+def _validate_ownership(professional, client, service=None):
     if client.professional_id != professional.id:
         raise ValidationError({"client": "Cliente não pertence a este profissional."})
+    if service and service.professional_id != professional.id:
+        raise ValidationError({"service": "Serviço não pertence a este profissional."})
 
 
 def create_package(user, serializer):
@@ -15,12 +17,12 @@ def create_package(user, serializer):
         professional = serializer.validated_data["professional"]
     else:
         professional = resolve_own_professional_or_403(user)
-    _validate_ownership(professional, client)
+    _validate_ownership(professional, client, serializer.validated_data.get("service"))
     serializer.save(professional=professional)
 
 
 def update_package(serializer):
     instance = serializer.instance
     client = serializer.validated_data.get("client", instance.client)
-    _validate_ownership(instance.professional, client)
+    _validate_ownership(instance.professional, client, serializer.validated_data.get("service", instance.service))
     serializer.save()

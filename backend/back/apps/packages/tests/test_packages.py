@@ -171,3 +171,34 @@ class PackageBalanceTests(AuthenticatedAPITestCase):
         # vinculo ja existente com o pacote.
         patch = self.client.patch(f"/api/v1/appointments/{appointment_id}", {"notes": "Nota"}, format="json")
         self.assertEqual(patch.status_code, 200)
+
+
+class PackageServiceTests(AuthenticatedAPITestCase):
+    def setUp(self):
+        from apps.services.models import Service
+
+        self.user_a = User.objects.create(firebase_uid="ther-a", email="a@teste.com", role=User.THERAPIST)
+        self.user_b = User.objects.create(firebase_uid="ther-b", email="b@teste.com", role=User.THERAPIST)
+        self.prof_a = Professional.objects.create(user=self.user_a, slug="terapeuta-a", full_name="A")
+        self.prof_b = Professional.objects.create(user=self.user_b, slug="terapeuta-b", full_name="B")
+        self.client_a = Client.objects.create(professional=self.prof_a, name="Cliente A")
+        self.service_a = Service.objects.create(professional=self.prof_a, name="Terapia", duration_minutes=50, price="150.00")
+        self.service_b = Service.objects.create(professional=self.prof_b, name="Outra", duration_minutes=50, price="90.00")
+
+    def _create(self, service):
+        return self.client.post(
+            "/api/v1/packages",
+            {"client": self.client_a.id, "service": service.id, "name": "P", "total_sessions": 4,
+             "total_value": "600.00", "start_date": "2026-01-01"},
+            format="json",
+        )
+
+    def test_package_carries_its_service(self):
+        self.login(self.user_a)
+        response = self._create(self.service_a)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["data"]["service"], self.service_a.id)
+
+    def test_rejects_other_professionals_service(self):
+        self.login(self.user_a)
+        self.assertEqual(self._create(self.service_b).status_code, 400)

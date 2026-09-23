@@ -64,6 +64,7 @@ class OpenAPIContractTests(SimpleTestCase):
         self.assertEqual(set(data["properties"]), {
             "id", "professional", "client", "service", "package", "starts_at", "ends_at", "status",
             "modality", "call_link", "price", "notes", "created_at",
+            "started_at", "finished_at", "confirmation_requested_at", "confirmation_source",
         })
 
     def test_actions_document_actual_results_without_unneeded_input(self):

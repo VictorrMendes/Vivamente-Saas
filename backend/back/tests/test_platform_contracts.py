@@ -161,6 +161,7 @@ class PlatformContractTests(AuthenticatedAPITestCase):
                 self.assertEqual(set(response.json()["data"]), {
                     "id", "professional", "client", "service", "package", "starts_at", "ends_at", "status",
                     "modality", "call_link", "price", "notes", "created_at",
+                    "started_at", "finished_at", "confirmation_requested_at", "confirmation_source",
                 })
                 self.assertEqual(response.json()["meta"]["request_id"], response["X-Request-ID"])
         deleted = self.client.delete(path)

@@ -35,7 +35,7 @@ def _compute_metrics(user):
         payments = Payment.objects.filter(professional=professional)
 
     now = timezone.now()
-    active_appointments = appointments.exclude(status=Appointment.CANCELLED)
+    active_appointments = appointments.exclude(status__in=[Appointment.CANCELLED, Appointment.DECLINED])
     this_month_appointments = active_appointments.filter(starts_at__year=now.year, starts_at__month=now.month)
 
     upcoming = list(

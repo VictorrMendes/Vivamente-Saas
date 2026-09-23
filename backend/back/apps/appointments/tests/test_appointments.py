@@ -168,9 +168,9 @@ class AppointmentTransitionTests(AuthenticatedAPITestCase):
         response = self._transition("complete")
         self.assertEqual(response.status_code, 400)
 
-    def test_cannot_transition_after_cancelled(self):
+    def test_cannot_complete_after_cancelled(self):
         self._transition("cancel")
-        response = self._transition("confirm")
+        response = self._transition("complete")
         self.assertEqual(response.status_code, 400)
 
     def test_confirmed_can_be_cancelled(self):
@@ -187,9 +187,9 @@ class AppointmentTransitionTests(AuthenticatedAPITestCase):
                 response = self._transition(action)
                 self.assertEqual(response.status_code, 400)
 
-    def test_cancelled_cannot_transition_again(self):
+    def test_cancelled_cannot_be_cancelled_or_completed_again(self):
         self._transition("cancel")
-        for action in ("confirm", "cancel", "complete"):
+        for action in ("cancel", "complete"):
             with self.subTest(action=action):
                 response = self._transition(action)
                 self.assertEqual(response.status_code, 400)

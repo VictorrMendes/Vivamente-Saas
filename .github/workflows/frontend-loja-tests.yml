@@ -1,0 +1,41 @@
+name: Frontend Loja Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/frontend-loja
+
+    env:
+      # Só precisam existir pro build carregar os módulos (env.ts falha
+      # rápido se faltar) - nunca são de fato chamadas: as rotas que
+      # dependem do Back são renderizadas sob demanda (ƒ), não no build.
+      BACK_API_URL: http://back.ci.invalid
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/frontend-loja/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        run: npm run build

@@ -50,6 +50,7 @@ APPOINTMENT_FIELDS = [
     "price",
     "notes",
     "created_at",
+    "started_at", "finished_at", "confirmation_requested_at", "confirmation_source",
 ]
 
 
@@ -60,14 +61,27 @@ class AppointmentSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+RECURRENCE_CHOICES = ["WEEKLY", "BIWEEKLY", "MONTHLY"]
+MAX_OCCURRENCES = 52
+
+
 class AppointmentWriteSerializer(serializers.ModelSerializer):
+    # Só na criação: repete a consulta no mesmo dia/horário (a série inteira, contando esta).
+    recurrence = serializers.ChoiceField(choices=RECURRENCE_CHOICES, write_only=True, required=False)
+    occurrences = serializers.IntegerField(min_value=2, max_value=MAX_OCCURRENCES, write_only=True, required=False)
+
     class Meta:
         model = Appointment
-        fields = APPOINTMENT_FIELDS
-        read_only_fields = ["id", "status", "created_at"]
+        fields = APPOINTMENT_FIELDS + ["recurrence", "occurrences"]
+        read_only_fields = ["id", "status", "created_at", "started_at", "finished_at",
+                            "confirmation_requested_at", "confirmation_source"]
 
     def validate(self, attrs):
         _validate_period(attrs, self.instance)
+        if self.instance is not None and ("recurrence" in attrs or "occurrences" in attrs):
+            raise serializers.ValidationError({"recurrence": "A recorrência só vale na criação."})
+        if ("recurrence" in attrs) != ("occurrences" in attrs):
+            raise serializers.ValidationError({"occurrences": "Informe a recorrência e o número de consultas juntos."})
         return attrs
 
 

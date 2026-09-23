@@ -6,6 +6,7 @@ PACKAGE_FIELDS = [
     "id",
     "professional",
     "client",
+    "service",
     "name",
     "total_sessions",
     "total_value",

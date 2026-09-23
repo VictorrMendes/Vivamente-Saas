@@ -10,6 +10,8 @@ from rest_framework.authentication import BaseAuthentication
 from .dev_tokens import decode_dev_token
 from .models import User
 
+FIREBASE_CLOCK_SKEW_SECONDS = 5
+
 
 def _get_firebase_app():
     try:
@@ -33,7 +35,9 @@ class FirebaseAuthentication(BaseAuthentication):
         if claims is None:
             try:
                 claims = firebase_auth.verify_id_token(
-                    token, app=_get_firebase_app(), check_revoked=True
+                    token, app=_get_firebase_app(), check_revoked=True,
+                    # Pequenas diferencas de relogio nao invalidam tokens recem-emitidos.
+                    clock_skew_seconds=FIREBASE_CLOCK_SKEW_SECONDS,
                 )
             except Exception as exc:
                 raise exceptions.AuthenticationFailed("Token inválido ou expirado") from exc

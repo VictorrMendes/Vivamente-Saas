@@ -89,6 +89,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+PLATFORM_PUBLIC_URL = env("PLATFORM_PUBLIC_URL", default="http://localhost:5173")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -107,6 +108,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "config.schema.EnvelopeSchema",
     "EXCEPTION_HANDLER": "config.exceptions.rfc9457_exception_handler",
     "DEFAULT_THROTTLE_RATES": {
+        "public-appointment-confirmation": "20/min",
         "public-appointment-requests": "10/min",
         "public-available-slots": "20/min",
         "public-professional-profile": "30/min",

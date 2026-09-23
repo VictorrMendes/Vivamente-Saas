@@ -24,7 +24,7 @@ class IsTherapist(BasePermission):
 class ClinicalRecordViewSet(EnvelopeModelViewSet):
     permission_classes = [IsTherapist]
     queryset = ClinicalRecord.objects.select_related("client", "professional", "appointment", "author")
-    filterset_fields = ["client"]
+    filterset_fields = ["client", "appointment"]
     ordering_fields = ["recorded_at", "created_at"]
     ordering = ["-recorded_at", "-id"]
 
